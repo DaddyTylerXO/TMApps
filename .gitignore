@@ -11,3 +11,5 @@ codex-connection.json
 ai-provider.json
 project-folders.json
 live-jobs.json
+claude-connection.json
+claude-prompt-*.txt

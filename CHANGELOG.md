@@ -5,9 +5,22 @@ move into a numbered release when that release is prepared.
 
 ## Unreleased
 
+## 0.2.0 — 2026-10-15
+
 ### Added
 
+- Collapsible navigation ribbon with saved state, accessible labels, and tooltips.
+- Open file location directly below a completed job's heading, using its saved directory.
+- Claude Code CLI connection, account verification/sign-in, model selection, and per-agent provider selection for mixed teams.
+- Live office appearance choices: Default (the original look), Robot workshop, and Neon network. Robot couriers deliver actual handoffs between desks and return to their stations.
+- Office styles are shared by Overview and The Office Live; animations respect reduced motion and office pause, and restored history is not replayed.
 - GitHub source repository setup and project instructions for maintaining this changelog.
+
+### Validation
+
+- 51 automated tests pass, including provider routing, ribbon persistence, completed-job folder access, and real-event/reduced-motion animation behavior.
+- Claude integration is covered by protocol fixtures and a mixed-provider file-handoff test. A live Claude generation run requires an installed native CLI and signed-in Claude account.
+- Office appearances and collapsed navigation were rendered in isolated Electron windows for visual checks; fixture jobs do not perform live AI work.
 
 ## 0.1.0 — 2026-10-15
 

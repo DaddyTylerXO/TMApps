@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('desktop', {
   aiLoginCancel: () => ipcRenderer.invoke('office:ai-login-cancel'),
   aiRuntime: () => ipcRenderer.invoke('office:ai-runtime'),
   aiSelect: provider => ipcRenderer.invoke('office:ai-select',provider),
+  aiInstallGuide: () => ipcRenderer.invoke('office:ai-install-guide'),
   projectFiles: jobId => ipcRenderer.invoke('office:project-files',jobId),
   projectRead: payload => ipcRenderer.invoke('office:project-read',payload),
   projectOpen: jobId => ipcRenderer.invoke('office:project-open',jobId),

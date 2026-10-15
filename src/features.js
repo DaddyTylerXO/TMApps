@@ -34,8 +34,12 @@ function renderFeatures(view) {
   if (view === 'appearance') $('alternate').innerHTML = `<section class="panel appearance-panel"><div class="panel-heading"><div><h2>Appearance</h2><p>Saved on this device and restored when you return.</p></div><span class="count-badge">PERSONAL</span></div><div class="appearance-body"><h3>Color theme</h3><p>Set the mood for your office.</p><div class="theme-options">${['light','dark','system'].map(theme => `<button class="theme-option ${state.appearance.theme === theme ? 'selected' : ''}" data-theme-option="${theme}" aria-pressed="${state.appearance.theme === theme}"><span class="theme-preview ${theme}"><b></b><i></i><i></i><i></i></span><strong>${theme === 'system' ? 'Follow system' : theme[0].toUpperCase() + theme.slice(1)}</strong><span>${state.appearance.theme === theme ? '✓ Selected' : theme === 'system' ? 'Match your device' : 'Choose theme'}</span></button>`).join('')}</div><div class="motion-setting"><div><h3>Reduce motion</h3><p>Keep agent animations and warning badges still.</p></div><label class="switch-label"><input id="reduce-motion" type="checkbox" ${state.appearance.reducedMotion ? 'checked' : ''}> Reduce motion</label></div></div></section>`;
   if (view === 'appearance') document.querySelector('.appearance-body').insertAdjacentHTML('afterbegin', `<div class="text-size-setting"><div><h3>Text size</h3><p>Make labels, controls, and reading text easier to see.</p></div><div class="size-controls"><button type="button" class="subtle" data-text-step="-10" aria-label="Decrease text size">A−</button><label class="sr-only" for="text-size">Text size</label><input id="text-size" type="range" min="100" max="200" step="10" value="${state.appearance.textSize}"><output id="text-size-value" for="text-size">${state.appearance.textSize}%</output><button type="button" class="subtle" data-text-step="10" aria-label="Increase text size">A＋</button><button type="button" class="text-button" data-text-reset>Reset</button></div></div>`);
   if (view === 'integrations') renderIntegrations();
+  if(view==='appearance')document.querySelector('.appearance-body').insertAdjacentHTML('afterbegin',officeAppearanceOptions());
+  renderOfficeAppearance();
+  document.querySelectorAll('.agent-card[data-agent]').forEach(card=>{if(state.agents.find(a=>a.id===card.dataset.agent)?.provider==='claude')card.querySelector('.agent-top small').textContent+=' · Claude Code';});
 }
 function openAgentForm() {
+  const form=$('agent-form');if(!form.elements.provider){const field=document.createElement('label');field.innerHTML='AI provider<select name="provider"><option value="default">Office default</option><option value="claude">Claude Code</option></select>';form.querySelector('button[type="submit"]').before(field);}form.elements.provider.value='default';
   $('agent-zone').innerHTML = zoneOptions(); $('agent-zone').value = 'products';
   $('agent-dialog').showModal();
 }
@@ -86,7 +90,7 @@ document.getElementById('agent-form').addEventListener('submit', event => {
   const form = event.target; const data = new FormData(form); const name = data.get('name').trim();
   if (!name) { form.elements.name.setCustomValidity('Give this agent a name.'); form.elements.name.reportValidity(); return; }
   if (state.agents.some(a => a.name.toLowerCase() === name.toLowerCase())) { form.elements.name.setCustomValidity('An agent with this name already exists.'); form.elements.name.reportValidity(); return; }
-  const agent = { id: 'agent-' + crypto.randomUUID(), name, role: data.get('role'), zone: data.get('zone'), description: data.get('description').trim(), color: data.get('color'), glyph: [...name][0].toUpperCase(), x:50, y:50 };
+  const agent = { id: 'agent-' + crypto.randomUUID(), name, role: data.get('role'), provider:data.get('provider')==='claude'?'claude':'default',zone: data.get('zone'), description: data.get('description').trim(), color: data.get('color'), glyph: [...name][0].toUpperCase(), x:50, y:50 };
   state.agents.push(agent); E.log(state, agent.id, `Joined the ${E.zones.find(z => z.id === agent.zone).name} zone as ${agent.role}.`, 'system');
   save(); form.reset(); $('agent-dialog').close(); render(); toast(`${name} has joined the team.`);
 });

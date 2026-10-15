@@ -54,7 +54,7 @@ class CodexConnection extends EventEmitter {
       child.on('error',()=>stopped(new Error('Cannot start Codex. Choose a working codex.exe.')));child.on('exit',()=>stopped(new Error('Codex stopped. Reconnect to continue.')));
       child.stdin.on('error',()=>{});child.stderr.on('data',()=>{});child.stdout.setEncoding('utf8');
       child.stdout.on('data',chunk=>{buffer+=chunk.toString();if(buffer.length>8*1024*1024){stopped(new Error('Codex output exceeded the message limit.'));child.kill();return;}let index;while((index=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,index);buffer=buffer.slice(index+1);try{this.receive(JSON.parse(line));}catch{}}});
-      await this.request('initialize',{clientInfo:{name:'agent_office',title:'Agent Office',version:'0.1.0'},capabilities:{experimentalApi:true}});this.write({method:'initialized',params:{}});
+      await this.request('initialize',{clientInfo:{name:'agent_office',title:'Agent Office',version:'0.2.0'},capabilities:{experimentalApi:true}});this.write({method:'initialized',params:{}});
     })();
     try{await this.starting;}catch(error){this.close();throw error;}finally{this.starting=null;}
   }

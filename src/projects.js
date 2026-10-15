@@ -50,6 +50,7 @@ document.addEventListener('click',async event=>{
   if(button.dataset.projectSelect)selectProject(button.dataset.projectSelect);
   if(button.hasAttribute('data-project-refresh')){projectView.error='';refreshProjectFiles();}
   if(button.hasAttribute('data-project-open'))try{await nativeCall('projectOpen',projectView.rootJob);}catch(error){toast(error.message);}
+  if(button.dataset.jobLocation)try{await nativeCall('projectOpen',button.dataset.jobLocation);}catch(error){toast(error.message);}
   if(button.hasAttribute('data-project-up')){projectView.folder=projectView.folder.split('/').slice(0,-1).join('/');renderProjects();}
   if(button.dataset.projectFile){if(button.dataset.fileKind==='folder'){projectView.folder=projectPath(button.dataset.projectFile);renderProjects();}else if(button.dataset.fileKind==='file')previewProjectFile(button.dataset.projectFile);else toast('Linked files are not followed by the project browser.');}
   if(button.dataset.projectNewJob){const row=officeProjects().find(p=>p.id===button.dataset.projectNewJob);if(row&&!state.projects.some(p=>p.id===row.id)){state.projects.push({...E.project(row.name,'products'),id:row.id});save();}newJob();if($('job-dialog').open){const select=$('job-form').elements.projectId;if([...select.options].some(o=>o.value===button.dataset.projectNewJob))select.value=button.dataset.projectNewJob;}}

@@ -30,6 +30,11 @@ test('Codex specialists use the same confined file tools, durable outputs and ha
  try{const job=f.runner.submit({title:'Codex handoff',agents:[agent('builder'),agent('reviewer','Reviewer')]});await until(()=>job.status==='done');assert.equal(job.settings.provider,'codex');assert.equal(job.usage.calls,2);assert.equal(job.usage.toolCalls,2);assert.equal(job.usage.inputTokens,24);assert.match(job.artifacts[1].text,/Codex deliverable/);assert.deepEqual(job.files,['codex.txt']);}finally{await f.dispose();}
 });
 
+test('a Claude specialist uses its configured provider and passes a real file to the default reviewer',async()=>{
+ const f=fixture(async(args,index)=>index===1?call('workspace_write',{path:'claude.txt',content:'Claude specialist output'}):final('Saved or reviewed claude.txt'));f.provider.connectionStatus=name=>({hasKey:name==='claude',model:'sonnet'});
+ try{const job=f.runner.submit({title:'Mixed team',agents:[{...agent('claude-builder'),provider:'claude'},agent('reviewer','Reviewer')]});await until(()=>job.status==='done');assert.equal(f.calls[0].provider,'claude');assert.equal(f.calls[0].model,'sonnet');assert.equal(f.calls.at(-1).provider,'openai');assert.match(f.calls.at(-1).input[0].content,/Saved or reviewed/);assert.equal(job.outputVerification.passed,true);}finally{await f.dispose();}
+});
+
 test('new project jobs create dedicated folders, reuse their project folder and preserve completed jobs',async()=>{
  let revision=0;const f=fixture(async args=>{const root=JSON.parse(args.input[0].content).workFolder;fs.writeFileSync(path.join(root,'deliverable.txt'),'Saved deliverable '+(++revision));return final('Saved deliverable');});
  try{const payload={title:'Build project',projectId:'project-example',projectWorkspace:true,agents:[agent('builder')]};const first=f.runner.submit(payload);await until(()=>first.status==='done');assert.equal(first.workFolder,path.join(f.folder,'projects','project-example'));assert.equal(fs.statSync(first.workFolder).isDirectory(),true);assert.equal(first.workspaceRoot,f.folder);

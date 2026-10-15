@@ -1,0 +1,39 @@
+const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const crypto=require('node:crypto');const {spawn}=require('node:child_process');const {redact}=require('./openai.cjs');
+const relaySchema={type:'object',properties:{text:{type:'string'},calls:{type:'array',maxItems:6,items:{type:'object',properties:{name:{type:'string'},arguments_json:{type:'string'}},required:['name','arguments_json'],additionalProperties:false}}},required:['text','calls'],additionalProperties:false};
+function findClaude(env=process.env){for(const root of [...(env.PATH || env.Path || '').split(path.delimiter),path.join(env.USERPROFILE || os.homedir(),'.local','bin')]){const exe=path.join(root,'claude.exe');if(path.isAbsolute(exe)&&fs.existsSync(exe))return exe;}return '';}
+class ClaudeConnection{
+ constructor({directory,environment=process.env,spawnImpl=spawn,onChange=()=>{}}){this.directory=directory;this.environment=environment;this.spawn=spawnImpl;this.onChange=onChange;this.file=path.join(directory,'claude-connection.json');this.config={model:'',maxCalls:20,maxOutputTokens:1800,autoConfinedApps:false};try{Object.assign(this.config,JSON.parse(fs.readFileSync(this.file,'utf8')));}catch{}this.authenticated=false;this.loginPending=false;this.children=new Set();}
+ executable(){return this.config.executable || findClaude(this.environment);}
+ status(){return {...this.config,provider:'claude',executable:this.executable(),hasKey:this.authenticated,keySource:'claude-code',canRemember:false,loginPending:this.loginPending,error:this.error || ''};}
+ save(payload){if(payload.executable&&(!path.isAbsolute(payload.executable)||path.basename(payload.executable).toLowerCase()!=='claude.exe'||!fs.existsSync(payload.executable)))throw new Error('Choose an existing native claude.exe.');if(typeof payload.model!=='string'||!/^[a-zA-Z0-9_.:-]{0,100}$/.test(payload.model))throw new Error('Use a Claude model alias or model ID.');if(!Number.isInteger(payload.maxCalls)||payload.maxCalls<5||payload.maxCalls>50)throw new Error('Model call limit must be between 5 and 50.');if(payload.executable!==this.config.executable)this.authenticated=false;Object.assign(this.config,{executable:payload.executable || '',model:payload.model,maxCalls:payload.maxCalls,autoConfinedApps:payload.autoConfinedApps===true});fs.writeFileSync(this.file,JSON.stringify(this.config,null,2));return this.status();}
+ async command(args,{input='',signal,timeout=120000,acceptFailure=false}={}){
+  const executable=this.executable();if(!executable)throw new Error('Claude Code is not installed or detected. Install the native Claude Code CLI and choose claude.exe.');
+  return new Promise((resolve,reject)=>{let settled=false,stdout='',stderr='';const env={...this.environment};delete env.OPENAI_API_KEY;delete env.CODEX_ACCESS_TOKEN;delete env.CLAUDECODE;
+   const child=this.spawn(executable,args,{cwd:this.directory,env,windowsHide:true,stdio:['pipe','pipe','pipe']});this.children.add(child);
+   const done=(error,result)=>{if(settled)return;settled=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);this.children.delete(child);error?reject(error):resolve(result);};
+   const abort=()=>{child.kill();done(signal?.reason || new Error('Claude Code request cancelled.'));};const timer=setTimeout(()=>{child.kill();done(new Error('Claude Code timed out.'));},timeout);signal?.addEventListener('abort',abort,{once:true});
+   child.on('error',()=>done(new Error('Cannot start Claude Code. Check its executable path.')));child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdin.on('error',()=>{});
+   child.stdout.on('data',chunk=>{stdout+=chunk;if(stdout.length>8*1024*1024){child.kill();done(new Error('Claude Code output exceeded 8 MB.'));}});child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-4000);});
+   child.on('close',code=>{if(code!==0&&!acceptFailure)done(new Error(redact(stderr || 'Claude Code failed. Check CLI sign-in and account access.')));else done(null,{stdout,code});});
+   if(signal?.aborted)abort();else child.stdin.end(input);
+  });
+ }
+ async verify(){try{const result=await this.command(['auth','status'],{acceptFailure:true,timeout:20000});let auth;try{auth=JSON.parse(result.stdout);}catch{throw new Error('Claude Code returned an unreadable auth status. Update the native CLI.');}this.authenticated=result.code===0&&auth.loggedIn===true;this.error=this.authenticated?'':'Sign in with Claude Code to continue.';}catch(error){this.authenticated=false;this.error=error.message;throw error;}finally{this.onChange();}return this.status();}
+ async login(){if(!this.executable())throw new Error('Install Claude Code and save its executable path before signing in.');if(this.loginPending)throw new Error('Claude sign-in is already open.');this.loginPending=true;this.error='';this.loginController=new AbortController();this.onChange();this.command(['auth','login'],{signal:this.loginController.signal,timeout:300000}).then(()=>this.verify()).catch(error=>{this.error=error.message;}).finally(()=>{this.loginPending=false;this.onChange();});return this.status();}
+ async cancelLogin(){this.loginController?.abort(new Error('Claude sign-in cancelled.'));this.loginPending=false;return this.status();}
+ async forget(){await this.command(['auth','logout']);this.authenticated=false;this.onChange();return this.status();}
+ async respond({model,instructions,input,tools,signal}){
+  const promptFile=path.join(this.directory,'claude-prompt-'+crypto.randomUUID()+'.txt');
+  const prompt=instructions+'\nYou are a tool-planning participant in Agent Office. Native tools are disabled. Return structured JSON: text is a final stage deliverable, or calls requests tools from the following schemas. Each call has name and arguments_json (a JSON object encoded as a string). Return calls:[] only when your stage is finished. Never fabricate tool results. The host executes these requests and sends back actual results. Available host tools: '+JSON.stringify(tools);
+  fs.writeFileSync(promptFile,prompt,{mode:0o600});
+  try{const args=['-p','--restricted','--tools','','--disallowedTools','mcp__*','--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--settings','{"disableAllHooks":true}','--no-session-persistence','--permission-mode','dontAsk','--output-format','json','--json-schema',JSON.stringify(relaySchema),'--system-prompt-file',promptFile,'--max-turns','4'];if(model)args.push('--model',model);
+   const result=await this.command(args,{input:JSON.stringify(input),signal});let data;try{data=JSON.parse(result.stdout);}catch{throw new Error('Claude Code returned invalid JSON. Update the CLI and verify account access.');}
+   if(data.is_error||data.subtype&&data.subtype!=='success')throw new Error(redact(String(data.result || data.errors?.join('; ') || 'Claude Code did not complete the request.')));
+   const reply=data.structured_output;if(!reply||typeof reply.text!=='string'||!Array.isArray(reply.calls)||reply.calls.length>6)throw new Error('Claude Code returned no valid structured tool plan.');
+   const output=reply.calls.map(call=>{if(!tools.some(t=>t.name===call.name)||typeof call.arguments_json!=='string')throw new Error('Claude requested an unknown or invalid host tool.');return {type:'function_call',name:call.name,arguments:call.arguments_json,call_id:crypto.randomUUID()};});
+   if(reply.text)output.push({type:'message',role:'assistant',content:[{type:'output_text',text:reply.text}]});return {status:'completed',output,usage:{input_tokens:(data.usage?.input_tokens || 0)+(data.usage?.cache_read_input_tokens || 0)+(data.usage?.cache_creation_input_tokens || 0),output_tokens:data.usage?.output_tokens || 0}};
+  }finally{try{fs.unlinkSync(promptFile);}catch{}}
+ }
+ close(){this.loginController?.abort();for(const child of this.children)child.kill();this.children.clear();}
+}
+module.exports={ClaudeConnection,findClaude,relaySchema};

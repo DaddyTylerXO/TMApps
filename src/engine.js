@@ -33,6 +33,7 @@
     }
     state.agents ||= agents.map(a => ({ ...a, zone: defaultZones[a.id], description: '' }));
     state.appearance ||= { theme: 'light', reducedMotion: false };
+    state.appearance.officeStyle=['default','robots','neon'].includes(state.appearance.officeStyle)?state.appearance.officeStyle:'default';state.appearance.sidebarCollapsed=state.appearance.sidebarCollapsed===true;
     state.appearance.textSize = [100,110,120,130,140,150,160,170,180,190,200].includes(state.appearance.textSize) ? state.appearance.textSize : 100;
     if (!Array.isArray(state.projects)) {
       state.projects = state.mode === 'demo' ? [project('Idea laboratory', 'forge', 'prototype'), project('Multilingual blog', 'content'), project('Character studio', 'sns', 'prototype'), project('Agent Office', 'products'), project('Bot workshop', 'infra'), project('Portfolio', 'business', 'completed'), project('Tiny worlds', 'games', 'prototype'), project('Earlier experiments', 'archive', 'paused')] : [];

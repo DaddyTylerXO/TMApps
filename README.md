@@ -2,9 +2,25 @@
 
 Agent Office is hosted in [TMApps](https://github.com/DaddyTylerXO/TMApps), the application-hosting repository. See [CHANGELOG.md](CHANGELOG.md) for release history and changes in development.
 
-Version **0.1.0**. Run **Agent Office Setup 0.1.0.exe** from `dist/` to install the current app on Windows. The setup wizard lets you choose an installation folder and creates Desktop and Start menu shortcuts. It installs for your Windows user without administrator access, adds a normal uninstall entry, and keeps your workspace data when uninstalled. All features described below are included in this 0.1.0 release.
+Version **0.2.0**. Run **Agent Office Setup 0.2.0.exe** from `dist/` to install the current app on Windows. The setup wizard lets you choose an installation folder and creates Desktop and Start menu shortcuts. It installs for your Windows user without administrator access, adds a normal uninstall entry, and keeps your workspace data when uninstalled. All features described below are included in this 0.2.0 release.
 
-A desktop workspace for live Codex/ChatGPT and OpenAI specialist workflows, with a visual office floor, configurable agents, real file and ArtCraft tools, handoffs, and local persistence.
+A desktop workspace for live Codex/ChatGPT, Claude Code, and OpenAI specialist workflows, with a visual office floor, configurable agents, real file and ArtCraft tools, handoffs, and local persistence.
+
+## New in 0.2
+
+- Collapse or expand the left navigation using the arrow at its top. The compact ribbon retains accessible labels and tooltips, and its state is saved on this device.
+- Completed job details have **Open file location** immediately below the heading. This opens the directory recorded for that job.
+- In **Appearance → Live office appearance**, choose **Default** for the original office, **Robot workshop** for a light workshop, or **Neon network** for a midnight circuit floor. Both Overview and The Office Live use the selected style. New real handoffs animate a robot carrying work to the next desk and returning; old history is not replayed. Pause and reduced motion stop these animations. The visuals do not advance jobs or imply AI work that did not happen.
+
+## Claude Code connection and specialists
+
+1. Install the native Windows Claude Code CLI using the [official setup guide](https://code.claude.com/docs/en/setup). Agent Office detects `claude.exe` from PATH or the user's `.local/bin` folder, or you can locate it manually. A recent CLI supporting restricted mode and structured output is required (restricted mode requires v2.1.248 or later).
+2. Open **AI Connection**, select **Claude Code · CLI account**, save the runtime path, and choose **Sign in with Claude Code** or **Verify CLI account** if already signed in. The CLI handles its own account and credentials; Agent Office stores only connection preferences. Usage follows the CLI account's allowance or configured billing. Signing out signs out the local Claude Code CLI.
+3. Leave Claude selected to power the office's default specialists. To mix providers, connect Claude, switch the office provider back to Codex/OpenAI, and use **Add agent → AI provider → Claude Code**. Include that specialist through **Additional teammate** when creating a job.
+
+The integration uses the official [programmatic CLI interface](https://code.claude.com/docs/en/headless) with restricted mode, native tools disabled, no session persistence, no hooks, and an empty MCP configuration. Claude returns structured requests for Agent Office's host tools; the existing folder boundaries, agent app assignments, action approvals, cancellation and output verification execute those requests. Each Claude step counts against the job's model-call limit. The CLI's final structured response is shown after each step; Codex retains its token streaming. A temporary system prompt is removed after every call, and no Claude credentials enter the renderer or exports.
+
+Claude protocol tests use fixtures and include a real disk file handoff between simulated providers. A live Claude generation test was not run because a native Claude CLI/account was not available on this PC during this update. Missing runtime/authentication is reported as setup required; it never becomes simulated success.
 
 ## Connect Codex with ChatGPT — no API key
 
@@ -103,7 +119,7 @@ npm install
 npm start
 ```
 
-Create the Windows installer with `npm run package` (output: `dist/Agent Office Setup 0.1.0.exe`). Use `npm run package:portable` if you also want a portable executable.
+Create the Windows installer with `npm run package` (output: `dist/Agent Office Setup 0.2.0.exe`). Use `npm run package:portable` if you also want a portable executable.
 
 For browser development, use `npm run dev` and open http://127.0.0.1:4173. The browser and desktop app use separate local storage.
 
