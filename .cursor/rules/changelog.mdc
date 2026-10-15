@@ -1,0 +1,9 @@
+---
+description: Maintain the Agent Office changelog for user-visible changes
+alwaysApply: true
+---
+
+- Update `CHANGELOG.md` in the same change as a user-visible feature, fix, or breaking change.
+- Use concise entries under `Unreleased`, grouped as Added, Changed, Fixed, or Removed when appropriate.
+- Preserve released history and do not invent release dates or successful validation.
+- Move entries into a numbered release only when preparing a user-requested release.
