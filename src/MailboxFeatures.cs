@@ -23,6 +23,7 @@ namespace Postbox {
             var menu = new ContextMenu();
             foreach (string target in new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash" }) { string destination = target; var item = new MenuItem { Header = "Move to " + target }; item.Click += delegate { MoveSelected(destination); }; menu.Items.Add(item); }
             list.ContextMenu = menu;
+            menu.Opened += delegate { menu.Items.Clear(); foreach (string target in MoveDestinations()) { string destination = target; var entry = new MenuItem { Header = "Move to " + FolderDisplayName(target) }; entry.Click += delegate { MoveSelected(destination); }; menu.Items.Add(entry); } };
             var body = Find<TextBox>("BodyText"); var parent = (StackPanel)body.Parent; int index = parent.Children.IndexOf(body);
             richReader = new RichTextBox { IsReadOnly = true, BorderThickness = new Thickness(0), Background = Theme.B("Surface"), Foreground = Theme.B("Text"), Padding = new Thickness(0), VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Visibility = Visibility.Collapsed };
             parent.Children.Insert(index, richReader);
@@ -41,23 +42,26 @@ namespace Postbox {
         private List<Message> SelectedMessages() { return Find<ListBox>("MessageList").SelectedItems.Cast<Message>().ToList(); }
         private void ShowMoveMenu(Button anchor) {
             var menu = new ContextMenu { PlacementTarget = anchor };
-            foreach (string name in new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash" }) { string target = name; var item = new MenuItem { Header = target }; item.Click += delegate { MoveSelected(target); }; menu.Items.Add(item); }
+            foreach (string name in MoveDestinations()) { string target = name; var item = new MenuItem { Header = FolderDisplayName(name) }; item.Click += delegate { MoveSelected(target); }; menu.Items.Add(item); }
             menu.IsOpen = true;
         }
         private async void MoveSelected(string destination) {
             var messages = SelectedMessages().Where(m => m.Folder != destination).ToList(); if (messages.Count == 0) return;
+            if (destination.StartsWith("Server:") && messages.All(m => m.RemoteUid == 0)) { Status("Local drafts stay on this PC. Server folders are available for synced messages."); return; }
             if (activeAccount != null && messages.Any(m => m.RemoteUid != 0)) {
+                var movingAccount = activeAccount; var movingService = new MailTransport(movingAccount, accountStore);
                 if (destination == "Drafts" || destination == "Sent") { Status("Server mail can be moved to Inbox, Archive, or Trash. Drafts and Sent are managed by composing and delivery."); return; }
                 if (!await mailGate.WaitAsync(0)) { Status("Please wait for the current mail operation."); return; }
-                try { Status("Moving messages on the server…"); await System.Threading.Tasks.Task.Run(() => transport.Move(messages, destination)); lastBatchMove = null; }
+                try { Status("Moving messages on the server…"); await System.Threading.Tasks.Task.Run(() => movingService.Move(messages, destination)); lastBatchMove = null; }
                 catch (Exception ex) { Status("Server move failed or was interrupted: " + ex.Message + " · sync to check the server before retrying"); return; }
                 finally { mailGate.Release(); }
-                await SyncMail(); return;
+                await SyncMail(movingAccount.Id); return;
             }
             var history = messages.ToDictionary(m => m.Id, m => m.Folder);
             store.MoveMany(messages, destination); lastBatchMove = history; Refresh(null);
             Status(messages.Count + " message(s) moved to " + destination + " · Ctrl+Z to undo");
         }
+        private IEnumerable<string> MoveDestinations() { return new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash" }.Concat(activeAccount == null ? new string[0] : (activeAccount.Folders ?? new List<ServerFolder>()).Where(f => f.Selectable && f.LocalName.StartsWith("Server:")).Select(f => f.LocalName)); }
         private void UndoMove() {
             if (lastBatchMove == null) return;
             var originals = store.Messages.Where(m => lastBatchMove.ContainsKey(m.Id)).ToDictionary(m => m, m => m.Folder);
@@ -81,7 +85,7 @@ namespace Postbox {
             var messages = SelectedMessages(); bool multiple = messages.Count > 1;
             Find<Button>("ReplyButton").IsEnabled = !multiple; Find<Button>("ForwardButton").IsEnabled = !multiple;
             moveButton.IsEnabled = messages.Count > 0;
-            if (!multiple) return false;
+            if (!multiple) return false; if (htmlReader != null) htmlReader.Visibility = Visibility.Collapsed;
             Find<TextBlock>("SubjectText").Text = messages.Count + " messages selected";
             Find<TextBlock>("SenderInitials").Text = "✓"; Find<TextBlock>("SenderText").Text = "Manage your selection";
             Find<TextBlock>("AddressText").Text = "Ctrl+click to add or remove messages · Shift+click for a range";
@@ -94,9 +98,13 @@ namespace Postbox {
             return true;
         }
         private void RenderRichMessage(Message message) {
-            richReader.Visibility = Visibility.Collapsed; Find<TextBox>("BodyText").Visibility = Visibility.Visible;
+            richReader.Visibility = Visibility.Collapsed; if (htmlReader != null) htmlReader.Visibility = Visibility.Collapsed; Find<TextBox>("BodyText").Visibility = Visibility.Visible;
             if (!String.IsNullOrEmpty(message.RichBody)) {
                 if (RichMail.Load(richReader, message.RichBody)) { richReader.Visibility = Visibility.Visible; Find<TextBox>("BodyText").Visibility = Visibility.Collapsed; }
+            }
+            if (!String.IsNullOrWhiteSpace(message.HtmlBody) && htmlReader != null) {
+                richReader.Visibility = Visibility.Collapsed; Find<TextBox>("BodyText").Visibility = Visibility.Collapsed;
+                htmlReader.Height = Math.Max(300, previewPanel.ActualHeight - 280); htmlReader.Visibility = Visibility.Visible; htmlReader.ShowMessage(message);
             }
             attachmentReader.Children.Clear();
             if (message.Importance == "High" || message.FollowUp) attachmentReader.Children.Add(Label((message.Importance == "High" ? "! High importance   " : "") + (message.FollowUp ? "⚑ Follow up" : ""), 12, "#BC9451"));

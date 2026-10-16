@@ -11,6 +11,11 @@ namespace Postbox {
         public string Data { get; set; }
         public long Size { get; set; }
     }
+    public class InlineMailImage { public string ContentId { get; set; } public string MimeType { get; set; } public string Data { get; set; } }
+    public class ServerFolder {
+        public string Name { get; set; } public string Path { get; set; } public string ParentPath { get; set; } public string LocalName { get; set; }
+        public int Count { get; set; } public int Unread { get; set; } public bool Selectable { get; set; }
+    }
     public class Message {
         public string Id { get; set; }
         public string Sender { get; set; }
@@ -20,6 +25,8 @@ namespace Postbox {
         public string Bcc { get; set; }
         public string RichBody { get; set; }
         public string HtmlBody { get; set; }
+        public List<InlineMailImage> InlineImages { get; set; }
+        public int ContentVersion { get; set; }
         public string InternetMessageId { get; set; }
         public string DeliveryState { get; set; }
         public string AccountId { get; set; }
@@ -45,7 +52,7 @@ namespace Postbox {
         public List<Message> Messages { get; private set; }
         private readonly string path;
         private readonly bool encrypted;
-        private readonly JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 67108864 };
+        private readonly JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 268435456 };
         public string LoadWarning { get; private set; }
         public MailStore(string dataPath) : this(dataPath, false, true) { }
         public MailStore(string dataPath, bool protect, bool seed) {

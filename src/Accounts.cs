@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -28,6 +29,7 @@ namespace Postbox {
         public string RefreshToken { get; set; }
         public string AccessToken { get; set; }
         public DateTime ExpiresUtc { get; set; }
+        public List<ServerFolder> Folders { get; set; }
         public void Validate() {
             Email = WelcomeFlow.ValidateEmail(Email);
             if (String.IsNullOrWhiteSpace(UserName)) UserName = Email;
@@ -47,12 +49,32 @@ namespace Postbox {
     }
     public sealed class AccountStore {
         private readonly string path;
-        private readonly JavaScriptSerializer json = new JavaScriptSerializer();
+        private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = 16777216 };
+        private readonly object gate = new object();
+        private AccountCatalog catalog;
         public AccountStore(string directory) { path = Path.Combine(directory, "account.protected"); }
-        public MailAccount Load() { return File.Exists(path) ? json.Deserialize<MailAccount>(ProtectedFile.Read(path)) : null; }
-        public void Save(MailAccount account) { ProtectedFile.Write(path, json.Serialize(account)); }
-        public void Remove() { if (File.Exists(path)) File.Delete(path); }
+        private AccountCatalog Read() {
+            if (catalog != null) return catalog;
+            catalog = new AccountCatalog { Accounts = new List<MailAccount>() };
+            if (File.Exists(path)) {
+                string text = ProtectedFile.Read(path); var values = json.Deserialize<Dictionary<string, object>>(text);
+                if (values.ContainsKey("Accounts")) catalog = json.Deserialize<AccountCatalog>(text);
+                else { var legacy = json.Deserialize<MailAccount>(text); if (legacy != null) { catalog.Accounts.Add(legacy); catalog.ActiveAccountId = legacy.Id; } }
+            }
+            catalog.Accounts = catalog.Accounts ?? new List<MailAccount>(); return catalog;
+        }
+        public MailAccount Load() { lock (gate) { var value = Read(); return value.Accounts.FirstOrDefault(a => a.Id == value.ActiveAccountId) ?? value.Accounts.FirstOrDefault(); } }
+        public List<MailAccount> LoadAll() { lock (gate) return Read().Accounts.ToList(); }
+        public void Save(MailAccount account) { Save(account, false); }
+        public void Save(MailAccount account, bool activate) {
+            lock (gate) { var value = Read(); int index = value.Accounts.FindIndex(a => a.Id == account.Id); if (index < 0) value.Accounts.Add(account); else value.Accounts[index] = account; if (activate || String.IsNullOrEmpty(value.ActiveAccountId)) value.ActiveAccountId = account.Id; ProtectedFile.Write(path, json.Serialize(value)); }
+        }
+        public void SaveTokens(MailAccount account) { lock (gate) { var value = Read(); if (value.Accounts.Any(a => Object.ReferenceEquals(a, account))) ProtectedFile.Write(path, json.Serialize(value)); } }
+        public void Activate(string id) { lock (gate) { var value = Read(); if (!value.Accounts.Any(a => a.Id == id)) throw new ArgumentException("Account not found."); value.ActiveAccountId = id; ProtectedFile.Write(path, json.Serialize(value)); } }
+        public void Remove(string id) { lock (gate) { var value = Read(); value.Accounts.RemoveAll(a => a.Id == id); if (value.ActiveAccountId == id) value.ActiveAccountId = value.Accounts.Select(a => a.Id).FirstOrDefault(); if (value.Accounts.Count == 0) { if (File.Exists(path)) File.Delete(path); } else ProtectedFile.Write(path, json.Serialize(value)); } }
+        public void Remove() { lock (gate) { catalog = new AccountCatalog { Accounts = new List<MailAccount>() }; if (File.Exists(path)) File.Delete(path); } }
     }
+    public sealed class AccountCatalog { public string ActiveAccountId { get; set; } public List<MailAccount> Accounts { get; set; } }
     public static class MicrosoftLogin {
         private sealed class TimedClient : WebClient {
             protected override WebRequest GetWebRequest(Uri address) { var request = base.GetWebRequest(address); request.Timeout = 15000; return request; }

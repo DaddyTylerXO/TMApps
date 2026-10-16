@@ -16,6 +16,7 @@ namespace Postbox {
     }
     public class Preferences {
         public string DisplayName { get; set; }
+        public string ProfilePhoto { get; set; }
         public string EmailAddress { get; set; }
         public bool SetupCompleted { get; set; }
         public string Signature { get; set; }
@@ -72,7 +73,7 @@ namespace Postbox {
             if (!new[] { "Left", "Top", "Right", "Bottom" }.Contains(InboxEdge)) InboxEdge = "Left";
             if (!new[] { "Off", "Top", "Bottom", "Sidebar" }.Contains(SpotifyPlacement)) SpotifyPlacement = "Off";
             if (AppearanceMode != "Light") AppearanceMode = "Dark";
-            FavouriteFolders = (FavouriteFolders ?? new List<string>()).Where(f => new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }.Contains(f)).Distinct().ToList();
+            FavouriteFolders = (FavouriteFolders ?? new List<string>()).Where(f => new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }.Contains(f) || (f != null && f.StartsWith("Server:"))).Distinct().ToList();
             if (String.IsNullOrWhiteSpace(ComposeFont)) ComposeFont = "Segoe UI";
             ComposeFontSize = Math.Max(8, Math.Min(48, ComposeFontSize));
             if (!new[] { "Left", "Top", "Right", "Bottom" }.Contains(NavigationEdge)) NavigationEdge = "Left";

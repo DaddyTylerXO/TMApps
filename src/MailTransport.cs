@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
@@ -11,29 +12,31 @@ using MimeKit;
 using MimeKit.Text;
 
 namespace Postbox {
-    public sealed class MailTransport {
+    public sealed partial class MailTransport {
         private readonly MailAccount account;
         private readonly AccountStore accounts;
         private readonly bool persistTokens;
         public MailTransport(MailAccount value, AccountStore storage, bool persist = true) { account = value; accounts = storage; persistTokens = persist; }
-        private void Authenticate(IMailService client) {
-            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account); if (persistTokens) accounts.Save(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
+        private void Authenticate(IMailService client) { lock (account) {
+            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account); if (persistTokens) accounts.SaveTokens(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
             else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password); }
+        }
         }
         internal static ImapClient CreateImapClient() { return new ImapClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
         internal static SmtpClient CreateSmtpClient() { return new SmtpClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
-        private ImapClient Connect() {
+        private ImapClient Connect(CancellationToken cancellation = default(CancellationToken)) {
             var client = CreateImapClient();
-            try { client.Connect(account.ImapHost, account.ImapPort, account.ImapPort == 993 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls); Authenticate(client); return client; }
+            try { client.Connect(account.ImapHost, account.ImapPort, account.ImapPort == 993 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client); return client; }
             catch { client.Dispose(); throw; }
         }
-        private SmtpClient ConnectSmtp() {
+        private SmtpClient ConnectSmtp(CancellationToken cancellation = default(CancellationToken)) {
             var client = CreateSmtpClient();
-            try { client.Connect(account.SmtpHost, account.SmtpPort, account.SmtpSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls); Authenticate(client); return client; }
+            try { client.Connect(account.SmtpHost, account.SmtpPort, account.SmtpSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client); return client; }
             catch { client.Dispose(); throw; }
         }
         public void Test() { using (var client = Connect()) client.Disconnect(true); using (var client = ConnectSmtp()) client.Disconnect(true); }
         private static IMailFolder Folder(ImapClient client, string name) {
+            if (name.StartsWith("Server:", StringComparison.Ordinal)) return client.GetFolder(Uri.UnescapeDataString(name.Substring(7)));
             if (name == "Inbox") return client.Inbox;
             if (name == "Drafts") return client.GetFolder(SpecialFolder.Drafts);
             if (name == "Sent") return client.GetFolder(SpecialFolder.Sent);
@@ -41,39 +44,19 @@ namespace Postbox {
             if (name == "Archive") return client.GetFolder(SpecialFolder.Archive);
             return null;
         }
-        public List<Message> Synchronize(List<Message> cached) {
-            var messages = new List<Message>();
-            var copies = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = 67108864 };
-            cached = copies.Deserialize<List<Message>>(copies.Serialize(cached));
-            using (var client = Connect()) {
-                foreach (string name in new[] { "Inbox", "Sent", "Archive", "Trash" }) {
-                    IMailFolder folder; try { folder = Folder(client, name); } catch (NotSupportedException) { continue; } if (folder == null) continue;
-                    folder.Open(FolderAccess.ReadOnly);
-                    if (folder.Count > 0) {
-                        var summaries = folder.Fetch(Math.Max(0, folder.Count - 200), -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags | MessageSummaryItems.Size);
-                        foreach (var summary in summaries) {
-                            var existing = cached.FirstOrDefault(m => m.RemoteFolder == folder.FullName && m.UidValidity == folder.UidValidity && m.RemoteUid == summary.UniqueId.Id);
-                            if (existing != null) { existing.Folder = name; existing.Unread = (summary.Flags & MessageFlags.Seen) == 0; existing.Starred = (summary.Flags & MessageFlags.Flagged) != 0; messages.Add(existing); continue; }
-                            if (summary.Size > 25 * 1024 * 1024) continue;
-                            var mime = folder.GetMessage(summary.UniqueId);
-                            messages.Add(ConvertMessage(mime, account.Id, name, folder.FullName, folder.UidValidity, summary.UniqueId.Id, summary.Flags ?? MessageFlags.None));
-                        }
-                    }
-                    folder.Close();
-                }
-                client.Disconnect(true);
-            }
-            return messages;
-        }
         public static Message ConvertMessage(MimeMessage mime, string accountId, string localFolder, string remoteFolder, uint validity, uint uid, MessageFlags flags) {
             var from = mime.From.Mailboxes.FirstOrDefault();
             string body = mime.TextBody;
             if (String.IsNullOrEmpty(body) && !String.IsNullOrEmpty(mime.HtmlBody)) body = PlainHtml(mime.HtmlBody);
             var attachments = new List<MailAttachment>();
+            var inlineImages = new List<InlineMailImage>();
+            foreach (var image in mime.BodyParts.OfType<MimePart>().Where(p => !String.IsNullOrEmpty(p.ContentId) && new[] { "image/png", "image/jpeg", "image/gif", "image/webp" }.Contains(p.ContentType.MimeType.ToLowerInvariant()))) {
+                using (var data = new MemoryStream()) { image.Content.DecodeTo(data); if (data.Length <= 5 * 1024 * 1024) inlineImages.Add(new InlineMailImage { ContentId = image.ContentId, MimeType = image.ContentType.MimeType, Data = System.Convert.ToBase64String(data.ToArray()) }); }
+            }
             foreach (var part in mime.Attachments.OfType<MimePart>()) {
                 using (var data = new MemoryStream()) { part.Content.DecodeTo(data); attachments.Add(new MailAttachment { Name = Path.GetFileName(part.FileName ?? "attachment"), Size = data.Length, Data = System.Convert.ToBase64String(data.ToArray()) }); }
             }
-            return new Message { Id = accountId + ":" + remoteFolder + ":" + validity + ":" + uid, InternetMessageId = mime.MessageId, AccountId = accountId, RemoteFolder = remoteFolder, RemoteUid = uid, UidValidity = validity, Sender = from == null ? "Unknown sender" : (String.IsNullOrEmpty(from.Name) ? from.Address : from.Name), Address = from == null ? "" : from.Address, To = String.Join("; ", mime.To.Mailboxes.Select(m => m.Address)), Cc = String.Join("; ", mime.Cc.Mailboxes.Select(m => m.Address)), Subject = mime.Subject ?? "(No subject)", Body = body ?? "", Folder = localFolder, Date = mime.Date.LocalDateTime, Unread = (flags & MessageFlags.Seen) == 0, Starred = (flags & MessageFlags.Flagged) != 0, Attachments = attachments, Importance = mime.Importance.ToString() };
+            return new Message { Id = accountId + ":" + remoteFolder + ":" + validity + ":" + uid, ContentVersion = 2, HtmlBody = mime.HtmlBody, InlineImages = inlineImages, InternetMessageId = mime.MessageId, AccountId = accountId, RemoteFolder = remoteFolder, RemoteUid = uid, UidValidity = validity, Sender = from == null ? "Unknown sender" : (String.IsNullOrEmpty(from.Name) ? from.Address : from.Name), Address = from == null ? "" : from.Address, To = String.Join("; ", mime.To.Mailboxes.Select(m => m.Address)), Cc = String.Join("; ", mime.Cc.Mailboxes.Select(m => m.Address)), Subject = mime.Subject ?? "(No subject)", Body = body ?? "", Folder = localFolder, Date = mime.Date.LocalDateTime, Unread = (flags & MessageFlags.Seen) == 0, Starred = (flags & MessageFlags.Flagged) != 0, Attachments = attachments, Importance = mime.Importance.ToString() };
         }
         public static MimeMessage CreateMime(Message message) {
             var mime = new MimeMessage(); mime.From.Add(new MailboxAddress(message.Sender, message.Address));

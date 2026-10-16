@@ -2,7 +2,7 @@
 
 ## For people using the app
 
-On the welcome screen or in **Accounts**, choose:
+On the welcome screen or in **Settings → Accounts**, choose:
 
 - **Sign in with Outlook** — continue to Microsoft's sign-in page in your default browser.
 - **Sign in with Gmail** — continue to Google's sign-in page in your default browser.
@@ -56,10 +56,14 @@ References: [Google desktop OAuth](https://developers.google.com/identity/protoc
 
 ## First live verification and current limits
 
-Automated tests use synthetic accounts and fake delivery. Live provider sign-in and round-trip delivery are still **unverified**, because no app registrations or account authorization were supplied during development. After enabling a provider, verify sign-in, receiving, a small message to an address you own, reply/attachment, read/star, and Trash/restore before relying on the build.
+Automated tests use synthetic accounts and fake delivery. A read-only check against the connected IMAP mailbox discovered 14 server folders, preserved the latest message HTML, and successfully entered IMAP IDLE. It did not send mail or change message flags, credentials, or cached mail. Outlook/Gmail browser sign-in and round-trip delivery remain **unverified**. After enabling a provider, verify sign-in, receiving, a small message to an address you own, reply/attachment, read/star, and Trash/restore before relying on the build.
 
-One active account is supported. Sync runs every 60 seconds while the app is running, or with **Sync**. It loads the latest 200 messages per Inbox/Sent/Archive/Trash folder; messages over 25 MB are excluded. Drafts remain local. Custom folders/full-history download and a signed installer are not included. TLS is required and certificate failures are never ignored.
+Add multiple accounts under **Settings → Accounts → Add email account**. Expand an email-address heading to see its folders, or choose **Open mailbox** in Settings. New Inbox mail is detected through IMAP IDLE when supported, with polling otherwise. Every account and its custom/nested server folders refresh automatically every 30 seconds while the app runs. Initial sync starts after connecting; the footer shows folder/item progress. Green confirms the selected server is connected and Windows has a network; red indicates a connection issue or a connection still being established. A network adapter alone does not guarantee Internet access.
 
-If sending is interrupted, check the server's Sent folder and the recipient before retrying. SMTP acceptance is not a guarantee of final delivery. Disconnect removes credentials and returns to Explore mode, retaining the encrypted cache. Revoke provider consent through Microsoft/Google/Apple account settings when required.
+Sync caches the latest 200 messages per selectable server folder; messages over 25 MB are excluded. Server drafts are readable; composing and editing drafts saves a local copy. Full-history download and a signed installer are not included. TLS is required and certificate failures are never ignored.
+
+HTML email keeps its formatting and embedded images. Choose **Load images** to allow external HTTPS pictures for that message. Windows 10/11 x64, .NET Framework 4.8, and the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) are required for HTML reading; if the runtime is unavailable, the app falls back to text. Message scripts do not run.
+
+If sending is interrupted, check the server's Sent folder and the recipient before retrying. SMTP acceptance is not a guarantee of final delivery. Removing an account removes its credentials and selects another saved mailbox, or returns to Explore mode when none remain. Its encrypted cache is retained. Revoke provider consent through Microsoft/Google/Apple account settings when required.
 
 Live mail and credentials live under `%LOCALAPPDATA%\TMA-Mail` and are DPAPI-protected for the Windows user. Settings/signature templates and sample mail remain local unencrypted JSON. Copying DPAPI files to another Windows account is not a backup strategy.

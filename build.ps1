@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.8.2')
+param([string]$OutputDirectory = 'build\v0.9-release')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -13,12 +13,15 @@ $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mai
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
 $arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
 foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net461') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net45') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
     if ($dll) { $arguments += '/reference:' + $dll.FullName; Copy-Item -LiteralPath $dll.FullName -Destination $out -Force }
 }
+foreach ($library in @('Microsoft.Web.WebView2.Wpf.dll','Microsoft.Web.WebView2.Core.dll')) { $source = Join-Path $root ('packages\microsoft.web.webview2\lib\net462\' + $library); $arguments += '/reference:' + $source; Copy-Item -LiteralPath $source -Destination $out -Force }
+Copy-Item -LiteralPath (Join-Path $root 'packages\microsoft.web.webview2\runtimes\win-x64\native\WebView2Loader.dll') -Destination $out -Force
 foreach ($reference in $references) { $arguments += '/reference:' + (Join-Path $framework $reference) }
 $arguments += (Join-Path $root 'src\MailStore.cs')
 $arguments += (Join-Path $root 'src\App.cs')

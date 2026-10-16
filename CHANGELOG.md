@@ -2,6 +2,20 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.9.0 beta — 16 October 2026
+
+- Add a protected multi-account catalog with migration from the existing single-account file. Keep mailbox caches separate and preserve saved sign-in credentials when switching accounts.
+- Start sync automatically after connecting. Use IMAP IDLE to watch Inbox changes, polling when unavailable, a 30-second all-folder refresh, and automatic reconnect attempts. Keep manual Sync available.
+- Discover selectable custom and nested server folders, server Drafts, and special folders. Group folders under collapsible email-address headings and allow custom-folder favourites and moves.
+- Show live mailbox/folder/item progress in the footer. Add a neon green/red connection indicator reflecting the active server and Windows network availability.
+- Preserve incoming MIME HTML and embedded CID graphics. Add an isolated WebView2 reader with Load images for external HTTPS pictures, disabled message scripts, restricted resources/navigation, and a plain-text fallback.
+- Put Settings at the bottom left and make Accounts the first settings section. List saved accounts with Open, Reconnect, Remove, and Add email account actions using the provider chooser.
+- Add a rounded profile menu for editing name/signatures, choosing a local profile photo, and opening account settings. Preserve live preview and Cancel restoration for profile preferences.
+- Keep local composition drafts separate when editing a server draft. Protect account selection and queued operations from mailbox switches and stale watcher credentials.
+- Add 27 automated live-workspace checks for account migration, cache isolation, custom folders, HTML policy, profile preview, and account management. Existing mailbox/settings/layout/connection/provider tests pass.
+- Verify HTML formatting, tables, and an embedded graphic in the actual WebView2 runtime; confirm message scripts remain disabled. Check the Accounts/profile screens in an isolated synthetic workspace.
+- Verify a connected mailbox read-only: discover 14 server folders, preserve the newest message HTML, and successfully enter IMAP IDLE. No mail was sent and no message flags or saved account/cache files were changed. Real incoming-arrival and round-trip sending tests remain outstanding.
+- Package the WebView2 SDK/native loader and license notices. HTML reading requires the separately installed Microsoft Edge WebView2 Runtime on Windows x64. Keep the latest-200-per-folder and 25 MB message limits documented.
 ## 0.8.2 beta — 16 October 2026
 
 - Fix iCloud IMAP/SMTP TLS failures caused by the executable's missing .NET target-framework metadata. Explicitly target .NET Framework 4.8 and let Windows select the TLS protocol for mail connections.

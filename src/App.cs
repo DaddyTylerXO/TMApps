@@ -33,7 +33,7 @@ namespace Postbox {
             folder = preferences.StartupFolder;
             Theme.SetMode(preferences.AppearanceMode); Theme.Install(window);
             InitializeWorkspace();
-            InitializeMailboxFeatures();
+            InitializeMailboxFeatures(); InitializeHtmlReader();
             foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {
                 Find<Button>(name + "Nav").Click += delegate(object sender, RoutedEventArgs e) {
                     folder = (string)((Button)sender).Tag;
@@ -68,8 +68,8 @@ namespace Postbox {
             };
             Find<Button>("ReplyButton").Click += delegate { if (selected != null) Compose(selected.Folder == "Drafts" ? selected : null, selected.Folder == "Drafts" ? "" : "reply"); };
             Find<Button>("ForwardButton").Click += delegate { if (selected != null) Compose(null, "forward"); };
-            Find<Button>("AccountsButton").Click += delegate { ShowAccounts(); };
-            Find<Button>("AccountTop").Click += delegate { ShowAccounts(); };
+            Find<Button>("AccountsButton").Click += delegate { ShowSettings(); };
+            Find<Button>("AccountTop").Click += delegate { ShowProfileMenu(); };
             window.PreviewKeyDown += delegate(object sender, KeyEventArgs e) {
                 if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.N) { Compose(null, ""); e.Handled = true; }
                 else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.F) { Find<TextBox>("SearchBox").Focus(); e.Handled = true; }
@@ -97,8 +97,10 @@ namespace Postbox {
                 selected = messages.FirstOrDefault(m => m.Id == keepId) ?? messages.FirstOrDefault();
                 list.SelectedItem = selected;
                 foreach (var item in messages.Where(m => keepSelection.Contains(m.Id))) if (!list.SelectedItems.Contains(item)) list.SelectedItems.Add(item);
-                Find<TextBlock>("FolderHeading").Text = folder;
+                Find<TextBlock>("FolderHeading").Text = FolderDisplayName(folder);
                 Find<TextBlock>("FolderCount").Text = messages.Count + (messages.Count == 1 ? " message" : " messages");
+                var serverFolder = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == folder);
+                if (serverFolder != null && serverFolder.Count > messages.Count) Find<TextBlock>("FolderCount").Text = messages.Count + " of " + serverFolder.Count + " messages cached";
                 Find<TextBlock>("FolderSubtitle").Text = folder == "Inbox" ? "A fresh perspective on your day." : folder == "Drafts" ? "Pick up where you left off." : folder == "Sent" ? "Messages you have sent." : folder == "Trash" ? "Deleted messages can be restored." : folder == "Starred" ? "The conversations worth keeping close." : "A little order, a little more space.";
                 Find<StackPanel>("EmptyList").Visibility = messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
                 foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {
@@ -118,7 +120,7 @@ namespace Postbox {
             Find<Button>("DeleteButton").Content = folder == "Trash" ? "↶  Restore" : "♧  Delete";
             Find<Button>("DeleteButton").ToolTip = folder == "Trash" ? "Restore to Inbox" : "Move to Trash (Delete)";
             moveButton.IsEnabled = selected != null;
-            if (selected == null) return;
+            if (selected == null) { if (htmlReader != null) htmlReader.Visibility = Visibility.Collapsed; return; }
             if (RenderMultipleSelection()) return;
             RenderRichMessage(selected);
             Find<Button>("ArchiveButton").IsEnabled = selected.Folder != "Archive" && selected.Folder != "Drafts";
@@ -133,7 +135,10 @@ namespace Postbox {
             Find<Button>("ReadButton").Content = selected.Unread ? "●  Mark read" : "○  Mark unread";
             Find<Button>("ReplyButton").Content = selected.Folder == "Drafts" ? "✎   Edit draft" : "↶   Reply";
         }
-        private void Status(string text) { Find<TextBlock>("StatusText").Text = text; }
+        private void Status(string text) {
+            if (activeAccount != null && !offlinePreview && !mailAccounts.Any(a => text.StartsWith(a.Email + " · ", StringComparison.OrdinalIgnoreCase))) text = activeAccount.Email + " · " + text;
+            Find<TextBlock>("StatusText").Text = text; Find<TextBlock>("StatusText").ToolTip = text;
+        }
         private static Brush Brush(string color) { return Theme.B(color); }
         private Window Dialog(string title, double width, double height) {
             var dialog = new Window { Owner = window, Title = title, Width = width, Height = height, MinWidth = width, MinHeight = height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#FFFFFF"), FontFamily = new FontFamily("Segoe UI"), Foreground = Brush("#17243B"), ShowInTaskbar = false }; Theme.Install(dialog); return dialog;
@@ -143,8 +148,9 @@ namespace Postbox {
             return new Button { Content = text, Background = Brush(primary ? "#4D83F5" : "#F0F3F8"), Foreground = Brush(primary ? "#FFFFFF" : "#53617A"), BorderThickness = new Thickness(0), Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand };
         }
         private void Compose(Message draft, string mode) {
-            var composer = new ComposerWindow(preferences, store, draft, mode, selected);
-            composer.Owner = window; if (activeAccount != null) composer.Deliver = SendMail;
+            var composingAccount = activeAccount;
+            var composer = new ComposerWindow(settingsStore.Clone(preferences), store, draft, mode, selected);
+            composer.Owner = window; if (composingAccount != null) composer.Deliver = message => SendMail(message, composingAccount);
             composer.Saved += delegate(bool sent, string subject) { Refresh(selected == null ? null : selected.Id); Status(sent ? "Message accepted by your mail server" : "Draft saved on this PC"); if (sent) MailNotification(false, subject); };
             composer.ShowDialog();
         }
