@@ -17,7 +17,7 @@ namespace Postbox {
         private readonly bool persistTokens;
         public MailTransport(MailAccount value, AccountStore storage, bool persist = true) { account = value; accounts = storage; persistTokens = persist; }
         private void Authenticate(IMailService client) {
-            if (account.Provider == "Microsoft") { MicrosoftLogin.Refresh(account); if (persistTokens) accounts.Save(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
+            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account); if (persistTokens) accounts.Save(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
             else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password); }
         }
         private ImapClient Connect() {

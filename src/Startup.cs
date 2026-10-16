@@ -14,6 +14,7 @@ using System.Windows.Shapes;
 namespace Postbox {
     public partial class App {
         private bool showAfterWelcome;
+        private string welcomeProvider;
         private async void StartDesktop(object sender, StartupEventArgs args) {
             StartupSplash splash = null;
             var cancellation = new CancellationTokenSource();
@@ -46,7 +47,7 @@ namespace Postbox {
                     welcome.Show(); splash.Close();
                     bool completed = await completion.Task;
                     if (!completed) { exiting = true; window.Close(); Shutdown(); return; }
-                    preferences = welcome.Result; showAfterWelcome = true; ApplyPreferences();
+                    preferences = welcome.Result; welcomeProvider = welcome.SelectedProvider; showAfterWelcome = true; ApplyPreferences();
                 } else splash.Close();
                 MainWindow = window; ShutdownMode = ShutdownMode.OnMainWindowClose;
                 window.Show();
@@ -122,35 +123,28 @@ namespace Postbox {
     }
 
     public class WelcomeWindow : Window {
-        private readonly TextBox email;
-        private readonly TextBlock error;
         public Preferences Result { get; private set; }
+        public string SelectedProvider { get; private set; }
         public WelcomeWindow(SettingsStore store, Preferences current, bool firstRun) {
-            Title = firstRun ? "Welcome to TMA-Mail" : "Email profile · TMA-Mail"; Width = 790; Height = 560; MinWidth = 740; MinHeight = 540; WindowStartupLocation = WindowStartupLocation.CenterScreen; FontFamily = new FontFamily("Segoe UI"); Theme.Install(this);
+            Title = firstRun ? "Welcome to TMA-Mail" : "Add an account · TMA-Mail"; Width = 820; Height = 680; MinWidth = 740; MinHeight = 650; WindowStartupLocation = WindowStartupLocation.CenterScreen; FontFamily = new FontFamily("Segoe UI"); Theme.Install(this);
             var grid = new Grid(); Content = grid; grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var forest = new Border { Background = Theme.B("#14243E"), Padding = new Thickness(18, 30, 18, 24) }; grid.Children.Add(forest);
             var illustration = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; forest.Child = illustration;
             illustration.Children.Add(new TextBlock { Text = "TMA-Mail", Foreground = Brushes.White, FontWeight = FontWeights.SemiBold, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 25) });
             illustration.Children.Add(new Viewbox { Width = 220, Height = 175, Child = new MailTree(false) });
             illustration.Children.Add(new TextBlock { Text = "Your mail.\nYour space.", FontSize = 21, Foreground = MailTree.ColorBrush("#E1EEE5"), TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 23, 0, 0) });
-            var right = new Grid { Margin = new Thickness(32, 32, 32, 26) }; Grid.SetColumn(right, 1); grid.Children.Add(right); right.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var form = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; right.Children.Add(form);
-            form.Children.Add(new TextBlock { Text = firstRun ? "LET’S GET STARTED" : "YOUR EMAIL PROFILE", FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("#8793A7"), Margin = new Thickness(0, 0, 0, 14) });
-            form.Children.Add(new TextBlock { Text = firstRun ? "Welcome to TMA-Mail" : "Add your email address", FontSize = 27, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14) });
-            form.Children.Add(new TextBlock { Text = "Save an email address to your profile, or explore the application first.", FontSize = 13, Foreground = Theme.B("#8793A7"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 26) });
-            form.Children.Add(new TextBlock { Text = "Email address", FontSize = 12, Foreground = Theme.B("Text"), Margin = new Thickness(0, 0, 0, 8) });
-            email = new TextBox { Text = current.EmailAddress ?? "", FontSize = 15, Padding = new Thickness(13, 12, 13, 12), ToolTip = "you@example.com" }; System.Windows.Automation.AutomationProperties.SetName(email, "Email address"); form.Children.Add(email);
-            error = new TextBlock { Foreground = Theme.B("#BC4343"), FontSize = 11, TextWrapping = TextWrapping.Wrap, MinHeight = 28, Margin = new Thickness(0, 8, 0, 4) }; form.Children.Add(error);
-            var save = new Button { Content = "Continue to account setup  →", IsDefault = true, Background = Theme.B("#4D83F5"), Foreground = Brushes.White, Padding = new Thickness(14, 12, 14, 12), Margin = new Thickness(0, 0, 0, 9) };
-            var skip = new Button { Content = "Explore for now", Padding = new Thickness(14, 12, 14, 12) }; form.Children.Add(save); form.Children.Add(skip);
-            Action<bool> complete = delegate(bool addAddress) {
-                try { Result = WelcomeFlow.Complete(store, current, addAddress, email.Text); Close(); }
-                catch (FormatException) { error.Text = "Check your email address, or choose Explore for now."; email.Focus(); }
-                catch (Exception ex) { error.Text = "Your profile could not be saved. " + ex.Message; }
+            var form = new StackPanel { Margin = new Thickness(38, 30, 38, 30), VerticalAlignment = VerticalAlignment.Center, MaxWidth = 450 }; Grid.SetColumn(form, 1); grid.Children.Add(form);
+            form.Children.Add(new TextBlock { Text = "MAKE YOURSELF AT HOME", FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Muted"), Margin = new Thickness(0, 0, 0, 13) });
+            form.Children.Add(new TextBlock { Text = "Welcome to TMA-Mail", FontSize = 27, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Text"), Margin = new Thickness(0, 0, 0, 12) });
+            form.Children.Add(new TextBlock { Text = "Choose your email provider to get started.", FontSize = 13, Foreground = Theme.B("Muted"), Margin = new Thickness(0, 0, 0, 26) });
+            var error = new TextBlock { Foreground = Theme.B("#BC4343"), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+            Action<string> complete = delegate(string provider) {
+                try { var result = WelcomeFlow.Complete(store, current, false, ""); SelectedProvider = provider; Result = result; Close(); }
+                catch (Exception ex) { error.Text = "Your setup could not be saved. " + ex.Message; }
             };
-            save.Click += delegate { complete(true); }; skip.Click += delegate { complete(false); };
-            var note = new TextBlock { Text = "Connect an account next to send and receive mail, or explore with sample messages.", FontSize = 10, Foreground = Theme.B("#8793A7"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 22, 0, 0) }; Grid.SetRow(note, 1); right.Children.Add(note);
-            Loaded += delegate { email.Focus(); email.CaretIndex = email.Text.Length; };
+            form.Children.Add(ProviderChoices.Picker(complete));
+            var skip = new Button { Content = "Explore for now", Background = Brushes.Transparent, Foreground = Theme.B("Muted"), Padding = new Thickness(14, 10, 14, 10), Margin = new Thickness(0, 5, 0, 0) }; skip.Click += delegate { complete(null); }; form.Children.Add(skip); form.Children.Add(error);
+            form.Children.Add(new TextBlock { Text = "You can add or change an account later.", FontSize = 11, Foreground = Theme.B("Muted"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) });
         }
     }
 }

@@ -2,44 +2,40 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.7.0 beta** adds real IMAP/SMTP mail connections. Automated checks pass; live provider sign-in and delivery have not yet been verified. Outlook/Hotmail requires a Microsoft application registration before first use. Follow [SETUP.md](SETUP.md).
+**Version 0.8.0 beta** simplifies adding an account. Welcome and Accounts now offer provider buttons with Outlook, Gmail, and iCloud logos, plus **Other Provider / Advanced Setup**. You no longer enter an email address on the welcome screen.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.7.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 with .NET Framework 4.8. The executable is currently unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.8.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 with .NET Framework 4.8. The executable is unsigned.
 
-On first launch, add an address to continue to account setup, or choose **Explore for now** to see sample messages without connecting anything. Use **Connect an account** later to sign in. The Windows executable, taskbar/title bars, and tray use the matching green envelope icon.
+Choose a provider or **Explore for now** with sample mail. You can add an account later through Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
-## Connected mail
+**Microsoft/Google sign-in must be enabled by the app publisher before distribution.** No provider registrations have been supplied for this repository yet. Unconfigured builds explain this on the relevant sign-in screen; ordinary users never see client-ID/server fields for Outlook or Gmail. [SETUP.md](SETUP.md) separates user instructions from the one-time developer configuration. Live provider sign-in/delivery remains unverified.
 
-- Microsoft Outlook/Hotmail/Microsoft 365 browser sign-in using a registered public client ID, with protected refresh tokens.
-- Gmail with a Google app password, and custom IMAP/SMTP providers with provider-supported credentials.
-- Required TLS with standard certificate validation; no insecure fallback.
-- Manual Sync and automatic refresh every 60 seconds while running.
-- Receive the latest 200 messages per Inbox/Sent/Archive/Trash folder. Cache message bodies and refresh remote read/star flags. Messages larger than 25 MB are excluded from this initial sync window.
-- Real SMTP delivery with To/Cc/Bcc, plain text and HTML alternatives, rich formatting, inline signature graphics, and attachments up to 20 MB total.
-- Server read/unread, stars, move, archive, and Trash/restore. Server folders must be advertised as special-use folders. Server moves do not use the local move-undo history.
-- Windows DPAPI protection for credentials/tokens and the connected mail cache. Sample mail stays separate and is never transmitted automatically.
-- Local drafts, with warnings for interrupted or uncertain delivery. Disconnected mode saves drafts only and cannot simulate a successful send.
+## Mail and writing
 
-## Workspace and writing
+- Required-TLS IMAP/SMTP connections using MailKit/MimeKit, normal certificate validation, and no insecure fallback.
+- Official MSAL Outlook browser sign-in and Google PKCE browser sign-in, automatic account address discovery, and token renewal. Existing 0.7 Microsoft connections remain compatible.
+- Windows DPAPI protection for account secrets, OAuth/MSAL caches, and connected mail. Sample mail stays separate.
+- Manual Sync and automatic refresh every 60 seconds while running, with the latest 200 messages per Inbox/Sent/Archive/Trash folder. Messages over 25 MB are excluded.
+- Real SMTP sending with To/Cc/Bcc, plain text and HTML alternatives, attachments up to 20 MB total, and inline signature graphics. Disconnected mode saves drafts only.
+- Server read/unread, stars, move, archive, and Trash/restore. Local drafts and local move undo; server moves are not in the undo history.
+- Rich composing with rounded toolbar buttons, fonts, styles, colours, lists, alignment, links, tables, importance, flags, contacts, RTF import/export, word count, spellcheck, dictation, read aloud, and reading view.
+- Multiple named signatures with independent new/reply defaults and an advanced editor for graphics and templates.
 
-- Three-pane mailbox, current-folder search, unread filter, Ctrl/Shift multi-selection, favourite folders, and bulk actions.
-- Forest green sidebar with neutral dark mode by default; light mode in Appearance.
-- Move/collapse the navigation ribbon and independently move the inbox list to any edge.
-- Settings preview changes immediately; Save keeps them and Cancel restores previous choices.
-- Profile editing, multiple named signatures, separate new/reply defaults, and advanced signature graphics/templates.
-- Rounded composing toolbar with fonts, styles, colours, lists, alignment, links, tables, attachments, importance, flags, and local contacts.
-- Windows spellcheck, dictation, read aloud, word count, reading view, and RTF body import/export.
-- Incoming/outgoing notification banners, independent sound choices, and custom WAV previews. Banners appear while running and are not persistent Windows Notification Center entries.
-- Startup folder, maximize/minimize, optional launch at Windows sign-in, and close-to-tray. Startup registration changes only when saved.
-- Optional local Spotify media widget with placement options, previous/play-pause/next. Requires an active Spotify desktop media session.
+## Your workspace
+
+- Three-pane mailbox, search, unread filtering, Ctrl/Shift multi-selection, favourites, and bulk actions.
+- Forest green navigation; neutral dark mode by default and light mode in Appearance.
+- Movable/collapsible navigation ribbon and independently movable inbox list.
+- Live settings preview: Save keeps changes and Cancel restores the previous settings.
+- Startup folder, maximize/minimize, optional Windows sign-in startup, and close-to-tray.
+- Incoming/outgoing notification banners and sounds, custom WAV previews, and an optional Spotify desktop media widget with placement and playback controls.
+- Matching green-envelope Windows executable/title-bar/tray icon and animated tree/envelope splash.
 
 Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B collapse navigation, Delete move to Trash, Ctrl+Z undo local moves outside text fields. In composing, Ctrl+S saves a draft and Ctrl+Enter sends through a connected account.
 
 ## Build, test, package
-
-From PowerShell in this source folder:
 
 ```powershell
 .\build.ps1
@@ -47,16 +43,18 @@ From PowerShell in this source folder:
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. The Windows .NET Framework C# compiler is used directly; no .NET SDK is required. First build downloads pinned NuGet dependencies through `restore.ps1`. Source is in `src/`, test code in `tests/`, and output in `build/v0.7-release/`. Close that executable before rebuilding it.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.8/`. Close that executable before rebuilding.
 
-Tests cover 21 mailbox checks, 34 preference checks, XAML layouts, eight navigation layouts, dark/light themes, live-settings and signature behavior, rich drafts, and 18 connection checks for encrypted storage, MIME/HTML, delivery success/failure, and the icon. No external email is sent by tests. Optional `test-media.ps1` checks local Windows media-session discovery; live Spotify playback control is not certified by the automated suite.
+For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 
-`package.ps1` includes only runtime files and documentation, never local profiles, test data, or credentials. It writes a ZIP and SHA-256 checksum. [THIRD_PARTY.md](THIRD_PARTY.md) lists dependency versions and included licenses.
+Tests cover mailbox operations, preferences, layouts, rich signatures/composing, encrypted storage, MIME, delivery success/failure, and 31 provider-setup checks for routing, presets, hidden advanced fields, dependency loading, and Explore mode. They never authenticate to real providers or send external mail. Optional `test-media.ps1` checks local media discovery.
 
-## Data and current limits
+`package.ps1` includes runtime files, provider deployment configuration, documentation, and third-party notices, never user profiles, test data, or account credentials. It generates a ZIP and SHA-256 checksum. [THIRD_PARTY.md](THIRD_PARTY.md) lists dependencies; [CHANGELOG.md](CHANGELOG.md) records development milestones.
 
-Default data folder: `%LOCALAPPDATA%\TMA-Mail`. Credentials are in `account.protected`; each account has a separate `mail-<id>.protected` cache. DPAPI binds these files to the Windows user. Settings, saved signature templates, and the older sample `mailbox.json` remain unencrypted local JSON. Keep older prototypes closed when using the same profile. `--data-dir <path>` selects an isolated profile for testing; `--setup` opens onboarding and `--splash-preview` shows only the animated splash.
+## Data and beta limits
 
-This beta supports one active account, local drafts, a limited sync window, and safe text reading of incoming HTML (remote content is not loaded). Full-history/custom-folder sync, Gmail OAuth, account switching UI, a signed installer, and live-provider verification remain outstanding. An SMTP acceptance is not a guarantee of final delivery; check bounced messages normally. Disconnect removes credentials and keeps the encrypted cache; revoke Microsoft access through your Microsoft account if required.
+Default data folder: `%LOCALAPPDATA%\TMA-Mail`. Account secrets/MSAL cache are protected in `account.protected`; connected mail uses per-account protected caches. Settings/signature templates and the older sample mailbox remain unencrypted local JSON. DPAPI files are tied to your Windows user. Disconnect removes saved account credentials and retains the encrypted cache; revoke provider consent through your provider account settings when required.
 
-See [CHANGELOG.md](CHANGELOG.md) for the progression from the original local prototype through the current beta, and [SETUP.md](SETUP.md) for account setup and the first live test.
+One active account, local drafts, limited-window sync, and text reading of incoming HTML are supported. Full-history/custom-folder sync, a signed installer, and live-provider verification remain outstanding. Desktop banners appear while the app runs and are not persistent Windows Notification Center entries. Spotify controls need an active desktop media session. SMTP acceptance does not guarantee final delivery; if sending is interrupted, check Sent/the recipient before retrying.
+
+Keep older prototypes closed when sharing a profile. `--data-dir <path>` selects an isolated test profile, `--setup` reopens the provider chooser, and `--splash-preview` displays the animated splash only.

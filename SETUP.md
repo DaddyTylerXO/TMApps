@@ -1,42 +1,65 @@
-# Connect Outlook / Hotmail to TMA-Mail
+# TMA-Mail account setup
 
-This build has real IMAP and SMTP code. Microsoft requires an app registration before it can issue sign-in tokens to TMA-Mail. The registration is a one-time developer setup; users then sign in through Microsoft. No client secret is used by this desktop app.
+## For people using the app
 
-## 1. Register TMA-Mail
+On the welcome screen or in **Accounts**, choose:
 
-1. Open the [Microsoft Entra admin center](https://entra.microsoft.com/) and sign in with an account that can register applications in an Entra directory. If your personal account has no directory access, you will need access to a directory or a Microsoft developer tenant first.
-2. Go to **Identity → Applications → App registrations → New registration**.
-3. Enter **TMA-Mail** as the name. Choose **Accounts in any organizational directory and personal Microsoft accounts** so Outlook.com/Hotmail accounts can sign in. This build uses the `common` authority.
-4. Register the application and copy its **Application (client) ID** from Overview. This ID is public; it is not a password.
-5. Under **Authentication → Advanced settings**, enable **Allow public client flows**. The app uses Microsoft's device-code flow; no redirect URI or client secret is required for that flow.
-6. Under **API permissions**, add the **delegated** Outlook/Exchange permissions `IMAP.AccessAsUser.All` and `SMTP.Send` (Office 365 Exchange Online). The app requests those full Outlook resource scopes, plus `offline_access` for token renewal. Do not select the application-only `...AsApp` permissions. Work tenants may require administrator consent.
+- **Sign in with Outlook** — continue to Microsoft's sign-in page in your default browser.
+- **Sign in with Gmail** — continue to Google's sign-in page in your default browser.
+- **Sign in with iCloud** — enter your iCloud Mail address and an Apple app-specific password. The IMAP/SMTP settings are automatic. The form links to your Apple Account to generate a password; do not enter your normal Apple Account password.
+- **Other Provider / Advanced Setup** — enter the IMAP/SMTP details supplied by your email provider.
 
-Microsoft documents the [registration and Outlook IMAP/SMTP OAuth scopes](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth) and the [device-code public-client flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code).
+You can also **Explore for now** without connecting anything. Provider selection does not require an email address. Use Back to change your choice; Cancel abandons the current sign-in. TMA-Mail tests both receiving and sending connections before saving the account.
 
-## 2. Connect inside TMA-Mail
+For Gmail accounts that support app passwords, **Use a Google app password instead** is available on the Gmail screen. Google requires 2-Step Verification for app passwords, and some accounts cannot use them. [Google app-password instructions](https://support.google.com/accounts/answer/185833).
 
-1. Extract the entire portable ZIP and open `TMA-Mail.exe`.
-2. Select **Connect an account**. Choose **Microsoft** and enter your Outlook/Hotmail address and the public client ID.
-3. Keep IMAP `outlook.office365.com`, port `993`, and SMTP `smtp-mail.outlook.com`, port `587`. For Microsoft 365 work accounts, your administrator may specify `smtp.office365.com` instead.
-4. Select **Sign in & test connection**. TMA-Mail shows a temporary code.
-5. Select **Open Microsoft sign-in**, enter the code on Microsoft's page, sign in to the same mailbox, and review the requested access.
-6. TMA-Mail tests both receiving and sending connections before saving the account. It then loads your mail automatically. **Sync** also refreshes manually; automatic refresh runs every 60 seconds while the app is running.
+Apple documents [third-party access](https://support.apple.com/en-us/121539), [app-specific passwords](https://support.apple.com/en-us/102654), and [iCloud Mail connection settings](https://support.apple.com/en-us/102525). This build uses the app-password method; the iCloud button is not a claim that generic Sign in with Apple grants mailbox access.
 
-If Microsoft reports that IMAP is disabled, enable IMAP in your Outlook mail settings if available. Work accounts may need administrator changes to permit IMAP and authenticated SMTP. The app never falls back to an unencrypted connection or ignores certificate errors.
+## Developer setup: enable Outlook and Gmail once per build
 
-## 3. First live verification
+General users should never have to register an application, enter a client ID, or choose mail server ports for a known provider. The app publisher configures the provider registrations before distributing the build. This repository currently has **no registered provider client IDs**. The chooser clearly reports an unconfigured provider instead of pretending that sign-in will work. iCloud/app-password and custom IMAP connections do not need these OAuth registrations.
 
-After sign-in, verify incoming mail and a small message to an address you own, then confirm reply, attachment, read/star, and Trash/restore behavior. This has **not yet been performed for this release**: no Microsoft client ID or account authorization was available during development. Automated tests use synthetic data and a fake delivery function, never your mailbox.
+Copy `provider-settings.example.json` to `provider-settings.json` in the source root and fill in the publisher's registrations. The real file is ignored by Git. `build.ps1` copies it beside the executable; if it is absent, the build uses the empty example. The portable ZIP includes the build configuration.
 
-If a send is interrupted, check the server's Sent folder and the recipient before retrying. TMA-Mail keeps the draft and warns about uncertain delivery. SMTP acceptance means the server accepted the message; final delivery can still fail or bounce.
+```json
+{
+  "OutlookClientId": "YOUR-MICROSOFT-APPLICATION-ID",
+  "GmailClientId": "YOUR-GOOGLE-DESKTOP-CLIENT-ID.apps.googleusercontent.com",
+  "GmailDesktopClientSecret": "YOUR-GOOGLE-DESKTOP-CLIENT-VALUE"
+}
+```
 
-## Gmail and other providers
+Use only installed/desktop client registrations here. Desktop OAuth client values are distributed with the application and cannot be treated as confidential server secrets. Never put a web-service client secret, a user's password, or a user's refresh token into this file. User tokens and the MSAL cache are separately protected with Windows DPAPI.
 
-- **Gmail:** choose Gmail, enter your address and a [Google app password](https://support.google.com/accounts/answer/185833). Google requires 2-Step Verification for app passwords; some accounts cannot use them. Gmail OAuth browser sign-in is not included in this build.
-- **Other IMAP:** enter the server hosts, ports, username, and provider-supported app password. IMAP port 993 uses implicit TLS; other IMAP ports require STARTTLS. SMTP 465 uses implicit TLS; other SMTP ports require STARTTLS. Servers must advertise special-use folders for Sent, Trash, and Archive.
+### Outlook / Hotmail / Microsoft 365
 
-## Storage and disconnecting
+1. Open the [Microsoft Entra admin center](https://entra.microsoft.com/) with an account allowed to register apps. A personal account may first need access to an Entra directory or developer tenant.
+2. Choose **App registrations → New registration**, name it **TMA-Mail**, and select **Accounts in any organizational directory and personal Microsoft accounts**.
+3. Under **Authentication**, add **Mobile and desktop applications** with redirect URI **http://localhost** for system-browser sign-in. This is a desktop/public client, not a web app or SPA. Do not create a client secret.
+4. Add the delegated Outlook/Exchange permissions **IMAP.AccessAsUser.All** and **SMTP.Send**. Work tenants may require administrator consent and must permit IMAP/authenticated SMTP.
+5. Copy the public **Application (client) ID** to `OutlookClientId`, then rebuild and package.
 
-Account secrets and live mail are protected with Windows DPAPI under `%LOCALAPPDATA%\TMA-Mail`. Disconnect removes the saved credentials, returns to the sample mailbox, and retains the encrypted cache for reconnection. It does not revoke existing Microsoft consent; manage that through your Microsoft account. Settings/signature templates and the older sample mailbox remain local unencrypted JSON. DPAPI files are tied to the Windows user; copying them to another computer is not a backup strategy.
+Microsoft sign-in now uses the official MSAL library with the system browser, PKCE, and a protected token cache. MSAL handles token renewal. Existing 0.7 device-code connections continue to renew using their saved credentials.
 
-This beta supports one active account, the latest 200 messages in Inbox/Sent/Archive/Trash, local drafts, and text reading of received HTML. Messages over 25 MB are excluded from this initial sync window. Custom server folders, full-history download, Gmail OAuth, a signed installer, and live-provider certification remain future work.
+References: [Microsoft native-app authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [Outlook IMAP/SMTP scopes](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth), [MSAL system browser](https://learn.microsoft.com/en-us/entra/msal/dotnet/acquiring-tokens/using-web-browsers).
+
+### Gmail
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create/select the publisher's project, enable Gmail, and configure the Google Auth Platform branding, audience, and consent screen.
+2. Create an OAuth client with application type **Desktop app**. Copy its client ID and installed-app client value into `GmailClientId` and `GmailDesktopClientSecret`.
+3. Request `openid`, `email`, and **https://mail.google.com/**. The latter is the scope required for Gmail IMAP/SMTP and is restricted. Public distribution needs Google's applicable verification requirements; while testing, add the intended accounts as test users. Testing-mode refresh tokens may expire and require sign-in again.
+4. Rebuild and package. Users select Gmail and finish consent on Google's site; the app reads the verified signed-in email address automatically.
+
+Google sign-in uses the official Google .NET library's PKCE flow with a loopback callback and default browser. It uses no embedded web view and no plaintext Google credential store. Refresh tokens are saved only inside TMA-Mail's protected account file.
+
+References: [Google desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app), [Gmail OAuth scope requirements](https://developers.google.com/workspace/gmail/imap/xoauth2-protocol), [Google OAuth policies](https://developers.google.com/identity/protocols/oauth2/policies).
+
+## First live verification and current limits
+
+Automated tests use synthetic accounts and fake delivery. Live provider sign-in and round-trip delivery are still **unverified**, because no app registrations or account authorization were supplied during development. After enabling a provider, verify sign-in, receiving, a small message to an address you own, reply/attachment, read/star, and Trash/restore before relying on the build.
+
+One active account is supported. Sync runs every 60 seconds while the app is running, or with **Sync**. It loads the latest 200 messages per Inbox/Sent/Archive/Trash folder; messages over 25 MB are excluded. Drafts remain local. Custom folders/full-history download and a signed installer are not included. TLS is required and certificate failures are never ignored.
+
+If sending is interrupted, check the server's Sent folder and the recipient before retrying. SMTP acceptance is not a guarantee of final delivery. Disconnect removes credentials and returns to Explore mode, retaining the encrypted cache. Revoke provider consent through Microsoft/Google/Apple account settings when required.
+
+Live mail and credentials live under `%LOCALAPPDATA%\TMA-Mail` and are DPAPI-protected for the Windows user. Settings/signature templates and sample mail remain local unencrypted JSON. Copying DPAPI files to another Windows account is not a backup strategy.

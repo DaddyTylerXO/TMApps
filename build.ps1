@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.7-release')
+param([string]$OutputDirectory = 'build\v0.8')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -11,10 +11,12 @@ $arguments = @('/nologo', '/target:winexe', '/optimize+', ('/out:' + (Join-Path 
 $arguments += '/win32icon:' + (Join-Path $root 'assets\TMA-Mail.ico')
 $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mail.ico'
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
-foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+$arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
+foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net461') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
+    if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net45') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
     if ($dll) { $arguments += '/reference:' + $dll.FullName; Copy-Item -LiteralPath $dll.FullName -Destination $out -Force }
 }
 foreach ($reference in $references) { $arguments += '/reference:' + (Join-Path $framework $reference) }
@@ -39,4 +41,8 @@ foreach ($metadata in @('Windows.Foundation.winmd', 'Windows.Media.winmd', 'Wind
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $root 'src\MainWindow.xaml') -Destination $out -Force
 Copy-Item -LiteralPath (Join-Path $root 'src\TMA-Mail.exe.config') -Destination $out -Force
+foreach ($document in @('SETUP.md','README.md')) { Copy-Item -LiteralPath (Join-Path $root $document) -Destination $out -Force }
+$providerConfig = Join-Path $root 'provider-settings.json'
+if (!(Test-Path $providerConfig)) { $providerConfig = Join-Path $root 'provider-settings.example.json' }
+Copy-Item -LiteralPath $providerConfig -Destination (Join-Path $out 'provider-settings.json') -Force
 Write-Host "Built $out\TMA-Mail.exe"

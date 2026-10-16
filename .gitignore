@@ -5,3 +5,4 @@ packages/
 release-repository/
 *.protected
 *.tmp
+provider-settings.json

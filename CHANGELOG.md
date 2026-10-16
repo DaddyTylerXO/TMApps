@@ -2,6 +2,18 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.8.0 beta — 16 October 2026
+
+- Replace the email-entry welcome screen with logo buttons for Sign in with Outlook, Sign in with Gmail, Sign in with iCloud, and Other Provider / Advanced Setup, plus Explore for now.
+- Replace the overwhelming Accounts form with the same provider chooser and focused steps with Back and Cancel.
+- Move IMAP/SMTP hosts, ports, and optional username into Advanced Setup only. Remove client-ID fields from the user-facing account journey.
+- Add official MSAL system-browser sign-in for Outlook and official Google .NET PKCE system-browser sign-in for Gmail, automatic signed-in address discovery, protected token caching, and renewal. Preserve existing Microsoft device-code and Gmail app-password account compatibility.
+- Add publisher-level provider configuration via ignored `provider-settings.json`; include a blank example. Unconfigured providers explain that sign-in is not enabled for the build rather than attempting fake authentication.
+- Add automatic iCloud server presets and a simple email/app-specific-password form with an Apple Account link. Keep a simple Gmail app-password fallback.
+- Add 31 provider-setup checks covering routing, hidden fields, provider presets, authentication dependency loading, Back, Explore, and connection handoff. The existing test suite also passes.
+- Verify welcome and iCloud form appearance in the native Windows app. Update portable packaging, license notices, and separate user/developer setup instructions.
+- Live provider sign-in/delivery remains unverified pending publisher app registrations and user authorization. Apple Account mailbox OAuth is not claimed by the iCloud app-password flow.
+
 ## 0.7.0 beta — 16 October 2026
 
 - Replaced the generic Windows icon with the application's green envelope: executable, title bars, compose/settings windows, startup window, and tray. Included 16–256 px icon assets.

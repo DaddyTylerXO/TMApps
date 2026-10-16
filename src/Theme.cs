@@ -29,12 +29,12 @@ namespace Postbox {
                 case "TEXT": case "#17243B": case "#243C60": case "#41516B": case "#4B5870": case "#4C5970": case "#53617A": return Dark ? "#ECEEF3" : "#242833";
                 case "#14243E": return "#0D2419";
                 case "#293F62": return "#35415B";
-                case "#4D83F5": case "#447EF2": case "#386FD4": case "#3566B9": return Dark ? "#5975C5" : "#526BB0";
-                case "#F5F7FB": case "#F8FAFD": return Dark ? "#17191F" : "#F4F5F8";
-                case "#F0F3F8": case "#F2F5F9": case "#F3F6FB": case "#F6F8FC": case "#EDF3FF": case "#ECF2FF": case "#E8EEFA": case "#E9EDFC": case "#DDE8FD": return Dark ? "#2D313B" : "#EDF0F6";
-                case "#E7EBF2": case "#DDE4EF": case "#E4E9F1": case "#E3E8F1": case "#EDF0F5": case "#E1E6EF": return Dark ? "#393F4B" : "#DCE1EA";
+                case "ACCENT": case "#4D83F5": case "#447EF2": case "#386FD4": case "#3566B9": return Dark ? "#5975C5" : "#526BB0";
+                case "CANVAS": case "#F5F7FB": case "#F8FAFD": return Dark ? "#17191F" : "#F4F5F8";
+                case "RAISED": case "#F0F3F8": case "#F2F5F9": case "#F3F6FB": case "#F6F8FC": case "#EDF3FF": case "#ECF2FF": case "#E8EEFA": case "#E9EDFC": case "#DDE8FD": return Dark ? "#2D313B" : "#EDF0F6";
+                case "BORDERS": case "#E7EBF2": case "#DDE4EF": case "#E4E9F1": case "#E3E8F1": case "#EDF0F5": case "#E1E6EF": return Dark ? "#393F4B" : "#DCE1EA";
                 case "#244B91": case "#5378B8": case "#5775A8": case "#6D6EB0": return Dark ? "#B2C7FA" : "#405F9B";
-                case "#8793A7": case "#8090A8": case "#8290A7": case "#79879D": case "#697891": case "#7C8BA3": case "#8995A8": case "#91A0B4": case "#99A4B5": case "#A2ADBE": case "#8A98AC": case "#929DB0": return Dark ? "#A9B0C0" : "#667085";
+                case "MUTED": case "#8793A7": case "#8090A8": case "#8290A7": case "#79879D": case "#697891": case "#7C8BA3": case "#8995A8": case "#91A0B4": case "#99A4B5": case "#A2ADBE": case "#8A98AC": case "#929DB0": return Dark ? "#A9B0C0" : "#667085";
                 case "#BC4343": return Dark ? "#F39A92" : "#A82D2D";
                 default: return key;
             }

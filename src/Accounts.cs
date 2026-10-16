@@ -22,6 +22,9 @@ namespace Postbox {
         public bool SmtpSsl { get; set; }
         public string Password { get; set; }
         public string ClientId { get; set; }
+        public string ClientSecret { get; set; }
+        public string AuthMethod { get; set; }
+        public string AuthCache { get; set; }
         public string RefreshToken { get; set; }
         public string AccessToken { get; set; }
         public DateTime ExpiresUtc { get; set; }
@@ -29,7 +32,7 @@ namespace Postbox {
             Email = WelcomeFlow.ValidateEmail(Email);
             if (String.IsNullOrWhiteSpace(UserName)) UserName = Email;
             if (String.IsNullOrWhiteSpace(ImapHost) || String.IsNullOrWhiteSpace(SmtpHost) || ImapPort < 1 || ImapPort > 65535 || SmtpPort < 1 || SmtpPort > 65535) throw new ArgumentException("Enter valid IMAP/SMTP hosts and ports.");
-            if (Provider != "Microsoft" && String.IsNullOrEmpty(Password)) throw new ArgumentException("Enter your provider's app password.");
+            if (Provider != "Microsoft" && AuthMethod != "OAuth" && String.IsNullOrEmpty(Password)) throw new ArgumentException("Enter your provider's app password.");
             if (String.IsNullOrEmpty(Id)) Id = Guid.NewGuid().ToString("N");
         }
     }
