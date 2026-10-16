@@ -20,7 +20,7 @@ namespace TMApps {
             directory=Path.GetFullPath(directory); Directory.CreateDirectory(directory);
             string executable=Path.Combine(directory,"TMApps-Launcher.exe");
             foreach(var process in Process.GetProcessesByName("TMApps-Launcher")) {
-                using(process) { try { if(String.Equals(process.MainModule.FileName,executable,StringComparison.OrdinalIgnoreCase)) throw new IOException("Close TMApps Launcher first. If it is in the tray, right-click its rocket icon and choose Quit, then retry."); } catch(System.ComponentModel.Win32Exception) { throw new IOException("Close TMApps Launcher before installing an update."); } }
+                using(process) { try { if(integrate || String.Equals(process.MainModule.FileName,executable,StringComparison.OrdinalIgnoreCase)) throw new IOException("Close TMApps Launcher first, including older portable copies. If it is in the tray, right-click its rocket icon and choose Quit, then retry."); } catch(System.ComponentModel.Win32Exception) { throw new IOException("Close TMApps Launcher before installing an update."); } }
             }
             string temporary=executable+".new"; string backup=executable+".previous";
             using(var payload=typeof(Setup).Assembly.GetManifestResourceStream("TMApps.payload.exe")) {
