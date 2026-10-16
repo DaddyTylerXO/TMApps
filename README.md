@@ -2,6 +2,8 @@
 
 A native Windows home for **TMA-Mail** and **TMA-Agent Office**. Install applications, open them, and apply updates from one dark, green-accented library. Inspired by the supplied reference, with original TMApps branding and visuals.
 
+![TMApps Launcher library](docs/launcher-preview.png)
+
 ## Download and run
 
 Download **TMApps-Launcher-1.0.0-windows-x64.zip** from [Windows downloads](https://github.com/DaddyTylerXO/TMApps/releases/tag/tma-apps), extract the entire folder, and run **TMApps Launcher.exe**. Keep its XAML, config, and catalog beside it. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
