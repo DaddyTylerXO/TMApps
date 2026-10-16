@@ -15,6 +15,7 @@ class ProviderSetupTests {
     static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject {
         foreach (var item in LogicalTreeHelper.GetChildren(parent)) {
             var child = item as DependencyObject; if (child == null) continue;
+            var element = child as UIElement; if (element != null && element.Visibility != Visibility.Visible) continue;
             if (child is T) yield return (T)child;
             foreach (var nested in Descendants<T>(child)) yield return nested;
         }
@@ -63,6 +64,15 @@ class ProviderSetupTests {
         Descendants<TextBox>(cloud).Single().Text = "test@icloud.com"; Descendants<PasswordBox>(cloud).Single().Password = "fake-app-password";
         Descendants<Button>(cloud).Single(b => b.Content as string == "Connect iCloud").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(cloud.Connected && connected != null && connected.Email == "test@icloud.com" && connected.ImapPort == 993 && connected.SmtpPort == 587, "Simple iCloud form did not connect using hidden presets");
+        var failure = new TaskCompletionSource<int>(); failure.SetException(new MailKit.Security.SslHandshakeException(new string('x', 1200)));
+        var failed = new AccountSetupWindow(null, config, delegate(MailAccount value, CancellationToken token) { return failure.Task; }, delegate { }, "iCloud");
+        Descendants<TextBox>(failed).Single().Text = "test@icloud.com"; Descendants<PasswordBox>(failed).Single().Password = "fake-app-password";
+        Descendants<Button>(failed).Single(b => b.Content as string == "Connect iCloud").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(!failed.Connected && Descendants<TextBlock>(failed).Any(t => t.Text.Contains("secure connection") && t.Text.Length < 200), "TLS failure did not show a concise message");
+        Check(!Descendants<TextBox>(failed).Any(t => Name(t) == "Technical connection details"), "Long connection details expanded automatically");
+        Descendants<Button>(failed).Single(b => b.Content as string == "Show connection details").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(Descendants<TextBox>(failed).Any(t => Name(t) == "Technical connection details" && t.IsReadOnly && t.Height == 140 && t.Text.Length > 1200), "Optional connection details were not bounded and readable");
+        failed.ShowPicker(); Check(!Descendants<TextBox>(failed).Any(), "Back did not clear connection error details"); failed.Close();
         var ready = new AccountSetupWindow(null, config, fake, delegate { }, "Microsoft");
         Check(Descendants<Button>(ready).Any(b => b.Content as string == "Continue with Outlook") && !Descendants<TextBox>(ready).Any(), "Configured Outlook has no simple sign-in action"); ready.Close();
         Theme.SetMode("Light"); var light = new WelcomeWindow(exploreSettings, new Preferences(), true); light.Measure(new Size(820, 680)); light.Arrange(new Rect(0, 0, 820, 680));

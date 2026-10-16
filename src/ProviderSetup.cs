@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -53,6 +54,8 @@ namespace Postbox {
         private readonly Action disconnect;
         private readonly StackPanel form;
         private readonly TextBlock status;
+        private readonly Button detailsButton;
+        private readonly TextBox connectionDetails;
         private readonly Button back;
         private CancellationTokenSource cancellation;
         private bool busy, closeAfterCancel;
@@ -66,14 +69,18 @@ namespace Postbox {
             back = new Button { Content = "‹  Back", Padding = new Thickness(12, 8, 12, 8), HorizontalAlignment = HorizontalAlignment.Left }; back.Click += delegate { ShowPicker(); }; heading.Children.Add(back);
             heading.Children.Add(new TextBlock { Text = "TMA-Mail", FontSize = 12, Foreground = Theme.B("Muted"), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right });
             var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) }; DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
-            status = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Theme.B("Muted"), FontSize = 12, Margin = new Thickness(0, 0, 0, 10) }; footer.Children.Add(status);
+            status = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Theme.B("Muted"), FontSize = 12, MaxHeight = 72, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 0, 10) }; footer.Children.Add(status);
+            connectionDetails = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, Height = 140, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 4, 0, 10), Visibility = Visibility.Collapsed };
+            System.Windows.Automation.AutomationProperties.SetName(connectionDetails, "Technical connection details");
+            detailsButton = new Button { Content = "Show connection details", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 8), Visibility = Visibility.Collapsed };
+            detailsButton.Click += delegate { bool show = connectionDetails.Visibility != Visibility.Visible; connectionDetails.Visibility = show ? Visibility.Visible : Visibility.Collapsed; detailsButton.Content = show ? "Hide connection details" : "Show connection details"; }; footer.Children.Add(detailsButton); footer.Children.Add(connectionDetails);
             var cancel = new Button { Content = "Cancel", HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(18, 8, 18, 8) }; cancel.Click += delegate { Close(); }; footer.Children.Add(cancel);
             form = new StackPanel(); root.Children.Add(new ScrollViewer { Content = form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs args) { if (busy) { closeAfterCancel = true; cancellation.Cancel(); status.Text = "Cancelling sign-in…"; args.Cancel = true; } };
             if (initialProvider == null) ShowPicker(); else SelectProvider(initialProvider);
         }
         private void Heading(string title, string subtitle) {
-            form.Children.Clear(); status.Text = "";
+            form.Children.Clear(); status.Text = ""; ClearConnectionDetails();
             form.Children.Add(new TextBlock { Text = title, FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12) });
             form.Children.Add(new TextBlock { Text = subtitle, FontSize = 13, Foreground = Theme.B("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 24) });
         }
@@ -139,13 +146,22 @@ namespace Postbox {
         }
         private async Task RunConnection(Func<CancellationToken, Task<MailAccount>> prepare) {
             if (busy) return; busy = true; closeAfterCancel = false; form.IsEnabled = false; back.IsEnabled = false;
+            ClearConnectionDetails();
             cancellation = new CancellationTokenSource(); cancellation.CancelAfter(TimeSpan.FromMinutes(5));
             status.Text = "Finish signing in, then we’ll connect your mailbox…";
             try { var value = await prepare(cancellation.Token); cancellation.Token.ThrowIfCancellationRequested(); value.Validate(); status.Text = "Connecting your mailbox…"; await connect(value, cancellation.Token); Connected = true; busy = false; Close(); }
             catch (OperationCanceledException) { status.Text = "Sign-in cancelled. You can try again whenever you’re ready."; }
             catch (Microsoft.Identity.Client.MsalException) { status.Text = "Outlook couldn’t finish signing in. Try again, or check the provider setup guide."; }
-            catch (Exception ex) { status.Text = "We couldn’t connect: " + ex.Message; }
+            catch (MailKit.Security.SslHandshakeException ex) { ConnectionError("We couldn’t establish a secure connection. Check Windows date/time and your network, then try again. Connection details are available below.", ex); }
+            catch (MailKit.Security.AuthenticationException ex) { ConnectionError("Your email provider couldn’t verify the sign-in. Check the email address and app-specific password, or sign in again.", ex); }
+            catch (Exception ex) { string reason = ex.Message.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Please try again."; if (reason.Length > 180) reason = reason.Substring(0, 180) + "…"; ConnectionError("We couldn’t connect: " + reason, ex); }
             finally { busy = false; cancellation.Dispose(); cancellation = null; form.IsEnabled = true; back.IsEnabled = true; if (closeAfterCancel && !Connected) Close(); }
+        }
+        private void ClearConnectionDetails() { detailsButton.Visibility = Visibility.Collapsed; detailsButton.Content = "Show connection details"; connectionDetails.Visibility = Visibility.Collapsed; connectionDetails.Text = ""; }
+        private void ConnectionError(string message, Exception error) {
+            status.Text = message; var details = new System.Text.StringBuilder();
+            for (var currentError = error; currentError != null; currentError = currentError.InnerException) details.AppendLine(currentError.GetType().Name + ": " + currentError.Message);
+            connectionDetails.Text = details.ToString(); detailsButton.Visibility = Visibility.Visible;
         }
     }
 }

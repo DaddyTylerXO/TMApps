@@ -2,11 +2,11 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.8.1 beta** simplifies adding an account. Welcome and Accounts now offer provider buttons with Outlook, Gmail, and iCloud logos, plus **Other Provider / Advanced Setup**. You no longer enter an email address on the welcome screen.
+**Version 0.8.2 beta** simplifies adding an account. Welcome and Accounts now offer provider buttons with Outlook, Gmail, and iCloud logos, plus **Other Provider / Advanced Setup**. You no longer enter an email address on the welcome screen.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.8.1-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 with .NET Framework 4.8. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.8.2-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 with .NET Framework 4.8. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -43,11 +43,12 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.8.1/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.8.2/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 
-Tests cover mailbox operations, preferences, layouts, rich signatures/composing, encrypted storage, MIME, delivery success/failure, and 31 provider-setup checks for routing, presets, hidden advanced fields, dependency loading, and Explore mode. They never authenticate to real providers or send external mail. Optional `test-media.ps1` checks local media discovery.
+Tests cover mailbox operations, preferences, layouts, rich signatures/composing, encrypted storage, MIME, delivery success/failure, and 35 provider-setup checks for routing, presets, hidden advanced fields, dependency loading, and Explore mode. They never authenticate to real providers or send external mail. Optional `test-media.ps1` checks local media discovery.
+Optional `test-tls.ps1` verifies Apple IMAP/SMTP TLS connectivity using the production mail-client settings, without credentials or sending mail. Version 0.8.2 corrects the executable's .NET target and TLS defaults; both Apple endpoints were verified with TLS 1.3 and standard certificate checks.
 
 `package.ps1` includes runtime files, provider deployment configuration, documentation, and third-party notices, never user profiles, test data, or account credentials. It generates a ZIP and SHA-256 checksum. [THIRD_PARTY.md](THIRD_PARTY.md) lists dependencies; [CHANGELOG.md](CHANGELOG.md) records development milestones.
 

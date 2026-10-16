@@ -20,13 +20,15 @@ namespace Postbox {
             if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account); if (persistTokens) accounts.Save(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
             else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password); }
         }
+        internal static ImapClient CreateImapClient() { return new ImapClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
+        internal static SmtpClient CreateSmtpClient() { return new SmtpClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
         private ImapClient Connect() {
-            var client = new ImapClient { Timeout = 30000 };
+            var client = CreateImapClient();
             try { client.Connect(account.ImapHost, account.ImapPort, account.ImapPort == 993 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls); Authenticate(client); return client; }
             catch { client.Dispose(); throw; }
         }
         private SmtpClient ConnectSmtp() {
-            var client = new SmtpClient { Timeout = 30000 };
+            var client = CreateSmtpClient();
             try { client.Connect(account.SmtpHost, account.SmtpPort, account.SmtpSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls); Authenticate(client); return client; }
             catch { client.Dispose(); throw; }
         }

@@ -2,6 +2,14 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.8.2 beta — 16 October 2026
+
+- Fix iCloud IMAP/SMTP TLS failures caused by the executable's missing .NET target-framework metadata. Explicitly target .NET Framework 4.8 and let Windows select the TLS protocol for mail connections.
+- Keep normal certificate and revocation validation enabled. Add application-scoped strong-crypto/system-default TLS settings without changing Windows settings.
+- Replace the oversized connection-error dump with concise messages and an optional scrollable connection-details panel.
+- Add regression checks for framework metadata and production mail-client TLS/certificate policy, plus an optional password-free Apple endpoint smoke check.
+- Verify both Apple endpoints negotiate TLS 1.3 with normal certificate validation. This confirms transport connectivity; account authentication and mail delivery still require the user's own sign-in.
+
 ## 0.8.1 beta — 16 October 2026
 
 - Add a question-mark help button beside the iCloud app-specific password label. Clicking it reveals Apple Account instructions, the two-factor authentication requirement, and a direct link to Apple's UK support guide. Click again to hide the instructions.

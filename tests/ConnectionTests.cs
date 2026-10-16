@@ -22,6 +22,14 @@ class ConnectionTests {
         var app = new Application(); app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         string directory = Path.Combine(args[0], "connections-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(directory);
         var accountStore = new AccountStore(directory);
+        var framework = (System.Runtime.Versioning.TargetFrameworkAttribute)Attribute.GetCustomAttribute(typeof(App).Assembly, typeof(System.Runtime.Versioning.TargetFrameworkAttribute));
+        Check(framework != null && framework.FrameworkName == ".NETFramework,Version=v4.8", "Executable lost its modern .NET target (legacy TLS regression)");
+        foreach (string factory in new[] { "CreateImapClient", "CreateSmtpClient" }) {
+            using (var client = (MailKit.MailService)typeof(MailTransport).GetMethod(factory, BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null)) {
+                Check(client.SslProtocols == System.Security.Authentication.SslProtocols.None, "Mail client forced legacy TLS defaults");
+                Check(client.CheckCertificateRevocation && client.ServerCertificateValidationCallback == null, "Certificate verification was weakened");
+            }
+        }
         var account = new MailAccount { Email = "tester@example.com", UserName = "tester", Provider = "Other IMAP", ImapHost = "imap.example.com", ImapPort = 993, SmtpHost = "smtp.example.com", SmtpPort = 587, Password = "fake-test-password", RefreshToken = "fake-test-refresh-token" }; account.Validate(); accountStore.Save(account);
         var disk = File.ReadAllBytes(Path.Combine(directory, "account.protected"));
         Check(!Encoding.UTF8.GetString(disk).Contains("fake-test"), "Credentials leaked in plaintext");
