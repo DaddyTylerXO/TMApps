@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 — 2026-10-16
+
+- Single downloadable `TMApps-Launcher.exe` with embedded interface and initial app catalog; no extraction or companion files.
+- Compact application list by default, optional grid, and Not installed filter.
+- Version numbers and source update dates for each application.
+- Both published app packages available immediately from the embedded library.
+- Standalone startup test that loads the EXE from an otherwise empty folder.
+
 ## Public distribution — 2026-10-16
 
 - Verified installation and uninstall of both published app packages without GitHub authentication.

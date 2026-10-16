@@ -36,7 +36,7 @@ namespace TMApps {
             string root = Path.Combine(args[0], "build", "test-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
             try {
                 var catalog = LauncherService.ParseCatalog(File.ReadAllText(Path.Combine(args[0], "catalog.json")));
-                Check(catalog.apps.Count == 2 && catalog.apps[0].Available && !catalog.apps[1].Available, "Bundled catalog availability");
+                Check(catalog.apps.Count == 2 && catalog.apps.All(a => a.Available), "Both real app packages bundled in catalog");
                 Check(LauncherService.TrustedUrl(catalog.apps[0].downloadUrl), "Pinned Mail artifact URL");
                 Check(!LauncherService.TrustedUrl("https://github.com/attacker/TMApps/releases/download/a/file.zip"), "Reject other repositories");
                 Check(!LauncherService.TrustedUrl("https://github.com.evil.test/DaddyTylerXO/TMApps/releases/download/file"), "Reject lookalike host");
@@ -46,7 +46,7 @@ namespace TMApps {
                 string original = File.ReadAllText(Path.Combine(args[0], "catalog.json"));
                 Reject(() => LauncherService.ParseCatalog(original.Replace("Agent Office.exe", "..\\\\evil.exe")), "Reject arbitrary executable");
                 Reject(() => LauncherService.ParseCatalog(original.Replace("tma-agent-office", "tma-mail")), "Reject duplicate app");
-                Reject(() => LauncherService.ParseCatalog(original.Replace("2d7b0cc95d7f39a7d69fffa1db80b34375686b91fd8ecd8277a3c04c0325bacd", "bad")), "Require checksum");
+                Reject(() => LauncherService.ParseCatalog(original.Replace(catalog.apps[0].sha256, "bad")), "Require checksum");
                 Check(LauncherService.IsNewer("0.10.0", "0.9.0"), "Numeric version comparison");
                 Check(LauncherService.IsNewer("1.0.0", "1.0.0-beta"), "Stable version follows beta");
                 Check(!LauncherService.IsNewer("1.0.0-beta", "1.0.0"), "Never downgrade stable to beta");
@@ -78,6 +78,7 @@ namespace TMApps {
                 string package = Path.Combine(root, "valid.zip"); Zip(package, "TMA-Mail.exe", "first application fixture");
                 var handler = new PackageHandler { Bytes = File.ReadAllBytes(package) };
                 var candidate = LauncherService.ParseCatalog(original).apps[0];
+                candidate.version = "0.8.0-beta";
                 using (var sha = SHA256.Create()) candidate.sha256 = BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-", "").ToLowerInvariant();
                 using (var service = new LauncherService(Path.Combine(root, "install-profile"), handler)) {
                     service.Install(candidate, new QuietProgress(), CancellationToken.None).GetAwaiter().GetResult();
@@ -104,12 +105,20 @@ namespace TMApps {
                     candidate.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/fixture.zip";
                     service.Install(candidate, new QuietProgress(), CancellationToken.None).GetAwaiter().GetResult();
                     Check(handler.UsedAuth && handler.LastUrl == "https://api.github.com/repos/DaddyTylerXO/TMApps/releases/assets/123", "Private release uses authenticated asset API");
-                    candidate.downloadUrl = catalog.apps[0].downloadUrl;
+                    candidate.downloadUrl = "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/a9625524f2717e948285eabfd19d958c556f2d4a/dist/TMA-Mail-0.8.0-beta-windows.zip";
                     service.Install(candidate, new QuietProgress(), CancellationToken.None).GetAwaiter().GetResult();
                     Check(handler.UsedAuth && handler.LastUrl.Contains("/contents/dist/") && handler.LastUrl.Contains("?ref="), "Private source artifact uses contents API");
                     service.SaveToken(""); Check(!service.HasToken && !File.Exists(Path.Combine(service.Root,"github-token.dat")), "Disconnect removes GitHub token");
                     Reject(() => service.SaveToken("invalid\r\ntoken"), "Reject malformed token");
                 }
+                string standalone = Path.Combine(root,"standalone"); Directory.CreateDirectory(standalone);
+                string exe = Path.Combine(standalone,"TMApps-Launcher.exe"); File.Copy(Path.Combine(args[0],"build","TMApps-Launcher.exe"),exe);
+                string report = Path.Combine(standalone,"verification.txt");
+                var start = new System.Diagnostics.ProcessStartInfo(exe, "--verify-package \"" + report + "\"") { WorkingDirectory = standalone, UseShellExecute = false, CreateNoWindow = true };
+                using (var process = System.Diagnostics.Process.Start(start)) { if (!process.WaitForExit(15000)) { process.Kill(); throw new Exception("Standalone startup timed out"); } Check(process.ExitCode == 0 && File.ReadAllText(report).StartsWith("OK:"), "EXE loads UI and catalog alone in empty folder"); }
+                Check(Directory.GetFiles(standalone).Length == 2, "Standalone startup needs no config, XAML, JSON, or DLL sidecars");
+                Check(new AppView { Info = catalog.apps[0] }.UpdatedLabel == "Oct 16, 2026", "App update date displayed from metadata");
+                using (var embedded = new LauncherService(Path.Combine(root,"embedded-profile"))) Check(embedded.LoadCatalog().apps.Count == 2, "Embedded catalog fallback works without source files");
                 var application = new Application();
                 string xaml = File.ReadAllText(Path.Combine(args[0], "src", "MainWindow.xaml"));
                 xaml = System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", "");
@@ -124,6 +133,11 @@ namespace TMApps {
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 using (var output = File.Create(Path.Combine(args[0], "build", "launcher-preview.png"))) encoder.Save(output);
                 Check(cards.Items.Count == 2, "Render real WPF templates for both apps");
+                cards.ItemTemplate = (DataTemplate)window.Resources["AppCard"];
+                var gridFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.UniformGrid)); gridFactory.SetValue(System.Windows.Controls.Primitives.UniformGrid.ColumnsProperty, 2);
+                cards.ItemsPanel = new ItemsPanelTemplate(gridFactory);
+                content.Measure(new Size(900,600)); content.Arrange(new Rect(0,0,900,600)); content.UpdateLayout();
+                Check(cards.ActualWidth > 0 && cards.Items.Count == 2, "Grid template loads at minimum supported width");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

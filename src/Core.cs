@@ -14,11 +14,20 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 
 namespace TMApps {
+    public static class Bundled {
+        public static string Read(string name) {
+            using (var input = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps." + name)) {
+                if (input == null) throw new InvalidDataException("Missing embedded launcher resource: " + name);
+                using (var reader = new StreamReader(input)) return reader.ReadToEnd();
+            }
+        }
+    }
     public class Catalog { public int schemaVersion { get; set; } public List<AppInfo> apps { get; set; } }
     public class AppInfo {
         public string id { get; set; } public string name { get; set; } public string category { get; set; }
         public string description { get; set; } public string version { get; set; } public string branch { get; set; }
         public string executable { get; set; } public string downloadUrl { get; set; } public string sha256 { get; set; }
+        public string updatedAt { get; set; }
         public bool Available { get { return !String.IsNullOrEmpty(downloadUrl); } }
     }
     public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } }
@@ -103,10 +112,10 @@ namespace TMApps {
             if (a.Length != b.Length) return a.Length == 1;
             return a.Length > 1 && String.CompareOrdinal(a[1], b[1]) > 0;
         }
-        public Catalog LoadCatalog(string bundled) {
+        public Catalog LoadCatalog(string bundled = null) {
             string cache = Path.Combine(Root, "catalog.json");
             if (File.Exists(cache)) { try { return ParseCatalog(File.ReadAllText(cache)); } catch { } }
-            return ParseCatalog(File.ReadAllText(bundled));
+            return ParseCatalog(bundled == null ? Bundled.Read("catalog.json") : File.ReadAllText(bundled));
         }
         public async Task<Catalog> Refresh(CancellationToken token) {
             using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token)) {

@@ -1,12 +1,12 @@
 # TMApps Launcher
 
-A native Windows home for **TMA-Mail** and **TMA-Agent Office**. Install applications, open them, and apply updates from one dark, green-accented library. Inspired by the supplied reference, with original TMApps branding and visuals.
+A standalone Windows launcher for **TMA-Mail** and **TMA-Agent Office**. One EXE opens a compact application list with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and installation all happen inside the launcher.
 
 ![TMApps Launcher library](docs/launcher-preview.png)
 
 ## Download and run
 
-Download **TMApps-Launcher-1.0.0-windows-x64.zip** from [Windows downloads](https://github.com/DaddyTylerXO/TMApps/releases/tag/tma-apps), extract the entire folder, and run **TMApps Launcher.exe**. Keep its XAML, config, and catalog beside it. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
+Download [**TMApps-Launcher.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher.exe) and open it. This is the entire launcher: no ZIP extraction, companion files, or developer tools are needed. The interface and initial app catalog are embedded in the EXE. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
 
 The release is created by the [Publish Windows launcher and app catalog workflow](https://github.com/DaddyTylerXO/TMApps/actions/workflows/publish.yml). Check that workflow for the first build's status if the release is not available yet.
 
@@ -15,7 +15,8 @@ The release is created by the [Publish Windows launcher and app catalog workflow
 - **Install app** downloads a Windows ZIP and verifies its SHA-256 checksum before extraction.
 - **Open app** starts the installed executable. The options menu also opens an older installed version while an update is available.
 - **Check for updates** fetches the current application catalog. **Update app** installs the newer build when you choose it.
-- Search, **Installed** / **Updates** filters, and grid/list views help navigate the library.
+- Search, **Installed** / **Updates** / **Not installed** filters, and grid/list views help navigate the library. List is the default view.
+- Every app shows its current published version and source update date. Publishing records the Mail package's last source commit date and Agent Office's source commit date; rebuilding the launcher does not invent a new app update date.
 - App options open its source, show its installation folder, or uninstall its managed binaries. Separate app accounts, mail, and workspace profiles are retained.
 - Settings can disable startup release checks. Updates download only when clicked.
 
@@ -25,8 +26,8 @@ Applications installed independently are not automatically adopted. Install them
 
 | Application | Source branch | Bundled fallback |
 | --- | --- | --- |
-| TMA-Mail | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) | Existing 0.8.0-beta ZIP, pinned to its exact commit and checksum |
-| TMA-Agent Office | [AI-Agent-Dashboard](https://github.com/DaddyTylerXO/TMApps/tree/AI-Agent-Dashboard) | 0.2.0 metadata; **Coming soon** until a real package is published |
+| TMA-Mail | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) | Published 0.8.2-beta package with SHA-256 verification |
+| TMA-Agent Office | [AI-Agent-Dashboard](https://github.com/DaddyTylerXO/TMApps/tree/AI-Agent-Dashboard) | Published 0.2.0 package with SHA-256 verification |
 
 The publishing workflow copies the newest checked-in Mail ZIP after verifying its checksum and builds Agent Office's unpacked Windows Electron app using its lockfile. Both ZIPs and checksums upload before `catalog.json`. The launcher reads that catalog from this repository's `tma-apps` GitHub Release. If publication fails, Mail can still install from the bundled fallback; Agent Office is never shown as installable without a package.
 
@@ -40,10 +41,10 @@ No Node.js or separate .NET SDK is needed for the launcher:
 .\build.ps1
 .\test.ps1
 .\package.ps1
-& '.\build\TMApps Launcher.exe'
+& '.\build\TMApps-Launcher.exe'
 ```
 
-The build uses the Windows .NET Framework C# compiler and WPF. Tests cover catalog validation, version ordering, archive boundaries, checksum failures, cancellation, install detection, atomic state writes, uninstall data retention, catalog recovery, and actual WPF template rendering. The preview is `build/launcher-preview.png`. Packaging creates the distributable ZIP and checksum under `dist/`.
+The build uses the Windows .NET Framework C# compiler and WPF. Tests cover catalog validation, version ordering, archive boundaries, checksum failures, cancellation, install detection, atomic state writes, uninstall data retention, catalog recovery, dates, and actual WPF template rendering. A separate process test copies only the EXE into an empty directory and verifies that the embedded interface and app catalog load without sidecar files. The preview is `build/launcher-preview.png`. Packaging creates `dist/TMApps-Launcher.exe` and an optional checksum sidecar; users only download the EXE.
 
 ## Publish updates
 
@@ -55,4 +56,4 @@ The catalog requires exactly the two registered app IDs, fixed executable names,
 
 Preferences and the cached catalog live in `%LOCALAPPDATA%\TMApps\Launcher`. Binaries live under `apps/<app-id>/<unique-install-folder>/`. Downloads extract into a new folder. The installation record switches atomically after verification, extraction, executable checks, cancellation checks, and checking the existing app is closed. Failed/cancelled updates preserve the previous record. ZIP traversal paths, links, excessive file counts, and oversized packages are rejected.
 
-Install and uninstall work for the current Windows user without administrator access. A launcher mutex prevents concurrent launcher instances. An interrupted process can leave an inactive staging folder; the next successful install cleans old folders. Quit application processes before retrying locked-file errors. Update the launcher itself by downloading the latest launcher ZIP; app updates are handled in the library.
+Install and uninstall work for the current Windows user without administrator access. A launcher mutex prevents concurrent launcher instances. An interrupted process can leave an inactive staging folder; the next successful install cleans old folders. Quit application processes before retrying locked-file errors. Update the launcher itself by replacing its EXE with the latest download; application installations and settings remain in your profile.

@@ -6,11 +6,12 @@
       "name": "TMA-Mail",
       "category": "COMMUNICATION",
       "description": "A calmer home for your inbox. Connect your accounts, compose beautifully, and keep your day in focus.",
-      "version": "0.8.0-beta",
+      "version": "0.8.2-beta",
+      "updatedAt": "2026-10-16T04:38:24Z",
       "branch": "TMA-Mail",
       "executable": "TMA-Mail.exe",
-      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/a9625524f2717e948285eabfd19d958c556f2d4a/dist/TMA-Mail-0.8.0-beta-windows.zip",
-      "sha256": "2d7b0cc95d7f39a7d69fffa1db80b34375686b91fd8ecd8277a3c04c0325bacd"
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Mail-0.8.2-beta-windows.zip",
+      "sha256": "02a542c63ca7a772db39e24dee71cd276cb3728c25c4cfe5a8708368b1b2ecae"
     },
     {
       "id": "tma-agent-office",
@@ -18,10 +19,11 @@
       "category": "AI WORKSPACE",
       "description": "Your team, together. Bring AI specialists, projects, and real work into one live office.",
       "version": "0.2.0",
+      "updatedAt": "2026-10-15T19:42:51Z",
       "branch": "AI-Agent-Dashboard",
       "executable": "Agent Office.exe",
-      "downloadUrl": "",
-      "sha256": ""
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Agent-Office-0.2.0-windows.zip",
+      "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883"
     }
   ]
 }

@@ -10,6 +10,10 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
+
 namespace TMApps {
     public class AppView : INotifyPropertyChanged {
         public AppInfo Info;
@@ -19,6 +23,7 @@ namespace TMApps {
         public string PreviewBackground { get { return Id == "tma-mail" ? "#203425" : "#2B253A"; } }
         public string Glyph { get { return Id == "tma-mail" ? "\uE715" : "\uE902"; } }
         public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : "02 / YOUR AI TEAM"; } }
+        public string UpdatedLabel { get { DateTimeOffset date; return DateTimeOffset.TryParse(Info.updatedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out date) ? date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Date not published"; } }
         public string VersionLabel { get; set; } public string Status { get; set; } public string Detail { get; set; }
         public string Action { get; set; } public bool CanAct { get; set; } public bool Busy;
         public CancellationTokenSource Cancellation;
@@ -28,10 +33,19 @@ namespace TMApps {
     }
     public class LauncherApplication : Application {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
-        string filter = "all"; bool listView; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
-        string BasePath { get { return AppDomain.CurrentDomain.BaseDirectory; } }
+        string filter = "all"; bool listView = true; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
+            if (args.Length == 2 && args[0] == "--verify-package") {
+                try {
+                    var app = new Application();
+                    var check = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml")));
+                    var catalog = LauncherService.ParseCatalog(Bundled.Read("catalog.json"));
+                    if (check.FindName("Cards") == null || catalog.apps.Count != 2) throw new InvalidDataException("Invalid embedded library.");
+                    File.WriteAllText(args[1], "OK: standalone UI and catalog loaded; " + catalog.apps.Count + " applications"); check.Close(); app.Shutdown();
+                } catch (Exception ex) { File.WriteAllText(args[1], "FAIL: " + ex.Message); Environment.ExitCode = 1; }
+                return;
+            }
             bool created;
             using (var mutex = new Mutex(true, "Local\\TMApps-Launcher", out created)) {
                 if (!created) { MessageBox.Show("TMApps Launcher is already open.", "TMApps"); return; }
@@ -44,13 +58,12 @@ namespace TMApps {
             service = new LauncherService(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TMApps", "Launcher"));
             preferences = new Preferences();
             try { preferences = LauncherService.Json.Deserialize<Preferences>(File.ReadAllText(Path.Combine(service.Root, "settings.json"))) ?? preferences; } catch { }
-            // XAML is packaged locally; event hooks are attached here, never from downloaded content.
-            string xaml = File.ReadAllText(Path.Combine(BasePath, "MainWindow.xaml"));
-            xaml = System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", "");
+            // Both the UI and initial catalog are embedded in the executable.
+            string xaml = CleanXaml(Bundled.Read("MainWindow.xaml"));
             window = (Window)XamlReader.Parse(xaml); MainWindow = window;
             window.AddHandler(Button.ClickEvent, new RoutedEventHandler(HandleButton));
             Find<TextBox>("Search").TextChanged += (s, ev) => Render();
-            apps = service.LoadCatalog(Path.Combine(BasePath, "catalog.json")).apps.Select(a => new AppView { Info = a }).ToList();
+            apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
             Render();
             Notice("Install an app to get started. Public downloads do not require a GitHub account.");
             window.Closing += (s, ev) => {
@@ -60,6 +73,7 @@ namespace TMApps {
             window.Show();
             if (preferences.checkOnStartup) RefreshCatalog();
         }
+        static string CleanXaml(string xaml) { return System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", ""); }
         void Notice(string value) { Find<TextBlock>("Notice").Text = value; }
         void Render() {
             if (apps == null) return;
@@ -69,35 +83,36 @@ namespace TMApps {
                     bool update = installed != null && LauncherService.IsNewer(app.Info.version, installed.version);
                     app.Status = installed == null ? (app.Info.Available ? "READY TO INSTALL" : "AWAITING FIRST RELEASE") : update ? "UPDATE AVAILABLE" : "INSTALLED · UP TO DATE";
                     app.Action = installed == null ? (app.Info.Available ? "↓  Install app" : "Coming soon") : update ? "↓  Update app" : "↗  Open app";
-                    app.CanAct = app.Info.Available || installed != null;
+                    app.CanAct = !refreshing && (app.Info.Available || installed != null);
                     app.VersionLabel = "v" + app.Info.version;
                     if (String.IsNullOrEmpty(app.Detail)) app.Detail = installed != null ? "Installed v" + installed.version : app.Info.Available ? "Windows x64 · Beta" : "The publisher is preparing a Windows build.";
                 }
                 app.Changed();
             }
             string query = Find<TextBox>("Search").Text.Trim();
-            var visible = apps.Where(a => (a.Name + " " + a.Category + " " + a.Description).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0).Where(a => filter == "all" || (service.GetInstalled(a.Info) != null && (filter == "installed" || LauncherService.IsNewer(a.Info.version, service.GetInstalled(a.Info).version)))).ToList();
+            var visible = apps.Where(a => (a.Name + " " + a.Category + " " + a.Description).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0).Where(a => { var installed = service.GetInstalled(a.Info); return filter == "all" || (filter == "notinstalled" ? installed == null : installed != null && (filter == "installed" || LauncherService.IsNewer(a.Info.version, installed.version))); }).ToList();
             Find<ItemsControl>("Cards").ItemsSource = visible;
             Find<TextBlock>("Empty").Visibility = visible.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             Find<TextBlock>("LibraryLabel").Text = "APPLICATION LIBRARY / " + visible.Count.ToString("00");
             Find<Button>("InstalledFilter").Content = "Installed  " + apps.Count(a => service.GetInstalled(a.Info) != null);
             Find<Button>("UpdatesFilter").Content = "Updates  " + apps.Count(a => { var i = service.GetInstalled(a.Info); return i != null && LauncherService.IsNewer(a.Info.version, i.version); });
-            foreach (string key in new[] { "all", "installed", "updates" }) {
-                var button = Find<Button>(key == "all" ? "AllFilter" : key == "installed" ? "InstalledFilter" : "UpdatesFilter");
+            Find<Button>("NotInstalledFilter").Content = "Not installed  " + apps.Count(a => service.GetInstalled(a.Info) == null);
+            foreach (string key in new[] { "all", "installed", "updates", "notinstalled" }) {
+                var button = Find<Button>(key == "all" ? "AllFilter" : key == "installed" ? "InstalledFilter" : key == "updates" ? "UpdatesFilter" : "NotInstalledFilter");
                 button.Background = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#BEF18A" : "#202725");
                 button.Foreground = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#142015" : "#D9DFDB");
             }
         }
         async void RefreshCatalog() {
             if (refreshing || apps.Any(a => a.Busy)) return;
-            refreshing = true; Find<Button>("RefreshButton").IsEnabled = false; Notice("Checking for new releases…");
+            refreshing = true; Render(); Find<Button>("RefreshButton").IsEnabled = false; Notice("Checking for new releases…");
             try {
                 var catalog = await service.Refresh(lifetime.Token);
                 foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
                 Render(); Notice("You're up to date with the latest published catalog. Last checked " + DateTime.Now.ToString("HH:mm") + ".");
             } catch (OperationCanceledException) { if (!lifetime.IsCancellationRequested) Notice("The release check timed out. Your saved library is still available. Try again shortly."); }
             catch (Exception) { Notice("Could not reach the release catalog. Check your connection and try again. Your saved library is still available."); }
-            finally { refreshing = false; Find<Button>("RefreshButton").IsEnabled = true; }
+            finally { refreshing = false; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy); }
         }
         async void Install(AppView app) {
             app.Busy = true; app.CanAct = false; app.Action = "Please wait…"; app.Status = "INSTALLING"; app.Cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
@@ -116,6 +131,7 @@ namespace TMApps {
             if (name.EndsWith("Filter")) { filter = tag; Render(); return; }
             if (name == "ViewButton") {
                 listView = !listView; b.Content = listView ? "▦  Grid" : "☷  List";
+                Find<ItemsControl>("Cards").ItemTemplate = (DataTemplate)window.Resources[listView ? "AppList" : "AppCard"];
                 var factory = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.UniformGrid)); factory.SetValue(System.Windows.Controls.Primitives.UniformGrid.ColumnsProperty, listView ? 1 : 2);
                 Find<ItemsControl>("Cards").ItemsPanel = new ItemsPanelTemplate(factory); return;
             }
