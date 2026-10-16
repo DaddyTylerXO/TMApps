@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.4.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.4.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.5.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -37,7 +37,7 @@ namespace TMApps {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
         EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
-        Func<AppInfo,string> chooseInstallLocation;
+        Func<AppInfo,AppInstallOptions> chooseInstallLocation;
         string filter = "all"; bool listView = true; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
@@ -66,9 +66,9 @@ namespace TMApps {
             window.Show();
             if (preferences.checkOnStartup) RefreshCatalog();
         }
-        internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop, Func<AppInfo,string> locationPicker = null) {
-            service = new LauncherService(root, handler);
-            chooseInstallLocation=locationPicker ?? new Func<AppInfo,string>(PromptInstallLocation);
+        internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop, Func<AppInfo,AppInstallOptions> locationPicker = null, IAppIntegration appIntegration = null) {
+            service = new LauncherService(root, handler,appIntegration);
+            chooseInstallLocation=locationPicker ?? new Func<AppInfo,AppInstallOptions>(PromptInstallLocation);
             preferences = DesktopIntegration.LoadPreferences(root);
             window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
             using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
@@ -139,7 +139,7 @@ namespace TMApps {
             ((Button)target.FindName("RefreshButton")).Content=p.compactNavigation ? "↻" : "↻  Check updates";
             ((Button)target.FindName("SettingsButton")).Content=p.compactNavigation ? "⚙" : "⚙  Settings";
             ((Button)target.FindName("SettingsButton")).ToolTip="Settings";
-            ((Button)target.FindName("GitHubButton")).Content=p.compactNavigation ? "↗" : "GitHub ↗";
+            ((TextBlock)target.FindName("GitHubLabel")).Visibility=p.compactNavigation ? Visibility.Collapsed : Visibility.Visible;
         }
         static string CleanXaml(string xaml) { return System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", ""); }
         void Notice(string value) { Find<TextBlock>("Notice").Text = value; }
@@ -180,28 +180,29 @@ namespace TMApps {
             try {
                 var catalog = await service.Refresh(lifetime.Token);
                 foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
-                Render(); Notice("You're up to date with the latest published catalog. Last checked " + DateTime.Now.ToString("HH:mm") + ".");
+                Render(); Notice(service.LastRefreshNotice+" Last checked "+DateTime.Now.ToString("HH:mm")+".");
             } catch (OperationCanceledException) { if (!lifetime.IsCancellationRequested) Notice("The release check timed out. Your saved library is still available. Try again shortly."); }
             catch (Exception) { Notice("Could not reach the release catalog. Check your connection and try again. Your saved library is still available."); }
             finally { refreshing = false; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy); }
         }
         async void Install(AppView app) {
-            string destination=null;
+            AppInstallOptions options=null;
             if(service.GetInstalled(app.Info)==null) {
-                destination=chooseInstallLocation(app.Info);
-                if(destination==null) return;
+                options=chooseInstallLocation(app.Info);
+                if(options==null) return;
             }
+            string destination=options==null ? null : options.directory;
             app.Busy = true; app.CanAct = false; app.Action = "Please wait…"; app.Status = "INSTALLING"; app.Cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             Render(); Find<Button>("RefreshButton").IsEnabled = false;
             try {
-                await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token,destination);
-                app.Detail = "Installed v" + app.Info.version; Notice(app.Name + " is ready. Select Open app to launch it.");
+                await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token,destination,options);
+                app.Detail = "Installed v" + app.Info.version; Notice(service.LastIntegrationWarning ?? (app.Name+" is ready. Select Open app to launch it."));
             } catch (OperationCanceledException) { app.Detail = "Installation cancelled. Your previous version is unchanged."; }
             catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message); }
             finally { app.Busy = false; app.Cancellation.Dispose(); app.Cancellation = null; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy) && !refreshing; }
         }
-        string PromptInstallLocation(AppInfo app) {
-            var dialog=new Window { Owner=window,Title="Install "+app.name,Width=620,Height=320,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
+        AppInstallOptions PromptInstallLocation(AppInfo app) {
+            var dialog=new Window { Owner=window,Title="Install "+app.name,Width=620,Height=410,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
             var panel=new StackPanel { Margin=new Thickness(24) }; dialog.Content=panel;
             panel.Children.Add(new TextBlock { Text="Install "+app.name,FontSize=23,Margin=new Thickness(0,0,0,12) });
             panel.Children.Add(new TextBlock { Text="Choose an empty application folder. Future updates will use this location.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,Margin=new Thickness(0,0,0,15) });
@@ -213,11 +214,13 @@ namespace TMApps {
                     if(picker.ShowDialog()==System.Windows.Forms.DialogResult.OK) location.Text=picker.SelectedPath;
                 }
             };
+            var startup=new CheckBox { Content="Open app on Windows start-up",Foreground=window.Foreground,Margin=new Thickness(0,15,0,7) }; panel.Children.Add(startup);
+            var desktop=new CheckBox { Content="Create desktop icon",IsChecked=true,Foreground=window.Foreground,Margin=new Thickness(0,4,0,0) }; panel.Children.Add(desktop);
             var error=new TextBlock { Foreground=Brushes.LightSalmon,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,10,0,0),MinHeight=35 }; panel.Children.Add(error);
             var actions=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,12,0,0) }; panel.Children.Add(actions);
-            string selected=null;
+            AppInstallOptions selected=null;
             var cancel=new Button { Content="Cancel",Margin=new Thickness(0,0,8,0),IsCancel=true }; cancel.Click+=(s,e)=>dialog.Close(); actions.Children.Add(cancel);
-            var install=new Button { Content="Install",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500"),IsDefault=true }; install.Click+=(s,e)=> { try { selected=service.ValidateInstallDirectory(app,location.Text); dialog.Close(); } catch(Exception ex) { error.Text=ex.Message; } }; actions.Children.Add(install);
+            var install=new Button { Content="Install",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500"),IsDefault=true }; install.Click+=(s,e)=> { try { selected=new AppInstallOptions { directory=service.ValidateInstallDirectory(app,location.Text),runAtStartup=startup.IsChecked==true,desktopShortcut=desktop.IsChecked==true }; dialog.Close(); } catch(Exception ex) { error.Text=ex.Message; } }; actions.Children.Add(install);
             dialog.ShowDialog(); return selected;
         }
         internal static Button ResolveButton(object source) {
@@ -267,7 +270,7 @@ namespace TMApps {
             add("Open installation folder", () => { if (installed != null) System.Diagnostics.Process.Start("explorer.exe", service.InstalledFolder(app.Info, installed)); }, installed != null && !app.Busy);
             add("Uninstall…", () => {
                 if (MessageBox.Show(window, "Remove " + app.Name + " from this launcher?\n\nYour application accounts, settings, and workspace data will be kept.", "Uninstall application", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes) {
-                    service.Uninstall(app.Info); app.Detail = null; Render(); Notice(app.Name + " was uninstalled. Application data was kept.");
+                    service.Uninstall(app.Info); app.Detail = null; Render(); Notice(service.LastIntegrationWarning ?? (app.Name+" was uninstalled. Application data was kept."));
                 }
             }, installed != null && !app.Busy);
             target.ContextMenu = menu; menu.PlacementTarget=target; menu.IsOpen = true;

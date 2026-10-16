@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0
+
+- Added per-app Windows startup and desktop icon options to the install dialog; updates retain and retarget them, and uninstall removes the managed integrations.
+- Fixed stale Mail discovery by checking its branch update manifest and checksum at a pinned commit in addition to the shared release catalog; incomplete checks are explicitly reported.
+- Updated the embedded Mail entry to 0.10.0-beta and retained newer cached releases when an older shared catalog is returned.
+- Restyled GitHub as a matching bubble with the official Octicons logo.
+
 ## 1.4.0 — 2026-10-16
 
 - Launcher setup now offers an editable destination and Browse picker, remembers the registered folder, and supports launcher relocation and custom-location uninstall.

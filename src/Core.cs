@@ -30,7 +30,8 @@ namespace TMApps {
         public string updatedAt { get; set; }
         public bool Available { get { return !String.IsNullOrEmpty(downloadUrl); } }
     }
-    public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } public string installRoot { get; set; } }
+    public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } public string installRoot { get; set; } public bool runAtStartup { get; set; } public bool desktopShortcut { get; set; } }
+    public class AppInstallOptions { public string directory { get; set; } public bool runAtStartup { get; set; } public bool desktopShortcut { get; set; } public AppInstallOptions() { desktopShortcut=true; } }
     public static class InstallationPaths {
         public static string Normalize(string directory) {
             if(String.IsNullOrWhiteSpace(directory)) throw new IOException("Choose an installation folder.");
@@ -63,14 +64,18 @@ namespace TMApps {
         public const string CatalogUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/catalog.json";
         public readonly string Root;
         readonly HttpClient http;
+        readonly IAppIntegration integration;
+        public string LastIntegrationWarning { get; private set; }
+        public string LastRefreshNotice { get; private set; }
         string githubToken;
         public bool HasToken { get { return !String.IsNullOrEmpty(githubToken); } }
         public static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
-        public LauncherService(string root, HttpMessageHandler handler = null) {
+        public LauncherService(string root, HttpMessageHandler handler = null, IAppIntegration appIntegration = null) {
             Root = Path.GetFullPath(root); Directory.CreateDirectory(Root);
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             http = handler == null ? new HttpClient() : new HttpClient(handler); http.Timeout = TimeSpan.FromMinutes(30);
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.0");
+            integration=appIntegration ?? new WindowsAppIntegration();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.5");
             try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
         }
         public void SaveToken(string token) {
@@ -88,7 +93,8 @@ namespace TMApps {
         async Task<HttpResponseMessage> ApiGet(string url, string accept, CancellationToken cancellation) {
             using (var request = new HttpRequestMessage(HttpMethod.Get, url)) {
                 request.Headers.Accept.ParseAdd(accept);
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", githubToken);
+                if(HasToken) request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", githubToken);
+                request.Headers.CacheControl=new System.Net.Http.Headers.CacheControlHeaderValue { NoCache=true };
                 return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation);
             }
         }
@@ -144,23 +150,56 @@ namespace TMApps {
             if (File.Exists(cache)) { try { return ParseCatalog(File.ReadAllText(cache)); } catch { } }
             return ParseCatalog(bundled == null ? Bundled.Read("catalog.json") : File.ReadAllText(bundled));
         }
-        public async Task<Catalog> Refresh(CancellationToken token) {
-            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token)) {
-                timeout.CancelAfter(TimeSpan.FromSeconds(25));
-                var response = await Download(CatalogUrl, timeout.Token);
-                using (response) {
-                    response.EnsureSuccessStatusCode();
-                    using (var input = await response.Content.ReadAsStreamAsync())
-                    using (var output = new MemoryStream()) {
-                        var buffer = new byte[8192]; int n;
-                        while ((n = await input.ReadAsync(buffer, 0, buffer.Length, timeout.Token)) > 0) {
-                            if (output.Length + n > 1024 * 1024) throw new InvalidDataException("Catalog is too large.");
-                            output.Write(buffer, 0, n);
-                        }
-                        string json = System.Text.Encoding.UTF8.GetString(output.ToArray()).TrimStart('\uFEFF');
-                        var catalog = ParseCatalog(json); AtomicWrite(Path.Combine(Root, "catalog.json"), json); return catalog;
+        async Task<string> ReadText(HttpResponseMessage response,CancellationToken token) {
+            using(response) {
+                response.EnsureSuccessStatusCode();
+                using(var input=await response.Content.ReadAsStreamAsync()) using(var output=new MemoryStream()) {
+                    var buffer=new byte[8192]; int n;
+                    while((n=await input.ReadAsync(buffer,0,buffer.Length,token))>0) {
+                        if(output.Length+n>1024*1024) throw new InvalidDataException("Update metadata is too large."); output.Write(buffer,0,n);
                     }
+                    return Encoding.UTF8.GetString(output.ToArray()).TrimStart('\uFEFF');
                 }
+            }
+        }
+        async Task<AppInfo> LatestMail(AppInfo current,CancellationToken token) {
+            var commit=Json.Deserialize<Dictionary<string,object>>(await ReadText(await ApiGet("https://api.github.com/repos/DaddyTylerXO/TMApps/commits/TMA-Mail?check="+DateTime.UtcNow.Ticks,"application/vnd.github+json",token),token));
+            string sha=Convert.ToString(commit["sha"]); if(!Regex.IsMatch(sha,"^[a-fA-F0-9]{40}$")) throw new InvalidDataException("Invalid source commit.");
+            string source="https://raw.githubusercontent.com/DaddyTylerXO/TMApps/"+sha+"/";
+            var update=Json.Deserialize<Dictionary<string,object>>(await ReadText(await Download(source+"update.json",token),token));
+            string url=Convert.ToString(update["DownloadUrl"]);
+            const string githubPrefix="https://github.com/DaddyTylerXO/TMApps/raw/refs/heads/TMA-Mail/dist/";
+            const string rawPrefix="https://raw.githubusercontent.com/DaddyTylerXO/TMApps/TMA-Mail/dist/";
+            string filename=url.StartsWith(githubPrefix,StringComparison.Ordinal) ? url.Substring(githubPrefix.Length) : url.StartsWith(rawPrefix,StringComparison.Ordinal) ? url.Substring(rawPrefix.Length) : "";
+            var match=Regex.Match(filename,@"^TMA-Mail-(\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)-windows\.zip$");
+            if(!match.Success) throw new InvalidDataException("Unrecognised Mail package location.");
+            string version=match.Groups[1].Value; string declared=Convert.ToString(update["Version"]);
+            if(declared!=version && declared!=version.Split('-')[0]) throw new InvalidDataException("Mail version and package do not match.");
+            string sidecar=(await ReadText(await Download(source+"dist/"+filename+".sha256",token),token)).Trim();
+            var hash=Regex.Match(sidecar,@"^([a-fA-F0-9]{64})(?:\s+\*?(.+))?$");
+            if(!hash.Success || (hash.Groups[2].Success && hash.Groups[2].Value!=filename)) throw new InvalidDataException("Invalid Mail package checksum.");
+            var result=Json.Deserialize<AppInfo>(Json.Serialize(current)); result.version=version; result.downloadUrl=source+"dist/"+filename; result.sha256=hash.Groups[1].Value.ToLowerInvariant();
+            var details=(Dictionary<string,object>)commit["commit"]; var committer=(Dictionary<string,object>)details["committer"]; result.updatedAt=Convert.ToString(committer["date"]);
+            return result;
+        }
+        public async Task<Catalog> Refresh(CancellationToken token) {
+            using(var timeout=CancellationTokenSource.CreateLinkedTokenSource(token)) {
+                timeout.CancelAfter(TimeSpan.FromSeconds(35));
+                Catalog catalog=null; bool shared=false,mailChecked=false;
+                try {
+                    catalog=ParseCatalog(await ReadText(await Download(CatalogUrl+"?check="+DateTime.UtcNow.Ticks,timeout.Token),timeout.Token)); shared=true;
+                    var saved=LoadCatalog();
+                    for(int i=0;i<catalog.apps.Count;i++) { var known=saved.apps.First(a=>a.id==catalog.apps[i].id); if(IsNewer(known.version,catalog.apps[i].version)) catalog.apps[i]=known; }
+                }
+                catch(OperationCanceledException) { throw; } catch { catalog=LoadCatalog(); }
+                try {
+                    var old=catalog.apps.First(a=>a.id=="tma-mail"); var latest=await LatestMail(old,timeout.Token);
+                    if(IsNewer(latest.version,old.version) || latest.version==old.version) catalog.apps[catalog.apps.IndexOf(old)]=latest;
+                    mailChecked=true;
+                } catch(OperationCanceledException) { throw; } catch { }
+                if(!shared && !mailChecked) throw new IOException("Neither release catalog nor Mail branch updates could be checked.");
+                LastRefreshNotice=mailChecked ? (shared ? "Release catalog and latest TMA-Mail branch checked." : "Latest TMA-Mail branch checked; other apps use the saved catalog.") : "Release catalog checked. Could not verify newer TMA-Mail branch packages; try again shortly.";
+                ParseCatalog(Json.Serialize(catalog)); AtomicWrite(Path.Combine(Root,"catalog.json"),Json.Serialize(catalog)); return catalog;
             }
         }
         public static void AtomicWrite(string path, string content) {
@@ -225,9 +264,10 @@ namespace TMApps {
                 }
             }
         }
-        public async Task Install(AppInfo app, IProgress<string> progress, CancellationToken token, string installationDirectory = null) {
+        public async Task Install(AppInfo app, IProgress<string> progress, CancellationToken token, string installationDirectory = null, AppInstallOptions options = null) {
             if (!app.Available || !TrustedUrl(app.downloadUrl)) throw new InvalidOperationException("This application has not been published yet.");
             if (IsRunning(app)) throw new IOException("Close " + app.name + " before updating it.");
+            LastIntegrationWarning=null;
             var previous=GetInstalled(app);
             string root=ValidateInstallDirectory(app,installationDirectory ?? InstallRoot(app,previous));
             InstallationPaths.Prepare(root,app.id,InstallationPaths.Same(root,AppRoot(app)));
@@ -251,8 +291,13 @@ namespace TMApps {
                 if (!File.Exists(Path.Combine(stage, app.executable))) throw new InvalidDataException("The package does not contain the expected application.");
                 token.ThrowIfCancellationRequested();
                 if (IsRunning(app)) throw new IOException("Close " + app.name + " and retry the update.");
-                AtomicWrite(Path.Combine(AppRoot(app), "installed.json"), Json.Serialize(new Installed { version = app.version, folder = folder, executable = app.executable,installRoot=root }));
-                committed = true;
+                var installed=new Installed { version=app.version,folder=folder,executable=app.executable,installRoot=root,
+                    runAtStartup=options!=null ? options.runAtStartup : previous!=null && previous.runAtStartup,
+                    desktopShortcut=options!=null ? options.desktopShortcut : previous!=null && previous.desktopShortcut };
+                AtomicWrite(Path.Combine(AppRoot(app),"installed.json"),Json.Serialize(installed));
+                committed=true;
+                try { integration.Apply(app,previous,installed,previous==null ? null : Path.Combine(InstalledFolder(app,previous),app.executable),Path.Combine(stage,app.executable)); }
+                catch(Exception ex) { LastIntegrationWarning="The app installed, but its startup/desktop options could not be fully applied: "+ex.Message; }
                 if(previous!=null) { string old=InstalledFolder(app,previous); if(!String.Equals(old,stage,StringComparison.OrdinalIgnoreCase)) { try { Directory.Delete(old,true); } catch { } } }
             } finally {
                 if (File.Exists(archive)) File.Delete(archive);
@@ -263,7 +308,10 @@ namespace TMApps {
             if (IsRunning(app)) throw new IOException("Close " + app.name + " before uninstalling it.");
             var installed=GetInstalled(app); if(installed==null) return;
             // Delete only the recorded version folder, never the user-selected parent or unrelated files.
+            string executable=Path.Combine(InstalledFolder(app,installed),app.executable);
             Directory.Delete(InstalledFolder(app,installed),true);
+            LastIntegrationWarning=null;
+            try { integration.Remove(app,installed,executable); } catch(Exception ex) { LastIntegrationWarning="App removed, but startup/shortcut cleanup needs attention: "+ex.Message; }
             File.Delete(Path.Combine(AppRoot(app), "installed.json"));
         }
         public void Dispose() { http.Dispose(); }

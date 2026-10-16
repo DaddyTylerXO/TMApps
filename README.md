@@ -22,8 +22,10 @@ The release is created by the [Publish Windows launcher and app catalog workflow
 
 - **Install app** downloads a Windows ZIP and verifies its SHA-256 checksum before extraction.
 - Before a new app installation, choose its destination using **Browse** or enter a full folder path, then confirm **Install**. Cancel closes the prompt without starting a download. Each app can use a different folder or drive. Updates reuse the saved location; existing installations from older launcher versions retain their locations.
+- The app-install prompt also offers **Open app on Windows start-up** (off by default) and **Create desktop icon** (on by default). These apply to the app being installed. The launcher remembers the choices, updates their executable targets after an app update, and removes its managed startup entry/shortcut when that app is uninstalled.
 - **Open app** starts the installed executable. The options menu also opens an older installed version while an update is available.
 - **Check for updates** fetches the current application catalog. **Update app** installs the newer build when you choose it.
+- Mail update checks also inspect the `TMA-Mail` branch's `update.json` and package checksum at one pinned Git commit. A new branch package can appear before the shared release catalog is republished. Numeric version comparison recognises `0.10.0` as newer than `0.9.2`; known newer cached versions are retained if the shared catalog is stale. An incomplete branch check is reported instead of claiming everything is up to date.
 - Search, **Installed** / **Updates** / **Not installed** filters, and explicit **Grid** / **List** buttons help navigate the library. The selected view is saved.
 - **Settings → Appearance** moves navigation to **Left**, **Top**, **Right**, or **Bottom**, just like TMA-Mail, and offers a compact icon ribbon. The ☰ button collapses or expands navigation. Appearance changes preview immediately; Cancel reverts them and Save keeps them.
 - **Settings → Startup** changes Windows startup, desktop shortcut, close-to-tray, and startup release-check options after installation.
@@ -37,7 +39,7 @@ Applications installed independently are not automatically adopted. Install them
 
 | Application | Source branch | Bundled fallback |
 | --- | --- | --- |
-| TMA-Mail | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) | Published 0.8.2-beta package with SHA-256 verification |
+| TMA-Mail | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) | 0.10.0-beta package pinned to its source commit with SHA-256 verification |
 | TMA-Agent Office | [AI-Agent-Dashboard](https://github.com/DaddyTylerXO/TMApps/tree/AI-Agent-Dashboard) | Published 0.2.0 package with SHA-256 verification |
 
 The publishing workflow copies the newest checked-in Mail ZIP after verifying its checksum and builds Agent Office's unpacked Windows Electron app using its lockfile. Both ZIPs and checksums upload before `catalog.json`. The launcher reads that catalog from this repository's `tma-apps` GitHub Release. If publication fails, Mail can still install from the bundled fallback; Agent Office is never shown as installable without a package.
@@ -58,6 +60,8 @@ No Node.js or separate .NET SDK is needed for the launcher:
 The build uses the Windows .NET Framework C# compiler and WPF, with no external installer compiler. Tests cover the installation engine, a real installer payload install/launch/uninstall in an isolated folder, real routed Install and three-dot clicks, saved Grid/List controls, all four navigation positions, compact mode, and WPF rendering. The preview is `build/launcher-preview.png`. Packaging creates `dist/TMApps-Launcher-Setup.exe` and its checksum; users download only the setup EXE. The installed runtime remains a single `TMApps-Launcher.exe` with its UI, icon, and initial catalog embedded.
 
 `make-icon.ps1` regenerates the original vector rocket as PNG and a seven-resolution ICO (16–256 px) under `assets/`. The icon is compiled into the EXE; no separate image download is required.
+
+The GitHub button uses the official [Octicons GitHub mark](https://github.com/primer/octicons), rendered as a vector inside the same bubble button style as Settings and Check updates. Its MIT license is preserved in `assets/github-mark-LICENSE.txt`.
 
 ## Publish updates
 
