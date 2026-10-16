@@ -106,7 +106,7 @@ namespace Postbox {
                 foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {
                     var button = Find<Button>(name + "Nav");
                     button.Background = Brush(name == folder ? "SidebarSelected" : "#14243E");
-                    button.Foreground = Brush(name == folder ? "#FFFFFF" : "#B7C6DF");
+                    button.Foreground = Brush(name == folder ? "#FFFFFF" : "#C5D4EC");
                 }
                 Find<Button>("AllFilter").Background = Brush(unreadOnly ? "Surface" : "#EDF3FF");
                 Find<Button>("UnreadFilter").Background = Brush(unreadOnly ? "#EDF3FF" : "Surface");

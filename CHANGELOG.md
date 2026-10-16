@@ -2,6 +2,16 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.9.1 beta — 16 October 2026
+
+- Load external HTTPS email pictures automatically by default. Add an Appearance toggle with live preview/Cancel restoration to return to per-message Load images. Keep message scripts, forms, frames, and unrelated resources blocked.
+- Prefer readable HTML content for message-list previews instead of plain-text open-in-browser boilerplate. Reuse prepared preview text and the WebView2 image cache; keep original email links usable in the default browser.
+- Replace native and HTML-reader scrollbars with rounded green thumbs and subtle tracks, including horizontal scroll support.
+- Add draggable green dividers for folders, the message list, and the preview. Save pane dimensions, support right/top/bottom layouts, and retain minimum reading space.
+- Match imported folders to the standard sidebar text size, weight, and colour. Add a rounded folder menu with Mark all as read, favourites, appearance editing, and Delete folder.
+- Add per-mailbox/per-path folder icons, colour swatches, custom hex colours, previews, and Reset. Mark all as read covers the complete server folder, beyond the 200 cached messages. Folder deletion requires confirmation; server system folders and folders containing subfolders are protected.
+- Pass 40 synthetic workspace checks plus the existing mailbox, settings, layout, connection, and provider suite. Verify automatic/blocked picture loading with intercepted synthetic image responses in the real WebView2 runtime; no external image server contacted.
+- Verify both pane edges by dragging in a synthetic Windows workspace, inspect scrollbars and the appearance editor. No real folders were deleted or marked read during testing. Sender image availability and live folder mutations remain outside this verification.
 ## 0.9.0 beta — 16 October 2026
 
 - Add a protected multi-account catalog with migration from the existing single-account file. Keep mailbox caches separate and preserve saved sign-in credentials when switching accounts.

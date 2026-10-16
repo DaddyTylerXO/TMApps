@@ -79,7 +79,7 @@ namespace Postbox {
                 var tokenizer = new HtmlTokenizer(reader) { DecodeCharacterReferences = true }; HtmlToken token; bool hidden = false;
                 while (tokenizer.ReadNextToken(out token)) {
                     var tag = token as HtmlTagToken; var data = token as HtmlDataToken;
-                    if (tag != null) { if (tag.Id == HtmlTagId.Script || tag.Id == HtmlTagId.Style || tag.Id == HtmlTagId.Head) hidden = !tag.IsEndTag; if (!hidden && (tag.Id == HtmlTagId.Br || tag.Id == HtmlTagId.P || tag.Id == HtmlTagId.Div || tag.Name.Equals("tr", StringComparison.OrdinalIgnoreCase) || tag.Name.Equals("li", StringComparison.OrdinalIgnoreCase))) text.AppendLine(); }
+                    if (tag != null) { if (tag.Id == HtmlTagId.Script || tag.Id == HtmlTagId.Style || tag.Id == HtmlTagId.Head) hidden = !tag.IsEndTag; if (!hidden && (tag.Id == HtmlTagId.Br || tag.Id == HtmlTagId.P || tag.Id == HtmlTagId.Div || tag.Name.Equals("tr", StringComparison.OrdinalIgnoreCase) || tag.Name.Equals("li", StringComparison.OrdinalIgnoreCase) || tag.Name.Equals("td", StringComparison.OrdinalIgnoreCase) || tag.Name.Equals("th", StringComparison.OrdinalIgnoreCase))) text.AppendLine(); }
                     else if (data != null && !hidden) text.Append(data.Data);
                 }
             }
@@ -113,6 +113,22 @@ namespace Postbox {
                 folder.AddFlags(uid, (message.Unread ? MessageFlags.None : MessageFlags.Seen) | (message.Starred ? MessageFlags.Flagged : MessageFlags.None), true);
                 folder.RemoveFlags(uid, (message.Unread ? MessageFlags.Seen : MessageFlags.None) | (message.Starred ? MessageFlags.None : MessageFlags.Flagged), true);
                 client.Disconnect(true);
+            }
+        }
+        public void MarkFolderRead(string path) {
+            using (var client = Connect()) {
+                var folder = client.GetFolder(path); folder.Open(FolderAccess.ReadWrite);
+                var unread = folder.Search(SearchQuery.NotSeen); if (unread.Count > 0) folder.AddFlags(unread, MessageFlags.Seen, true);
+                folder.Close(false); client.Disconnect(true);
+            }
+        }
+        public void DeleteFolder(string path) {
+            using (var client = Connect()) {
+                var folder = client.GetFolder(path);
+                var special = FolderAttributes.Inbox | FolderAttributes.Drafts | FolderAttributes.Sent | FolderAttributes.Trash | FolderAttributes.Junk | FolderAttributes.Archive | FolderAttributes.All;
+                if ((folder.Attributes & special) != 0) throw new InvalidOperationException("Provider system folders cannot be deleted.");
+                if (folder.GetSubfolders(false).Count > 0) throw new InvalidOperationException("Move or remove the subfolders before deleting this folder.");
+                folder.Delete(); client.Disconnect(true);
             }
         }
     }

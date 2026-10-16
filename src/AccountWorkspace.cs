@@ -49,11 +49,11 @@ namespace Postbox {
             var groups = new StackPanel();
             foreach (var account in mailAccounts) {
                 var captured = account; bool active = activeAccount != null && account.Id == activeAccount.Id;
-                var group = new Expander { Header = new TextBlock { Text = account.Email, ToolTip = account.Email, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 184, FontWeight = FontWeights.SemiBold, FontSize = 12 }, Foreground = System.Windows.Media.Brushes.White, IsExpanded = expandedMailboxes.ContainsKey(account.Id) ? expandedMailboxes[account.Id] : active, Margin = new Thickness(4, 8, 4, 8) };
+                var group = new Expander { Header = new TextBlock { Text = account.Email, ToolTip = account.Email, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = Math.Max(120, preferences.NavigationWidth - 40), FontWeight = FontWeights.SemiBold, FontSize = 12 }, Foreground = System.Windows.Media.Brushes.White, IsExpanded = expandedMailboxes.ContainsKey(account.Id) ? expandedMailboxes[account.Id] : active, Margin = new Thickness(4, 8, 4, 8) };
                 group.Expanded += delegate { expandedMailboxes[captured.Id] = true; }; group.Collapsed += delegate { expandedMailboxes[captured.Id] = false; };
                 if (active) { AddCustomFolders(navigationButtons, account); group.Content = navigationButtons; }
                 else {
-                    var entries = new StackPanel(); foreach (var item in MailboxFolders(account)) { var target = item; var button = FolderButton(item.Value, delegate { SelectMailbox(captured, target.Key); }); entries.Children.Add(button); } group.Content = entries;
+                    var entries = new StackPanel(); foreach (var item in MailboxFolders(account)) { var target = item; var button = FolderButton(item.Value, delegate { SelectMailbox(captured, target.Key); }); var serverFolder = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.LocalName == target.Key); if (serverFolder != null) StyleServerFolder(button, captured, serverFolder); entries.Children.Add(button); } group.Content = entries;
                 }
                 groups.Children.Add(group);
             }
@@ -63,15 +63,14 @@ namespace Postbox {
             foreach (string name in folders) if (!favouritesTab || preferences.FavouriteFolders.Contains(name)) yield return new KeyValuePair<string, string>(name, name);
             foreach (var value in account.Folders ?? new List<ServerFolder>()) if (value.LocalName.StartsWith("Server:") && (!favouritesTab || preferences.FavouriteFolders.Contains(value.LocalName))) yield return new KeyValuePair<string, string>(value.LocalName, value.Name);
         }
-        private Button FolderButton(string label, Action click) { var button = Action(label, false); button.HorizontalContentAlignment = HorizontalAlignment.Left; button.Foreground = System.Windows.Media.Brushes.White; button.Background = System.Windows.Media.Brushes.Transparent; button.Margin = new Thickness(8, 3, 8, 3); button.Padding = new Thickness(10, 10, 10, 10); button.Click += delegate { click(); }; return button; }
+        private Button FolderButton(string label, Action click) { var button = Action(label, false); button.HorizontalContentAlignment = HorizontalAlignment.Left; button.Foreground = Brush("#C5D4EC"); button.FontSize = 13; button.FontWeight = FontWeights.Normal; button.Background = System.Windows.Media.Brushes.Transparent; button.Margin = new Thickness(8, 3, 8, 3); button.Padding = new Thickness(10, 10, 10, 10); button.Click += delegate { click(); }; return button; }
         private void AddCustomFolders(Panel panel, MailAccount account) {
             if (account == null) return;
             foreach (var value in (account.Folders ?? new List<ServerFolder>()).Where(f => f.LocalName.StartsWith("Server:")).OrderBy(f => f.Path)) {
                 if (favouritesTab && !preferences.FavouriteFolders.Contains(value.LocalName)) continue;
                 var captured = value; var button = FolderButton("▱  " + value.Name + (value.Unread > 0 ? "  " + value.Unread : ""), delegate { folder = captured.LocalName; unreadOnly = false; Refresh(null); });
                 button.IsEnabled = value.Selectable; button.ToolTip = value.Path; button.Margin = new Thickness(String.IsNullOrEmpty(value.ParentPath) ? 8 : 20, 3, 8, 3);
-                var context = new ContextMenu(); var favourite = new MenuItem { Header = preferences.FavouriteFolders.Contains(value.LocalName) ? "Remove from favourites" : "Add to favourites" }; context.Items.Add(favourite);
-                favourite.Click += delegate { if (preferences.FavouriteFolders.Contains(captured.LocalName)) preferences.FavouriteFolders.Remove(captured.LocalName); else preferences.FavouriteFolders.Add(captured.LocalName); settingsStore.Save(preferences); ApplyNavigation(); }; button.ContextMenu = context;
+                StyleServerFolder(button, account, value);
                 customFolderButtons[button] = value.LocalName; panel.Children.Add(button);
             }
         }

@@ -17,9 +17,15 @@ namespace Postbox {
         private readonly Button images;
         private Message current;
         private bool allowImages;
+        private bool automaticImages = true;
         private Task initialization;
         private int generation;
         private string suppliedDocument;
+        public void SetImagePolicy(bool automatic) {
+            if (automaticImages == automatic) return;
+            automaticImages = automatic;
+            if (current != null) { var message = current; current = null; ShowMessage(message); }
+        }
         public HtmlMessageView(string dataDirectory) {
             cacheDirectory = Path.Combine(dataDirectory, "WebView2-Mail");
             var toolbar = new DockPanel { Margin = new Thickness(0, 0, 0, 8) }; SetDock(toolbar, Dock.Top); Children.Add(toolbar);
@@ -37,7 +43,7 @@ namespace Postbox {
             // Scripts/host objects are disabled in the engine. CSP plus the resource/navigation
             // handlers below enforce the boundary for this untrusted HTML.
             var filter = new MimeKit.Text.HtmlToHtml(); html = filter.Convert(html);
-            return "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; connect-src 'none'; img-src data: https:; style-src 'unsafe-inline'; font-src data:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'\"><style>html{overflow-wrap:anywhere}body{margin:16px;font-family:Segoe UI,sans-serif;color:#222;background:#fff}img{max-width:100%;height:auto}table{max-width:100%}input,button,select,textarea{pointer-events:none}</style></head><body>" + html + "</body></html>";
+            return "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; connect-src 'none'; img-src data: https:; style-src 'unsafe-inline'; font-src data:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'\"><style>html{overflow-wrap:anywhere}body{margin:16px;font-family:Segoe UI,sans-serif;color:#222;background:#fff}img{max-width:100%;height:auto}table{max-width:100%}input,button,select,textarea{pointer-events:none}::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#3a8c5e;border:2px solid transparent;background-clip:padding-box;border-radius:8px}::-webkit-scrollbar-thumb:hover{background-color:#55ad7d}</style></head><body>" + html + "</body></html>";
         }
         public static bool AllowResource(string url, bool imageContext, bool externalImages) {
             if (!imageContext) return false;
@@ -64,12 +70,13 @@ namespace Postbox {
         private void NavigateDocument(string html) { suppliedDocument = "data:text/html;charset=utf-8;base64," + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(html)); browser.NavigateToString(html); }
         public async void ShowMessage(Message message) {
             if (current != null && current.Id == message.Id && current.HtmlBody == message.HtmlBody && browser != null && browser.CoreWebView2 != null) return;
-            current = message; int request = ++generation; allowImages = false; images.IsEnabled = true; notice.Text = "External pictures are hidden";
+            current = message; int request = ++generation; allowImages = automaticImages; images.IsEnabled = !automaticImages; images.Visibility = automaticImages ? Visibility.Collapsed : Visibility.Visible; notice.Text = automaticImages ? "Loading formatted message and pictures…" : "External pictures are hidden";
             try {
                 if (initialization == null) initialization = Initialize(); await initialization;
                 if (request != generation || current == null) return;
                 string html = PrepareHtml(current); if (html.Length > 1500000) throw new InvalidOperationException("This large message is shown as text.");
                 browser.Visibility = Visibility.Visible; foreach (var fallback in Children.OfType<TextBox>()) fallback.Visibility = Visibility.Collapsed; NavigateDocument(html);
+                if (automaticImages) notice.Text = "Pictures load automatically · change in Appearance settings";
             } catch (Exception) {
                 notice.Text = "HTML reader unavailable. Showing message text; check that Microsoft Edge WebView2 Runtime is installed.";
                 if (browser != null) browser.Visibility = Visibility.Collapsed;

@@ -62,6 +62,31 @@ class LiveMailboxTests {
         Check(settingsStore.Load().ProfilePhoto == "AQID" && settingsStore.Load().FavouriteFolders.Contains(customKey), "Profile photo or custom favourite did not persist");
         var preview = new SettingsPreview(settingsStore, preferences); var edit = settingsStore.Clone(preferences); edit.ProfilePhoto = "BAUG"; preview.Apply(edit); Check(preview.Revert().ProfilePhoto == "AQID", "Cancel did not restore the profile photo");
         var panel = (StackPanel)Call(app, "AccountsSettings", window); Check(Children<TextBlock>(panel).Count(t => t.Text.EndsWith("@example.com")) == 2 && Children<Button>(panel).Any(b => b.Content.ToString().Contains("Add email account")), "Settings account list or add button missing");
+        var prefs = (Preferences)Get(app, "preferences");
+        Check(prefs.AutoLoadImages, "Email pictures do not load automatically by default");
+        var imagePreview = new SettingsPreview(settingsStore, prefs); var changed = settingsStore.Clone(prefs); changed.AutoLoadImages = false; imagePreview.Apply(changed); Check(imagePreview.Revert().AutoLoadImages, "Cancel did not restore image loading policy");
+        var messagePreview = new Message { Body = "To view this content open the following URL in your browser", HtmlBody = "<p>Actual newsletter headline</p>" }; Check(messagePreview.Preview.Contains("Actual newsletter headline") && !messagePreview.Preview.Contains("following URL"), "Preview prefers browser-link boilerplate over HTML content");
+        prefs.NavigationEdge = "Left"; prefs.NavigationCollapsed = false; Call(app, "ApplyPreferences");
+        var navGrip = (System.Windows.Controls.Primitives.Thumb)Get(app, "navigationResizer"); double oldWidth = prefs.NavigationWidth;
+        navGrip.RaiseEvent(new System.Windows.Controls.Primitives.DragDeltaEventArgs(70, 0) { RoutedEvent = System.Windows.Controls.Primitives.Thumb.DragDeltaEvent });
+        navGrip.RaiseEvent(new System.Windows.Controls.Primitives.DragCompletedEventArgs(70, 0, false) { RoutedEvent = System.Windows.Controls.Primitives.Thumb.DragCompletedEvent });
+        Check(prefs.NavigationWidth > oldWidth && ((Border)Get(app, "navigation")).Width == prefs.NavigationWidth, "Folder pane drag did not resize");
+        var actualSettings = new SettingsStore(Path.Combine(directory, "settings.json")); Check(Math.Abs(actualSettings.Load().NavigationWidth - prefs.NavigationWidth) < 1, "Pane width was not saved");
+        foreach (string edge in new[] { "Left", "Right", "Top", "Bottom" }) {
+            prefs.InboxEdge = edge; prefs.InboxWidth = 530; prefs.InboxHeight = 340; Call(app, "ApplyPreferences");
+            var root = (FrameworkElement)window.Content; root.Measure(new Size(1400, 850)); root.Arrange(new Rect(0, 0, 1400, 850)); root.UpdateLayout();
+            var grip = (GridSplitter)Get(app, "inboxSplitter"); var area = (Grid)Get(app, "mailArea");
+            bool horizontal = edge == "Top" || edge == "Bottom"; int index = edge == "Right" || edge == "Bottom" ? 1 : 0;
+            Check(grip.Parent == area && (horizontal ? area.RowDefinitions[index].ActualHeight >= 330 : area.ColumnDefinitions[index].ActualWidth >= 500), "Expanded inbox layout or divider missing: " + edge);
+        }
+        var appSecond = ((List<MailAccount>)Get(app, "mailAccounts")).First(a => a.Id == second.Id); Call(app, "SelectMailbox", appSecond, customKey);
+        var folderButton = Children<Button>(window).First(b => b.Content != null && b.Content.ToString().Contains("Design & notes"));
+        Check(folderButton.FontWeight == FontWeights.Normal && ((SolidColorBrush)folderButton.Foreground).Color == ((SolidColorBrush)Theme.B("#C5D4EC")).Color, "Imported folder typography differs from sidebar");
+        Check(folderButton.ContextMenu.Items.OfType<MenuItem>().Any(m => m.Header.ToString() == "Mark all as read") && folderButton.ContextMenu.Items.OfType<MenuItem>().Any(m => m.Header.ToString() == "Delete folder…"), "Folder server action menu missing");
+        prefs.FolderAppearances[App.FolderAppearanceKey(second.Id, "Projects/Design & notes")] = new FolderAppearance { Icon = "★", Colour = "#75D49B" }; actualSettings.Save(prefs); Call(app, "ApplyNavigation");
+        folderButton = Children<Button>(window).First(b => b.Content != null && b.Content.ToString().Contains("Design & notes"));
+        Check(folderButton.Content.ToString().StartsWith("★") && ((SolidColorBrush)folderButton.Foreground).Color == (Color)ColorConverter.ConvertFromString("#75D49B") && actualSettings.Load().FolderAppearances.Count == 1, "Folder appearance did not apply and persist");
+        Check(App.FolderAppearanceKey(first.Id, "same") != App.FolderAppearanceKey(second.Id, "same"), "Folder appearance leaked between mailboxes");
         window.Close(); app.Shutdown();
         accounts.Remove(first.Id); Check(accounts.LoadAll().Count == 1 && accounts.Load().Id == second.Id, "Removing one account removed another mailbox");
         Console.WriteLine("Passed " + checks + " live-mail workspace checks. Synthetic data only; no server contacted.");

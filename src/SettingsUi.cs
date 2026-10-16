@@ -71,6 +71,7 @@ namespace Postbox {
             centerHost = new DockPanel(); Grid.SetColumn(centerHost, 1); Grid.SetRow(centerHost, 1); workspace.Children.Add(centerHost); centerHost.Children.Add(center);
             Grid.SetColumn(header, 0); Grid.SetColumnSpan(header, 1); Grid.SetRow(header, 0); center.Children.Add(header);
             mailArea = new Grid();
+            mailArea.SizeChanged += delegate { ConstrainInboxSize(); };
             mailArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.5, GridUnitType.Star), MinWidth = 290, MaxWidth = 365 });
             mailArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 420 });
             Grid.SetRow(mailArea, 1); center.Children.Add(mailArea);
@@ -78,6 +79,7 @@ namespace Postbox {
             Grid.SetRow(readerPanel, 0); Grid.SetColumn(readerPanel, 1); mailArea.Children.Add(readerPanel);
             Grid.SetColumn(statusPanel, 0); Grid.SetColumnSpan(statusPanel, 1); Grid.SetRow(statusPanel, 2); center.Children.Add(statusPanel);
             navigation = new Border { Background = Brush("#14243E") }; workspace.Children.Add(navigation);
+            window.SizeChanged += delegate { if (!preferences.NavigationCollapsed && (preferences.NavigationEdge == "Left" || preferences.NavigationEdge == "Right")) navigation.Width = FittedNavigationWidth(); };
             // Keep the XAML root attached so FindName continues to resolve its controls.
             root.Children.Clear(); root.RowDefinitions.Clear(); root.ColumnDefinitions.Clear(); root.Children.Add(workspace);
             foreach (string name in folders) Detach(Find<Button>(name + "Nav"));
@@ -117,7 +119,7 @@ namespace Postbox {
             UpdateConnectionLamp();
             Find<Button>("AccountTop").ToolTip = preferences.DisplayName + " · Account connections";
             ApplyNavigation();
-            ApplyInboxLayout();
+            ApplyInboxLayout(); if (htmlReader != null) htmlReader.SetImagePolicy(preferences.AutoLoadImages);
             if (richReader != null) richReader.FontSize = preferences.TextSize;
         }
         private void ApplyNavigation() {
@@ -127,7 +129,7 @@ namespace Postbox {
             foreach (string name in folders) Detach(Find<Button>(name + "Nav"));
             foreach (var button in new[] { Find<Button>("ComposeButton"), Find<Button>("AccountsButton"), collapseButton, settingsButton }) Detach(button);
             var brand = (StackPanel)navigation.Tag; Detach(brand);
-            navigation.Width = horizontal ? Double.NaN : compact ? 66 : 224;
+            navigation.Width = horizontal ? Double.NaN : compact ? 66 : FittedNavigationWidth();
             navigation.Height = Double.NaN;
             Grid.SetColumn(navigation, preferences.NavigationEdge == "Right" ? 2 : preferences.NavigationEdge == "Left" ? 0 : 1);
             Grid.SetRow(navigation, preferences.NavigationEdge == "Top" ? 0 : preferences.NavigationEdge == "Bottom" ? 2 : 1);
@@ -159,7 +161,7 @@ namespace Postbox {
             if (favouritesTab && preferences.FavouriteFolders.Count == 0) navigationButtons.Children.Add(new TextBlock { Text = "Add favourites in Settings", Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10), FontSize = 11 });
             var scroll = new ScrollViewer { Content = MailboxNavigation(horizontal, compact), VerticalScrollBarVisibility = horizontal ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = horizontal ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled };
             navContent.Children.Add(scroll); layout.Children.Add(navContent);
-            UpdateNavigationLabels();
+            UpdateNavigationLabels(); ApplyNavigationResize();
             ApplySpotifyPlacement();
             UpdateConnectionLamp();
         }
@@ -248,6 +250,8 @@ namespace Postbox {
             var signReply = Toggle(profile, "Add signature to replies and forwards", preferences.SignatureOnReplies);
             profile.Children.Add(Label("Existing drafts keep their content. Your signature is inserted above quoted messages.", 11, "#8793A7")); Tab(tabs, "Profile & signature", profile);
             var appearance = SettingsSection("Your workspace", "Preview changes immediately. Save keeps them; Cancel restores your previous settings.");
+            var autoImages = Toggle(appearance, "Load email pictures automatically", preferences.AutoLoadImages);
+            appearance.Children.Add(Label("External pictures contact the image server. Turn this off to load them only when you choose Load images.", 11, "Muted"));
             var mode = Choice(appearance, "Colour mode", preferences.AppearanceMode, new[] { "Dark", "Light" });
             var edge = Choice(appearance, "Navigation position", preferences.NavigationEdge, new[] { "Left", "Top", "Right", "Bottom" });
             var inboxEdge = Choice(appearance, "Inbox / message list position", preferences.InboxEdge, new[] { "Left", "Top", "Right", "Bottom" });
@@ -299,7 +303,7 @@ namespace Postbox {
             Func<Preferences> readControls = delegate {
                 var updated = settingsStore.Clone(editing);
                 updated.ProfilePhoto = photoEditor.Data; updated.DisplayName = name.Text; updated.EmailAddress = email.Text.Trim(); signatureProfile.ReadInto(updated); updated.SignatureOnNew = signNew.IsChecked == true; updated.SignatureOnReplies = signReply.IsChecked == true;
-                updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
+                updated.AutoLoadImages = autoImages.IsChecked == true; updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
                 updated.ComposeFont = Value(composeFont); updated.ComposeFontSize = Int32.Parse(Value(composeSize));
                 updated.NavigationEdge = Value(edge); updated.NavigationCollapsed = collapsed.IsChecked == true; updated.TextSize = Int32.Parse(Value(textSize));
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);

@@ -43,7 +43,15 @@ namespace Postbox {
         public bool Unread { get; set; }
         public bool Starred { get; set; }
         public string Initials { get { return String.Join("", (Sender ?? "?").Split(' ').Where(s => s.Length > 0).Take(2).Select(s => s.Substring(0, 1))).ToUpperInvariant(); } }
-        public string Preview { get { return (Body ?? "").Replace("\r", " ").Replace("\n", " "); } }
+        private string previewHtml, previewText;
+        public string Preview { get {
+            string text = Body ?? "";
+            if (!String.IsNullOrWhiteSpace(HtmlBody)) {
+                if (previewHtml != HtmlBody) { previewHtml = HtmlBody; try { previewText = MailTransport.PlainHtml(HtmlBody); } catch { previewText = ""; } }
+                if (!String.IsNullOrWhiteSpace(previewText)) text = previewText;
+            }
+            return System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        } }
         public string TimeLabel { get { return Date.Date == DateTime.Today ? Date.ToString("HH:mm") : Date.ToString("dd MMM"); } }
         public string StarLabel { get { return Starred ? "★" : "☆"; } }
     }

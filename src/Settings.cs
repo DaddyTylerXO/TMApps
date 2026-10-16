@@ -14,7 +14,13 @@ namespace Postbox {
         public string RichBody { get; set; }
         public override string ToString() { return Name; }
     }
+    public class FolderAppearance { public string Icon { get; set; } public string Colour { get; set; } }
     public class Preferences {
+        public bool AutoLoadImages { get; set; }
+        public double NavigationWidth { get; set; }
+        public double InboxWidth { get; set; }
+        public double InboxHeight { get; set; }
+        public Dictionary<string, FolderAppearance> FolderAppearances { get; set; }
         public string DisplayName { get; set; }
         public string ProfilePhoto { get; set; }
         public string EmailAddress { get; set; }
@@ -50,6 +56,7 @@ namespace Postbox {
         public string NewSignatureId { get; set; }
         public string ReplySignatureId { get; set; }
         public Preferences() {
+            AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
             EmailAddress = "";
             StartupFolder = "Inbox"; NotifyReceived = true; NotifySent = false;
@@ -81,6 +88,11 @@ namespace Postbox {
             if (!new[] { "en-GB", "en-US", "fr-FR", "de-DE", "es-ES" }.Contains(SpellLanguage)) SpellLanguage = "en-GB";
             if (!new[] { "None", "Notification", "Chime", "Exclamation", "Custom WAV" }.Contains(ReceiveSound)) ReceiveSound = "Notification";
             if (!new[] { "None", "Notification", "Chime", "Exclamation", "Custom WAV" }.Contains(SendSound)) SendSound = "None";
+            if (Double.IsNaN(NavigationWidth) || Double.IsInfinity(NavigationWidth)) NavigationWidth = 224;
+            if (Double.IsNaN(InboxWidth) || Double.IsInfinity(InboxWidth)) InboxWidth = 365;
+            if (Double.IsNaN(InboxHeight) || Double.IsInfinity(InboxHeight)) InboxHeight = 260;
+            NavigationWidth = Math.Max(180, Math.Min(520, NavigationWidth)); InboxWidth = Math.Max(260, Math.Min(1400, InboxWidth)); InboxHeight = Math.Max(180, Math.Min(900, InboxHeight));
+            FolderAppearances = FolderAppearances ?? new Dictionary<string, FolderAppearance>();
             TextSize = Math.Max(12, Math.Min(20, TextSize));
             ReceiveWavePath = ReceiveWavePath ?? ""; SendWavePath = SendWavePath ?? "";
         }
