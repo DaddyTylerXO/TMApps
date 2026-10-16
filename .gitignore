@@ -1,0 +1,7 @@
+build/
+*.user
+*.log
+packages/
+release-repository/
+*.protected
+*.tmp
