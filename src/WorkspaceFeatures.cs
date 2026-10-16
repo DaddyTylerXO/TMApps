@@ -56,13 +56,15 @@ namespace Postbox {
         private void ApplySpotifyPlacement() {
             if (centerHost == null || navigationFooter == null) return;
             if (spotify != null) { Detach(spotify); spotify.Stop(); }
+            headerSearch.Width = 440;
             if (preferences.SpotifyPlacement == "Off") return;
             if (spotify == null) spotify = new SpotifyWidget();
             spotify.SetSidebar(preferences.SpotifyPlacement == "Sidebar");
             if (preferences.SpotifyPlacement == "Sidebar") {
                 if (preferences.NavigationCollapsed) { spotify.ToolTip = "Expand the navigation ribbon to see Spotify"; return; }
                 navigationFooter.Children.Insert(0, spotify);
-            } else { DockPanel.SetDock(spotify, preferences.SpotifyPlacement == "Top" ? Dock.Top : Dock.Bottom); centerHost.Children.Insert(0, spotify); }
+            } else if (preferences.SpotifyPlacement == "Top") { headerSearch.Width = 210; spotify.SetHeader(); Grid.SetColumn(spotify, 1); headerLeft.Children.Add(spotify); }
+            else { DockPanel.SetDock(spotify, Dock.Bottom); centerHost.Children.Insert(0, spotify); }
             spotify.Start();
         }
     }

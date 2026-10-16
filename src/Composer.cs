@@ -95,8 +95,14 @@ namespace Postbox {
             if (existing != null && !String.IsNullOrEmpty(existing.RichBody) && !RichMail.Load(editor, existing.RichBody)) { MessageBox.Show(this, "The formatted body could not be read. The plain text copy is shown; saving will replace the damaged formatting.", "TMA-Mail"); }
             if (existing != null && existing.Attachments != null) attachments.AddRange(existing.Attachments);
             if (mode != "" && original != null) {
-                subject.Text = (mode == "reply" ? "Re: " : "Fwd: ") + original.Subject;
-                to.Text = mode == "reply" ? (original.Address == "you@postbox.local" || (original.Address == "you@tma-mail.local" || (!String.IsNullOrEmpty(prefs.EmailAddress) && String.Equals(original.Address, prefs.EmailAddress, StringComparison.OrdinalIgnoreCase))) ? original.To : original.Address) : "";
+                subject.Text = (mode == "reply" || mode == "replyAll" ? "Re: " : "Fwd: ") + original.Subject;
+                to.Text = mode == "reply" || mode == "replyAll" ? (original.Address == "you@postbox.local" || (original.Address == "you@tma-mail.local" || (!String.IsNullOrEmpty(prefs.EmailAddress) && String.Equals(original.Address, prefs.EmailAddress, StringComparison.OrdinalIgnoreCase))) ? original.To : original.Address) : "";
+                if (mode == "replyAll") {
+                    var own = prefs.EmailAddress ?? "";
+                    var addresses = new[] { original.Address }.Concat((original.To ?? "").Split(';', ',')).Select(a => (a ?? "").Trim()).Where(a => a.Length > 0 && !String.Equals(a, own, StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    to.Text = String.Join("; ", addresses);
+                    cc.Text = String.Join("; ", (original.Cc ?? "").Split(';', ',').Select(a => a.Trim()).Where(a => a.Length > 0 && !String.Equals(a, own, StringComparison.OrdinalIgnoreCase) && !addresses.Contains(a, StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase));
+                }
                 RichMail.SetPlain(editor, prefs.InitialBody(true) + "\n\n──────── Original message ────────\nFrom: " + original.Sender + " <" + original.Address + ">\nDate: " + original.Date.ToLocalTime().ToString("f") + "\nSubject: " + original.Subject + "\n\n" + original.Body);
                 if (mode == "forward" && original.Attachments != null) attachments.AddRange(original.Attachments);
             }

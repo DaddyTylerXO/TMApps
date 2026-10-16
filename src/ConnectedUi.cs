@@ -38,8 +38,7 @@ namespace Postbox {
         }
         private bool periodicSyncRunning;
         private async void StartMailConnection() {
-            var toolbar = (StackPanel)Find<Button>("DeleteButton").Parent;
-            var sync = Action("↻ Sync", false); sync.Click += async delegate { await SyncMail(); }; toolbar.Children.Add(sync);
+            Find<Button>("FooterSyncButton").Click += async delegate { await SyncMail(); };
             InitializeCacheShutdown();
             if (offlinePreview) { Status("Offline preview · synthetic mailboxes · no server connections"); return; }
             syncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };

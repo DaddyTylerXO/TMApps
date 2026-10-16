@@ -6,8 +6,8 @@ using System.Windows.Media.Imaging;
 [assembly: AssemblyTitle("TMA-Mail")]
 [assembly: AssemblyProduct("TMA-Mail")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
-[assembly: AssemblyVersion("0.9.2.0")]
-[assembly: AssemblyFileVersion("0.9.2.0")]
+[assembly: AssemblyVersion("0.10.0.0")]
+[assembly: AssemblyFileVersion("0.10.0.0")]
 namespace Postbox {
     public static class AppBrand {
         public static void Apply(Window window) {

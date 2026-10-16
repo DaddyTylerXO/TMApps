@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.9.2')
+param([string]$OutputDirectory = 'build\v0.10.0')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -13,7 +13,7 @@ $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mai
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
 $arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
 foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
-foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net461') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
@@ -22,6 +22,11 @@ foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
 }
 foreach ($library in @('Microsoft.Web.WebView2.Wpf.dll','Microsoft.Web.WebView2.Core.dll')) { $source = Join-Path $root ('packages\microsoft.web.webview2\lib\net462\' + $library); $arguments += '/reference:' + $source; Copy-Item -LiteralPath $source -Destination $out -Force }
 Copy-Item -LiteralPath (Join-Path $root 'packages\microsoft.web.webview2\runtimes\win-x64\native\WebView2Loader.dll') -Destination $out -Force
+foreach ($library in @(@("ical.net","Ical.Net.dll"),@("nodatime","NodaTime.dll"))) { $file = Join-Path $root ("packages\" + $library[0] + "\lib\netstandard2.0\" + $library[1]); $arguments += "/reference:" + $file; Copy-Item -LiteralPath $file -Destination $out -Force }
+$netstandard = Get-ChildItem (Join-Path $env:WINDIR "Microsoft.NET\assembly\GAC_MSIL\netstandard") -Recurse -Filter netstandard.dll | Select-Object -First 1 -ExpandProperty FullName
+$arguments += "/reference:" + $netstandard
+$arguments += "/reference:" + (Join-Path $framework "WPF\ReachFramework.dll")
+$arguments += "/reference:" + (Join-Path $framework "WPF\System.Printing.dll")
 foreach ($reference in $references) { $arguments += '/reference:' + (Join-Path $framework $reference) }
 $arguments += (Join-Path $root 'src\MailStore.cs')
 $arguments += (Join-Path $root 'src\App.cs')
@@ -48,4 +53,5 @@ foreach ($document in @('SETUP.md','README.md')) { Copy-Item -LiteralPath (Join-
 $providerConfig = Join-Path $root 'provider-settings.json'
 if (!(Test-Path $providerConfig)) { $providerConfig = Join-Path $root 'provider-settings.example.json' }
 Copy-Item -LiteralPath $providerConfig -Destination (Join-Path $out 'provider-settings.json') -Force
+Copy-Item -LiteralPath (Join-Path $root "assets\Sounds") -Destination $out -Recurse -Force
 Write-Host "Built $out\TMA-Mail.exe"

@@ -45,6 +45,7 @@ namespace Postbox {
             System.Windows.Automation.AutomationProperties.SetName(lamp, (string)lamp.ToolTip);
         }
         private void SelectMailbox(MailAccount account, string target) {
+            ShowMailView();
             if (activeAccount == null || activeAccount.Id != account.Id) {
                 accountStore.Activate(account.Id); activeAccount = account; transport = new MailTransport(account, accountStore); store = CurrentMailbox(); lastBatchMove = null; selected = null; preferences.EmailAddress = account.Email;
             }
@@ -104,10 +105,13 @@ namespace Postbox {
                             Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
                                 if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                                 account.Folders = foldersFound.Select(f => new ServerFolder { Name = f.Name, Path = f.Path, ParentPath = f.ParentPath, LocalName = f.LocalName, Count = f.Count, Unread = f.Unread, Selectable = f.Selectable }).ToList();
+                                if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             }));
                         }, delegate(ServerFolder completed, List<Message> batch) { Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
                             if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                             bool folderChanged = mailbox.ApplyFolderBatch(completed, batch); changed |= folderChanged;
+                            var metadata = account.Folders == null ? null : account.Folders.FirstOrDefault(f => f.Path == completed.Path); if (metadata != null) { metadata.Count = completed.Count; metadata.Unread = completed.Unread; }
+                            if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             if (folderChanged && activeAccount != null && account.Id == activeAccount.Id && (folder == completed.LocalName || folder == "Starred")) Refresh(selected == null ? null : selected.Id);
                         })); }, mailShutdown.Token));
                     lock (progressGate) reporting = false;

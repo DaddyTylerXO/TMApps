@@ -18,7 +18,7 @@ namespace Postbox {
         private void InitializeMailboxFeatures() {
             var list = Find<ListBox>("MessageList"); list.SelectionMode = SelectionMode.Extended;
             list.ToolTip = "Ctrl+click to select individual messages. Shift+click to select a range.";
-            var toolbar = (StackPanel)Find<Button>("DeleteButton").Parent;
+            var toolbar = (Panel)Find<Button>("DeleteButton").Parent;
             moveButton = Action("↗ Move to…", false); moveButton.Click += delegate { ShowMoveMenu(moveButton); }; toolbar.Children.Insert(2, moveButton);
             var menu = new ContextMenu();
             foreach (string target in new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash" }) { string destination = target; var item = new MenuItem { Header = "Move to " + target }; item.Click += delegate { MoveSelected(destination); }; menu.Items.Add(item); }
@@ -77,7 +77,7 @@ namespace Postbox {
         }
         private void ToggleSelectedRead() {
             var messages = SelectedMessages(); if (messages.Count == 0) return;
-            bool markUnread = !messages.Any(m => m.Unread); foreach (var message in messages) message.Unread = markUnread;
+            bool markUnread = !messages.Any(m => m.Unread); foreach (var message in messages) SetUnreadLocal(message, markUnread);
             foreach (var message in messages) SaveServerFlags(message);
             SaveMailboxInBackground(store); Refresh(selected.Id);
         }

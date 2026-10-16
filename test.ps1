@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.9.2')
+param([string]$OutputDirectory = 'build\v0.10.0')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -14,7 +14,7 @@ $layoutArguments += Join-Path $PSScriptRoot 'tests\LayoutTests.cs'
 if ($LASTEXITCODE -ne 0) { throw 'Layout test compilation failed.' }
 & (Join-Path $out 'LayoutTests.exe') (Join-Path $PSScriptRoot 'src\MainWindow.xaml')
 if ($LASTEXITCODE -ne 0) { throw 'Layout checks failed.' }
-& (Join-Path $framework 'csc.exe') /nologo /target:exe ('/out:' + (Join-Path $out 'SettingsTests.exe')) ('/reference:' + (Join-Path $framework 'System.Web.Extensions.dll')) (Join-Path $PSScriptRoot 'src\Settings.cs') (Join-Path $PSScriptRoot 'tests\SettingsTests.cs')
+& (Join-Path $framework 'csc.exe') /nologo /target:exe ('/out:' + (Join-Path $out 'SettingsTests.exe')) ('/reference:' + (Join-Path $framework 'System.Web.Extensions.dll')) (Join-Path $PSScriptRoot 'src\Settings.cs') (Join-Path $PSScriptRoot 'src\Sounds.cs') (Join-Path $PSScriptRoot 'tests\SettingsTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Settings test compilation failed.' }
 & (Join-Path $out 'SettingsTests.exe') (Join-Path $out 'test-data')
 if ($LASTEXITCODE -ne 0) { throw 'Settings checks failed.' }
@@ -60,3 +60,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Responsiveness test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'ResponsivenessTests.exe.config') -Force
 & (Join-Path $out 'ResponsivenessTests.exe') --data-dir (Join-Path $out ('test-data\responsive-' + [guid]::NewGuid().ToString()))
 if ($LASTEXITCODE -ne 0) { throw 'Responsiveness checks failed.' }
+
+$suiteArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'SuiteFeaturesTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')),('/reference:' + (Join-Path $out 'MimeKit.dll')))
+foreach($reference in @('System.dll','System.Core.dll','System.Net.Http.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $suiteArguments += '/reference:' + (Join-Path $framework $reference) }
+$suiteArguments += Join-Path $PSScriptRoot 'tests\SuiteFeaturesTests.cs'
+& (Join-Path $framework 'csc.exe') @suiteArguments
+if($LASTEXITCODE -ne 0) { throw 'Suite test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'SuiteFeaturesTests.exe.config') -Force
+& (Join-Path $out 'SuiteFeaturesTests.exe') --data-dir (Join-Path $out ('test-data\suite-' + [guid]::NewGuid().ToString()))
+if($LASTEXITCODE -ne 0) { throw 'Workspace-suite tests failed.' }

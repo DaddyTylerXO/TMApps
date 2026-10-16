@@ -38,6 +38,7 @@ namespace Postbox {
         public string Importance { get; set; }
         public bool FollowUp { get; set; }
         public List<MailAttachment> Attachments { get; set; }
+        public string Category { get; set; }
         public string Subject { get; set; }
         public string Body { get; set; }
         public string Folder { get; set; }
@@ -57,6 +58,7 @@ namespace Postbox {
         } }
         [ScriptIgnore] public string TimeLabel { get { return Date.Date == DateTime.Today ? Date.ToString("HH:mm") : Date.ToString("dd MMM"); } }
         [ScriptIgnore] public string StarLabel { get { return Starred ? "★" : "☆"; } }
+        [ScriptIgnore] public string FollowUpLabel { get { return FollowUp ? "⚑ Follow up" : ""; } }
     }
 
     public class MailStore {

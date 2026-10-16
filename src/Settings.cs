@@ -16,6 +16,8 @@ namespace Postbox {
     }
     public class FolderAppearance { public string Icon { get; set; } public string Colour { get; set; } }
     public class Preferences {
+        public bool AutoMarkRead { get; set; }
+        public bool CalendarMonday { get; set; }
         public bool AutoLoadImages { get; set; }
         public double NavigationWidth { get; set; }
         public double InboxWidth { get; set; }
@@ -56,11 +58,12 @@ namespace Postbox {
         public string NewSignatureId { get; set; }
         public string ReplySignatureId { get; set; }
         public Preferences() {
+            CalendarMonday = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
             EmailAddress = "";
             StartupFolder = "Inbox"; NotifyReceived = true; NotifySent = false;
-            ReceiveSound = "Notification"; SendSound = "None"; ReceiveWavePath = ""; SendWavePath = "";
+            ReceiveSound = "Cozy"; SendSound = "Cozy"; ReceiveWavePath = ""; SendWavePath = "";
             SpellCheckEnabled = true; SpellLanguage = "en-GB"; NavigationEdge = "Left"; TextSize = 14;
             AppearanceMode = "Dark"; FavouriteFolders = new List<string> { "Inbox", "Sent" }; ComposeFont = "Segoe UI"; ComposeFontSize = 14;
             InboxEdge = "Left"; SpotifyPlacement = "Off"; Signatures = new List<MailSignature>(); SignatureTemplates = new List<MailSignature>();
@@ -86,8 +89,8 @@ namespace Postbox {
             if (!new[] { "Left", "Top", "Right", "Bottom" }.Contains(NavigationEdge)) NavigationEdge = "Left";
             if (!new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive" }.Contains(StartupFolder)) StartupFolder = "Inbox";
             if (!new[] { "en-GB", "en-US", "fr-FR", "de-DE", "es-ES" }.Contains(SpellLanguage)) SpellLanguage = "en-GB";
-            if (!new[] { "None", "Notification", "Chime", "Exclamation", "Custom WAV" }.Contains(ReceiveSound)) ReceiveSound = "Notification";
-            if (!new[] { "None", "Notification", "Chime", "Exclamation", "Custom WAV" }.Contains(SendSound)) SendSound = "None";
+            if (!SoundCatalog.Choices.Contains(ReceiveSound)) ReceiveSound = "Notification";
+            if (!SoundCatalog.Choices.Contains(SendSound)) SendSound = "None";
             if (Double.IsNaN(NavigationWidth) || Double.IsInfinity(NavigationWidth)) NavigationWidth = 224;
             if (Double.IsNaN(InboxWidth) || Double.IsInfinity(InboxWidth)) InboxWidth = 365;
             if (Double.IsNaN(InboxHeight) || Double.IsInfinity(InboxHeight)) InboxHeight = 260;

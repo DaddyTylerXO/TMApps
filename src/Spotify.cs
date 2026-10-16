@@ -48,6 +48,7 @@ namespace Postbox {
         private readonly StackPanel layout, details, controls;
         private readonly TextBlock title, artist;
         private readonly Button play, next, previous;
+        private Grid headerLayout;
         private bool busy, disposed, active;
         public SpotifyWidget() {
             Background = Theme.B("Surface"); CornerRadius = new CornerRadius(14); Padding = new Thickness(14, 10, 14, 10); Margin = new Thickness(12, 8, 12, 8);
@@ -59,7 +60,8 @@ namespace Postbox {
             previous = ControlButton("|‹", "Previous track", "previous"); play = ControlButton("▶", "Play or pause Spotify", "toggle"); next = ControlButton("›|", "Next track", "next"); controls.Children.Add(previous); controls.Children.Add(play); controls.Children.Add(next);
             timer.Tick += async delegate { await Refresh(); };
         }
-        public void SetSidebar(bool sidebar) { layout.Orientation = sidebar ? Orientation.Vertical : Orientation.Horizontal; details.Width = sidebar ? 160 : 300; details.Margin = new Thickness(0, 0, sidebar ? 0 : 18, sidebar ? 8 : 0); }
+        public void SetSidebar(bool sidebar) { if (headerLayout != null) { headerLayout.Children.Clear(); headerLayout = null; layout.Children.Add(details); layout.Children.Add(controls); Child = layout; } Background = Theme.B("Surface"); layout.Orientation = sidebar ? Orientation.Vertical : Orientation.Horizontal; details.Width = sidebar ? 160 : 300; details.Margin = new Thickness(0, 0, sidebar ? 0 : 18, sidebar ? 8 : 0); Padding = new Thickness(14, 10, 14, 10); Margin = new Thickness(6); }
+        public void SetHeader() { layout.Children.Clear(); headerLayout = new Grid(); headerLayout.ColumnDefinitions.Add(new ColumnDefinition()); headerLayout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); headerLayout.Children.Add(details); Grid.SetColumn(controls, 1); headerLayout.Children.Add(controls); Child = headerLayout; Background = Theme.B("Raised"); Padding = new Thickness(10, 5, 10, 5); Margin = new Thickness(12, 3, 10, 3); details.Width = Double.NaN; details.Margin = new Thickness(0, 0, 8, 0); }
         public async void Start() { if (disposed) return; active = true; timer.Start(); await Refresh(); }
         public void Stop() { active = false; timer.Stop(); }
         private Button ControlButton(string text, string hint, string action) {

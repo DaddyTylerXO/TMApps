@@ -78,13 +78,17 @@ namespace Postbox {
             if (account == null) return;
             foreach (var value in (account.Folders ?? new List<ServerFolder>()).Where(f => f.LocalName.StartsWith("Server:")).OrderBy(f => f.Path)) {
                 if (favouritesTab && !preferences.FavouriteFolders.Contains(value.LocalName)) continue;
-                var captured = value; var button = FolderButton("▱  " + value.Name + (value.Unread > 0 ? "  " + value.Unread : ""), delegate { folder = captured.LocalName; unreadOnly = false; Refresh(null); });
+                var captured = value; var button = FolderButton("▱  " + value.Name + (value.Unread > 0 ? "  " + value.Unread : ""), delegate { ShowMailView(); folder = captured.LocalName; unreadOnly = false; Refresh(null); });
                 button.IsEnabled = value.Selectable; button.ToolTip = value.Path; button.Margin = new Thickness(String.IsNullOrEmpty(value.ParentPath) ? 8 : 20, 3, 8, 3);
                 StyleServerFolder(button, account, value);
                 customFolderButtons[button] = value.LocalName; panel.Children.Add(button);
             }
         }
-        private void UpdateCustomFolderSelection() { foreach (var value in customFolderButtons) value.Key.Background = value.Value == folder ? Theme.B("SidebarSelected") : System.Windows.Media.Brushes.Transparent; }
+        private void UpdateCustomFolderSelection() { foreach (var value in customFolderButtons) {
+            value.Key.Background = value.Value == folder ? Theme.B("SidebarSelected") : System.Windows.Media.Brushes.Transparent;
+            var metadata = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == value.Value);
+            if (metadata != null) { FolderAppearance look; preferences.FolderAppearances.TryGetValue(FolderAppearanceKey(activeAccount.Id, metadata.Path), out look); string icon = look == null ? "▱" : look.Icon; value.Key.Content = preferences.NavigationCollapsed ? icon : icon + "   " + metadata.Name + (metadata.Unread > 0 ? "  " + metadata.Unread : ""); }
+        } }
         private void ShowProfileMenu() {
             var menu = new ContextMenu { PlacementTarget = Find<Button>("AccountTop"), Placement = PlacementMode.Bottom, MinWidth = 270, Background = Theme.B("Surface"), Foreground = Theme.B("Text"), Padding = new Thickness(8), HasDropShadow = true };
             menu.Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='ContextMenu'><Border CornerRadius='18' Background='{TemplateBinding Background}' Padding='8' BorderBrush='#555B68' BorderThickness='1'><ItemsPresenter/></Border></ControlTemplate>");

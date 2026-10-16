@@ -7,3 +7,5 @@ Pinned support packages: System.Formats.Asn1 8.0.1, System.Threading.Tasks.Exten
 Provider sign-in adds Microsoft.Identity.Client 4.91.0 and Microsoft.IdentityModel.Abstractions 8.14.0 (MIT), Google.Apis.Auth / Google.Apis.Core / Google.Apis 1.73.0 (Apache-2.0), and Newtonsoft.Json 13.0.4 (MIT). Support dependencies: System.Diagnostics.DiagnosticSource 6.0.1, System.Text.Json 8.0.6, System.Text.Encodings.Web 8.0.0, and Microsoft.Bcl.AsyncInterfaces 8.0.0 (MIT). Corresponding license notices are included in `licenses/`.
 
 HTML reading uses Microsoft.Web.WebView2 SDK 1.0.4191.47 under Microsoft's WebView2 SDK license (not MIT). SDK license and notices are included as licenses/WebView2.txt and licenses/WebView2-NOTICE.txt. The Microsoft Edge WebView2 Runtime is a separate Microsoft component installed on the user's PC.
+
+Calendar imports use Ical.Net 5.2.3 (MIT), NodaTime 3.2.2 (Apache-2.0), and Portable.System.DateTimeOnly 9.0.0 (MIT). Their licenses are included in licenses/Ical.Net.txt, licenses/NodaTime.txt, and licenses/DateTimeOnly.txt. The 14 bundled WAV sounds are original synthesized assets created for TMA-Mail; make-sounds.ps1 reproduces them.

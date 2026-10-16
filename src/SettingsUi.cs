@@ -69,6 +69,7 @@ namespace Postbox {
             center.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             center.RowDefinitions.Add(new RowDefinition { Height = new GridLength(30) });
             centerHost = new DockPanel(); Grid.SetColumn(centerHost, 1); Grid.SetRow(centerHost, 1); workspace.Children.Add(centerHost); centerHost.Children.Add(center);
+            suiteCenter = center; suiteHeader = (Grid)header.Child; headerSearch = (Border)suiteHeader.Children[0]; headerLeft = new Grid(); headerLeft.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); headerLeft.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); suiteHeader.Children.Remove(headerSearch); headerLeft.Children.Add(headerSearch); suiteHeader.Children.Insert(0, headerLeft);
             Grid.SetColumn(header, 0); Grid.SetColumnSpan(header, 1); Grid.SetRow(header, 0); center.Children.Add(header);
             mailArea = new Grid();
             mailArea.SizeChanged += delegate { ConstrainInboxSize(); };
@@ -112,7 +113,7 @@ namespace Postbox {
         private void ApplyPreferences() {
             Theme.SetMode(preferences.AppearanceMode);
             window.Title = "TMA-Mail";
-            Find<TextBlock>("WorkspaceBadge").Text = activeAccount == null ? "EXPLORE MODE" : "CONNECTED MAIL";
+            Find<TextBlock>("WorkspaceBadge").Text = activeAccount == null ? "EXPLORE MODE" : "CONNECTED MAIL"; ((FrameworkElement)Find<TextBlock>("WorkspaceBadge").Parent).Visibility = Visibility.Collapsed;
             Find<TextBox>("BodyText").FontSize = preferences.TextSize;
             if (activeAccount != null) preferences.EmailAddress = activeAccount.Email;
             ((Border)Find<Button>("AccountTop").Content).Child = ProfilePhotoEditor.Avatar(preferences, 34);
@@ -121,13 +122,14 @@ namespace Postbox {
             ApplyNavigation();
             ApplyInboxLayout(); if (htmlReader != null) htmlReader.SetImagePolicy(preferences.AutoLoadImages);
             if (richReader != null) richReader.FontSize = preferences.TextSize;
+            if (calendarPage != null && calendarPage.Visibility == Visibility.Visible) RenderCalendarMonth();
         }
         private void ApplyNavigation() {
             bool horizontal = preferences.NavigationEdge == "Top" || preferences.NavigationEdge == "Bottom";
             bool compact = preferences.NavigationCollapsed;
             navigation.Child = null;
             foreach (string name in folders) Detach(Find<Button>(name + "Nav"));
-            foreach (var button in new[] { Find<Button>("ComposeButton"), Find<Button>("AccountsButton"), collapseButton, settingsButton }) Detach(button);
+            foreach (var button in new[] { Find<Button>("ComposeButton"), Find<Button>("AccountsButton"), collapseButton, settingsButton, managementButton, calendarButton }) Detach(button);
             var brand = (StackPanel)navigation.Tag; Detach(brand);
             navigation.Width = horizontal ? Double.NaN : compact ? 88 : FittedNavigationWidth();
             navigation.Height = Double.NaN;
@@ -135,11 +137,11 @@ namespace Postbox {
             Grid.SetRow(navigation, preferences.NavigationEdge == "Top" ? 0 : preferences.NavigationEdge == "Bottom" ? 2 : 1);
             var layout = new DockPanel { LastChildFill = true, Margin = new Thickness(horizontal ? 8 : 0) }; navigation.Child = layout;
             collapseButton.Width = Double.NaN; collapseButton.Height = Double.NaN; settingsButton.Height = Double.NaN; settingsButton.FontSize = 12; collapseButton.Content = "☰"; collapseButton.HorizontalAlignment = HorizontalAlignment.Right; collapseButton.Background = Brushes.Transparent; collapseButton.Foreground = Brush("#C5D4EC"); collapseButton.Margin = new Thickness(0, 4, 4, 0); collapseButton.Padding = new Thickness(10, 9, 10, 9);
-            DockPanel.SetDock(collapseButton, horizontal ? Dock.Right : Dock.Top); layout.Children.Add(collapseButton);
-            if (!horizontal && !compact) { brand.Margin = new Thickness(24, 17, 16, 18); DockPanel.SetDock(brand, Dock.Top); layout.Children.Add(brand); }
-            var compose = Find<Button>("ComposeButton"); compose.Content = compact ? "＋" : horizontal ? "＋ New" : "＋   New message";
-            compose.Height = Double.NaN; compose.FontSize = 12; compose.Background = Theme.B("SidebarAccent"); compose.ToolTip = "New message (Ctrl+N)"; compose.Margin = new Thickness(8, horizontal ? 4 : 8, 8, horizontal ? 4 : 24); compose.Padding = new Thickness(compact ? 12 : 14, 10, compact ? 12 : 14, 10);
+            if (!horizontal && !compact) { var top = new DockPanel { Height = 54, Margin = new Thickness(8, 0, 4, 0) }; DockPanel.SetDock(collapseButton, Dock.Right); top.Children.Add(collapseButton); brand.Margin = new Thickness(12, 0, 0, 0); brand.VerticalAlignment = VerticalAlignment.Center; top.Children.Add(brand); DockPanel.SetDock(top, Dock.Top); layout.Children.Add(top); } else { DockPanel.SetDock(collapseButton, horizontal ? Dock.Right : Dock.Top); layout.Children.Add(collapseButton); }
+            var compose = Find<Button>("ComposeButton"); compose.Content = compact ? "✉⁺" : horizontal ? "✉⁺ New" : "✉⁺   New message";
+            compose.Height = Double.NaN; compose.FontSize = 12; compose.Background = Theme.B("SidebarAccent"); compose.ToolTip = "New message (Ctrl+N)"; compose.Margin = new Thickness(8, horizontal ? 4 : 8, 8, horizontal ? 4 : 6); compose.Padding = new Thickness(compact ? 12 : 14, 10, compact ? 12 : 14, 10);
             DockPanel.SetDock(compose, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(compose);
+            foreach (var entry in new[] { managementButton, calendarButton }) if (entry != null) { entry.Content = entry == managementButton ? (compact ? "🔧" : "🔧  Mailbox management") : (compact ? "▦" : "▦  Calendar"); entry.Margin = new Thickness(8, 3, 8, 3); entry.Padding = new Thickness(8); entry.FontSize = compact ? 20 : 12; entry.Height = 40; entry.HorizontalContentAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Left; entry.Background = Brushes.Transparent; entry.Foreground = Brush("#C5D4EC"); DockPanel.SetDock(entry, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(entry); }
             var footer = new StackPanel { Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical }; navigationFooter = footer;
             settingsButton.Content = compact ? "⚙" : "⚙  Settings"; settingsButton.HorizontalAlignment = HorizontalAlignment.Stretch; settingsButton.HorizontalContentAlignment = HorizontalAlignment.Left;
             var accounts = Find<Button>("AccountsButton"); accounts.Visibility = Visibility.Collapsed;
@@ -188,16 +190,16 @@ namespace Postbox {
         private bool IsOwnMessage(Message message) { return message.Address == "you@postbox.local" || message.Address == "you@tma-mail.local" || (!String.IsNullOrEmpty(preferences.EmailAddress) && String.Equals(message.Address, preferences.EmailAddress, StringComparison.OrdinalIgnoreCase)); }
         private void HideToTray() { tray.Visible = true; window.Hide(); }
         private void RestoreWindow() { window.Show(); window.WindowState = preferences.StartMaximized ? WindowState.Maximized : WindowState.Normal; tray.Visible = false; window.Activate(); }
-        private void PlaySound(string choice, string file) {
+        private void PlaySound(string choice, string file, bool sent = false) {
             try {
-                if (choice == "Custom WAV") { if (soundPlayer != null) soundPlayer.Dispose(); soundPlayer = new SoundPlayer(file); soundPlayer.Load(); soundPlayer.Play(); }
+                if (choice == "Custom WAV" || SoundCatalog.Cozy.Contains(choice)) { if (soundPlayer != null) soundPlayer.Dispose(); soundPlayer = new SoundPlayer(choice == "Custom WAV" ? file : SoundCatalog.PathFor(choice, sent)); soundPlayer.Play(); }
                 else if (choice == "Notification") SystemSounds.Asterisk.Play();
                 else if (choice == "Chime") SystemSounds.Beep.Play();
                 else if (choice == "Exclamation") SystemSounds.Exclamation.Play();
             } catch (Exception ex) { Status("Sound could not be played: " + ex.Message); }
         }
         private void MailNotification(bool received, string subject) {
-            PlaySound(received ? preferences.ReceiveSound : preferences.SendSound, received ? preferences.ReceiveWavePath : preferences.SendWavePath);
+            PlaySound(received ? preferences.ReceiveSound : preferences.SendSound, received ? preferences.ReceiveWavePath : preferences.SendWavePath, !received);
             if (received ? !preferences.NotifyReceived : !preferences.NotifySent) return;
             ShowNotification(received ? "New mail" : "Message sent", subject);
         }
@@ -235,7 +237,7 @@ namespace Postbox {
             FieldLabel(panel, label); var choice = new ComboBox { ItemsSource = options, SelectedItem = value, Padding = new Thickness(8), FontSize = 13, MinHeight = 34 }; panel.Children.Add(choice); return choice;
         }
         private static string Value(ComboBox combo) { return combo.SelectedItem as string; }
-        private static void Tab(TabControl tabs, string title, StackPanel content) { tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(12, 14, 12, 14), Width = 130 }, Content = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
+        private static void Tab(TabControl tabs, string title, StackPanel content) { tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(8, 6, 8, 6), Width = 130 }, Content = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
 
         private void ShowSettings(string section = "Accounts") {
             var previewSession = new SettingsPreview(settingsStore, preferences);
@@ -257,6 +259,7 @@ namespace Postbox {
             var signReply = Toggle(profile, "Add signature to replies and forwards", preferences.SignatureOnReplies);
             profile.Children.Add(Label("Existing drafts keep their content. Your signature is inserted above quoted messages.", 11, "#8793A7")); Tab(tabs, "Profile & signature", profile);
             var appearance = SettingsSection("Your workspace", "Preview changes immediately. Save keeps them; Cancel restores your previous settings.");
+            var autoRead = Toggle(appearance, "Automatically mark messages as read when I open them", preferences.AutoMarkRead);
             var autoImages = Toggle(appearance, "Load email pictures automatically", preferences.AutoLoadImages);
             appearance.Children.Add(Label("External pictures contact the image server. Turn this off to load them only when you choose Load images.", 11, "Muted"));
             var mode = Choice(appearance, "Colour mode", preferences.AppearanceMode, new[] { "Dark", "Light" });
@@ -282,13 +285,13 @@ namespace Postbox {
             var notifications = SettingsSection("Stay in the loop", "Banners and sounds work while the app is running and your mailbox is connected.");
             var received = Toggle(notifications, "Show a desktop banner for incoming mail", preferences.NotifyReceived);
             var sent = Toggle(notifications, "Show a desktop banner for sent mail", preferences.NotifySent);
-            string[] sounds = { "None", "Notification", "Chime", "Exclamation", "Custom WAV" };
+            string[] sounds = SoundCatalog.Choices;
             var receiveSound = Choice(notifications, "Incoming mail sound", preferences.ReceiveSound, sounds);
             var receivePath = SoundFileField(notifications, preferences.ReceiveWavePath);
             var receivePreview = Action("▶  Preview incoming sound", false); receivePreview.Margin = new Thickness(0, 8, 0, 4); receivePreview.HorizontalAlignment = HorizontalAlignment.Left; receivePreview.Click += delegate { PlaySound(Value(receiveSound), receivePath.Text); }; notifications.Children.Add(receivePreview);
             var sendSound = Choice(notifications, "Sending mail sound", preferences.SendSound, sounds);
             var sendPath = SoundFileField(notifications, preferences.SendWavePath);
-            var sendPreview = Action("▶  Preview sending sound", false); sendPreview.Margin = new Thickness(0, 8, 0, 10); sendPreview.HorizontalAlignment = HorizontalAlignment.Left; sendPreview.Click += delegate { PlaySound(Value(sendSound), sendPath.Text); }; notifications.Children.Add(sendPreview);
+            var sendPreview = Action("▶  Preview sending sound", false); sendPreview.Margin = new Thickness(0, 8, 0, 10); sendPreview.HorizontalAlignment = HorizontalAlignment.Left; sendPreview.Click += delegate { PlaySound(Value(sendSound), sendPath.Text, true); }; notifications.Children.Add(sendPreview);
             var testBanner = Action("Preview desktop banner", false); testBanner.HorizontalAlignment = HorizontalAlignment.Left; testBanner.Click += delegate { ShowNotification("Notification preview", "This is how your mail notifications will look."); }; notifications.Children.Add(testBanner);
             var demoReceive = Action(activeAccount == null ? "Receive a sample message" : "Test incoming notification", false); demoReceive.Margin = new Thickness(0, 12, 0, 12); demoReceive.HorizontalAlignment = HorizontalAlignment.Left;
             demoReceive.Click += delegate {
@@ -303,6 +306,8 @@ namespace Postbox {
             var spell = Toggle(writing, "Check spelling in the subject and message body", preferences.SpellCheckEnabled);
             var language = Choice(writing, "Spelling language", preferences.SpellLanguage, new[] { "en-GB", "en-US", "fr-FR", "de-DE", "es-ES" });
             writing.Children.Add(Label("Right-click an underlined word for suggestions or Ignore All. Language support depends on the dictionaries installed in Windows. New composing windows use your saved choices.", 12, "#8793A7")); Tab(tabs, "Writing", writing);
+            var calendarSettings = CalendarSettings(dialog); var weekStart = Choice(calendarSettings, "Start week on", preferences.CalendarMonday ? "Monday" : "Sunday", new[] { "Monday", "Sunday" }); Tab(tabs, "Calendar", calendarSettings);
+            Tab(tabs, "Add-ins / plug-ins", PluginSettings(dialog)); Tab(tabs, "App Info", AppInfoSettings());
             var footer = new Grid { Margin = new Thickness(24, 16, 24, 20) }; footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); Grid.SetRow(footer, 2); layout.Children.Add(footer);
             var status = Label("Previewing live. Save keeps your changes; Cancel restores them.", 11, "#8793A7"); status.VerticalAlignment = VerticalAlignment.Center; footer.Children.Add(status);
             var actions = new StackPanel { Orientation = Orientation.Horizontal }; Grid.SetColumn(actions, 1); footer.Children.Add(actions);
@@ -310,7 +315,7 @@ namespace Postbox {
             Func<Preferences> readControls = delegate {
                 var updated = settingsStore.Clone(editing);
                 updated.ProfilePhoto = photoEditor.Data; updated.DisplayName = name.Text; updated.EmailAddress = email.Text.Trim(); signatureProfile.ReadInto(updated); updated.SignatureOnNew = signNew.IsChecked == true; updated.SignatureOnReplies = signReply.IsChecked == true;
-                updated.AutoLoadImages = autoImages.IsChecked == true; updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
+                updated.CalendarMonday = Value(weekStart) == "Monday"; updated.AutoMarkRead = autoRead.IsChecked == true; updated.AutoLoadImages = autoImages.IsChecked == true; updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
                 updated.ComposeFont = Value(composeFont); updated.ComposeFontSize = Int32.Parse(Value(composeSize));
                 updated.NavigationEdge = Value(edge); updated.NavigationCollapsed = collapsed.IsChecked == true; updated.TextSize = Int32.Parse(Value(textSize));
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);
@@ -340,7 +345,7 @@ namespace Postbox {
                     preferences = updated; committed = true; ApplyPreferences(); dialog.Close(); Status("Settings saved · startup choices apply on next launch");
                 } catch (Exception ex) { status.Text = "Could not save: " + ex.Message; status.Foreground = Brush("#BC4343"); }
             };
-            tabs.SelectedIndex = section == "Accounts" ? 0 : 1; if (section == "Name") dialog.Loaded += delegate { name.Focus(); name.SelectAll(); };
+            tabs.SelectedIndex = section == "Accounts" ? 0 : section == "Calendar" ? 6 : section == "Plugins" ? 7 : section == "App Info" ? 8 : 1; if (section == "Name") dialog.Loaded += delegate { name.Focus(); name.SelectAll(); };
             dialog.ShowDialog();
         }
         private static bool ValidWave(string file) {

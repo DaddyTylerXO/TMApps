@@ -2,6 +2,18 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.10.0 beta — 16 October 2026
+
+- Update unread folder counts immediately for local read/unread changes and as server folder status arrives, including custom folder labels. Add Appearance setting to mark messages read when opened, off by default, including clicking an already-selected first message.
+- Remove the Connected Mail badge, keep the profile button at its original header height when Spotify is on, and fit a rounded Spotify card before the profile/new-message controls. Move branding toward the top, add a mail-plus header composer button, and move Sync beside the connection light in the footer.
+- Expand the main toolbar with Reply, Reply all, Forward, Follow up, Categorise, Print text, Save .eml and Apps. Preserve embedded images when reconstructing an exported MIME message. Follow-up/category metadata remains local.
+- Add Mailbox Management below New message. Scan server message headers on a separate read-only IMAP connection for mailing lists, display individual and bulk selection controls, and request one-click unsubscribe via explicit reviewed HTTPS POST. Browser/mailto senders remain manual; accepted requests are not presented as guaranteed removal. Scan history is private and protected.
+- Add Calendar below Mailbox Management and a large month view with day details, navigation, and a return-to-mail action. Add Calendar settings for provider .ics exports, public HTTPS/webcal links, email invitation attachments, and week-start preference. Support time zones, floating local times, all-day events, recurrences and exceptions using iCal.NET 5.2.3. Imports are read-only snapshots, not continuous provider calendar synchronization.
+- Add a functional web-tool plug-in manager for TMA-Mail JSON manifests, with install confirmation, enable/disable, removal, and toolbar launchers. No mail content or account permissions are supplied to these tools. Outlook add-in host APIs are not implemented and Outlook add-ins are explicitly unsupported.
+- Add App Info with installed version, on-demand GitHub branch update checks, and a browser download action. Publish update.json alongside each portable build.
+- Create seven original soft incoming sounds and seven distinct outgoing sounds, including Cozy defaults for fresh profiles and six alternatives per direction. Retain existing users' sound selections and custom WAV support.
+- Add 42 synthetic suite checks for defaults/counts, header/footer layout, calendar recurrence/time zones/floating time, sound files, manifests, reply-all, and intercepted unsubscribe POST. Existing mailbox/settings/layout/connection/provider and large-cache responsiveness tests pass. No real unsubscribe, calendar provider mutation, or external email was sent during verification.
+- Verify the expanded mailbox and imported calendar in a native synthetic workspace. Include new runtime dependencies, sounds, plug-in documentation, update manifest and license notices in the portable package.
 ## 0.9.2 beta — 16 October 2026
 
 - Fix an expensive sync path that serialized, encrypted, and rewrote the complete cache on the UI thread after every folder. Merge completed folders in memory, persist changed data once per sync in a worker, and retain completed batches after an interrupted sync.

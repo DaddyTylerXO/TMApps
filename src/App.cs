@@ -33,10 +33,10 @@ namespace Postbox {
             folder = preferences.StartupFolder;
             Theme.SetMode(preferences.AppearanceMode); Theme.Install(window);
             InitializeWorkspace();
-            InitializeMailboxFeatures(); InitializeHtmlReader();
+            InitializeMailboxFeatures(); InitializeHtmlReader(); InitializeSuiteUi();
             foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {
                 Find<Button>(name + "Nav").Click += delegate(object sender, RoutedEventArgs e) {
-                    folder = (string)((Button)sender).Tag;
+                    ShowMailView(); folder = (string)((Button)sender).Tag;
                     unreadOnly = false;
                     refreshing = true; Find<TextBox>("SearchBox").Text = ""; refreshing = false;
                     selected = null; Refresh(null);
@@ -46,8 +46,8 @@ namespace Postbox {
             Find<ListBox>("MessageList").SelectionChanged += delegate {
                 if (refreshing) return;
                 selected = Find<ListBox>("MessageList").SelectedItem as Message;
-                if (selected != null && selected.Unread && SelectedMessages().Count == 1) {
-                    selected.Unread = false; SaveMailboxInBackground(store); SaveServerFlags(selected);
+                if (preferences.AutoMarkRead && selected != null && selected.Unread && SelectedMessages().Count == 1) {
+                    SetUnreadLocal(selected, false); SaveMailboxInBackground(store); SaveServerFlags(selected);
                     // Preserve the current view while reading; explicit filtering refreshes it.
                     refreshing = true; Find<ListBox>("MessageList").Items.Refresh(); refreshing = false;
                     UpdateCounts();
@@ -55,6 +55,12 @@ namespace Postbox {
                 RenderReader();
             };
             Find<ListBox>("MessageList").MouseDoubleClick += delegate { if (selected != null && selected.Folder == "Drafts") Compose(selected, ""); };
+            Find<ListBox>("MessageList").PreviewMouseLeftButtonUp += delegate(object sender, MouseButtonEventArgs e) {
+                var list = (ListBox)sender;
+                if (!preferences.AutoMarkRead || selected == null || !selected.Unread || SelectedMessages().Count != 1 || ItemsControl.ContainerFromElement(list, e.OriginalSource as DependencyObject) == null) return;
+                SetUnreadLocal(selected, false); SaveMailboxInBackground(store); SaveServerFlags(selected);
+                refreshing = true; try { list.Items.Refresh(); } finally { refreshing = false; } UpdateCounts(); RenderReader();
+            };
             Find<Button>("AllFilter").Click += delegate { unreadOnly = false; Refresh(null); };
             Find<Button>("UnreadFilter").Click += delegate { unreadOnly = true; Refresh(null); };
             Find<Button>("ComposeButton").Click += delegate { Compose(null, ""); };
@@ -140,6 +146,13 @@ namespace Postbox {
             Find<TextBlock>("StatusText").Text = text; Find<TextBlock>("StatusText").ToolTip = text;
         }
         private static Brush Brush(string color) { return Theme.B(color); }
+        private void SetUnreadLocal(Message message, bool unread) {
+            if (message.Unread == unread) return;
+            int delta = unread ? 1 : -1; message.Unread = unread;
+            var account = mailAccounts.FirstOrDefault(a => a.Id == message.AccountId) ?? activeAccount;
+            var metadata = account == null || account.Folders == null ? null : account.Folders.FirstOrDefault(f => f.Path == message.RemoteFolder || f.LocalName == message.Folder);
+            if (metadata != null) metadata.Unread = Math.Max(0, Math.Min(metadata.Count, metadata.Unread + delta));
+        }
         private Window Dialog(string title, double width, double height) {
             var dialog = new Window { Owner = window, Title = title, Width = width, Height = height, MinWidth = width, MinHeight = height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#FFFFFF"), FontFamily = new FontFamily("Segoe UI"), Foreground = Brush("#17243B"), ShowInTaskbar = false }; Theme.Install(dialog); return dialog;
         }
