@@ -2,6 +2,10 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.8.1 beta — 16 October 2026
+
+- Add a question-mark help button beside the iCloud app-specific password label. Clicking it reveals Apple Account instructions, the two-factor authentication requirement, and a direct link to Apple's UK support guide. Click again to hide the instructions.
+
 ## 0.8.0 beta — 16 October 2026
 
 - Replace the email-entry welcome screen with logo buttons for Sign in with Outlook, Sign in with Gmail, Sign in with iCloud, and Other Provider / Advanced Setup, plus Explore for now.

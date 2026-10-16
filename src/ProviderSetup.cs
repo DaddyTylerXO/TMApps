@@ -105,14 +105,26 @@ namespace Postbox {
             form.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = Theme.B("Text"), Margin = new Thickness(0, 12, 0, 6) });
             var input = new TextBox { Text = value ?? "", Padding = new Thickness(12, 10, 12, 10) }; System.Windows.Automation.AutomationProperties.SetName(input, label); form.Children.Add(input); return input;
         }
-        private PasswordBox Password() {
-            form.Children.Add(new TextBlock { Text = "App-specific password", FontSize = 12, Foreground = Theme.B("Text"), Margin = new Thickness(0, 16, 0, 6) });
+        private PasswordBox Password(bool appleHelp = false) {
+            var label = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 6) };
+            label.Children.Add(new TextBlock { Text = "App-specific password", FontSize = 12, Foreground = Theme.B("Text"), VerticalAlignment = VerticalAlignment.Center }); form.Children.Add(label);
+            if (appleHelp) {
+                var instructions = new StackPanel();
+                instructions.Children.Add(new TextBlock { Text = "Create an Apple app-specific password", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) });
+                instructions.Children.Add(new TextBlock { Text = "1. Sign in at account.apple.com.\n2. Open Sign-In and Security → App-Specific Passwords.\n3. Choose Generate an app-specific password and follow Apple’s instructions.\n4. Paste the generated password into TMA-Mail below.\n\nYour Apple Account needs two-factor authentication. Use the generated password here, rather than your usual Apple Account password.", FontSize = 12, Foreground = Theme.B("Muted"), TextWrapping = TextWrapping.Wrap });
+                var guide = new Button { Content = "Read Apple’s step-by-step guide ↗", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 10, 0, 0), ToolTip = "https://support.apple.com/en-gb/102654" };
+                guide.Click += delegate { try { Process.Start("https://support.apple.com/en-gb/102654"); } catch (Exception ex) { status.Text = "The guide could not be opened: " + ex.Message; } }; instructions.Children.Add(guide);
+                var help = new Border { Child = instructions, Background = Theme.B("Raised"), CornerRadius = new CornerRadius(12), Padding = new Thickness(14), Margin = new Thickness(0, 2, 0, 10), Visibility = Visibility.Collapsed }; form.Children.Add(help);
+                var question = new Button { Content = "?", Width = 24, Height = 24, MinHeight = 0, FontSize = 12, FontWeight = FontWeights.Bold, Padding = new Thickness(0), Margin = new Thickness(8, 0, 0, 0), ToolTip = "How to create an Apple app-specific password" };
+                System.Windows.Automation.AutomationProperties.SetName(question, "Help creating an Apple app-specific password");
+                question.Click += delegate { help.Visibility = help.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; }; label.Children.Add(question);
+            }
             var password = new PasswordBox { Padding = new Thickness(12, 10, 12, 10), Background = Theme.B("Surface"), Foreground = Theme.B("Text"), BorderBrush = Theme.B("Borders") }; System.Windows.Automation.AutomationProperties.SetName(password, "App-specific password"); form.Children.Add(password); return password;
         }
         private void ShowPassword(string provider) {
             SelectedProvider = provider;
             Heading("Sign in with " + ProviderChoices.Name(provider), provider == "iCloud" ? "Enter your iCloud Mail address and an app-specific password from Apple. Your server settings are filled in automatically." : "Use a Google app password with 2-Step Verification. Your Gmail settings are already filled in.");
-            var email = Field("Email address", current != null && current.Provider == provider ? current.Email : ""); var password = Password();
+            var email = Field("Email address", current != null && current.Provider == provider ? current.Email : ""); var password = Password(provider == "iCloud");
             AddAction(provider == "iCloud" ? "Get an app-specific password from Apple ↗" : "Get a Google app password ↗", delegate { Process.Start(provider == "iCloud" ? "https://account.apple.com/" : "https://myaccount.google.com/apppasswords"); }, false);
             AddAction("Connect " + ProviderChoices.Name(provider), async delegate { await RunConnection(delegate(CancellationToken token) { var value = ProviderChoices.Account(provider); value.Email = email.Text.Trim(); value.Password = password.Password.Replace(" ", ""); value.Validate(); return Task.FromResult(value); }); }, true);
         }
