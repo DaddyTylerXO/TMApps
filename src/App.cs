@@ -10,9 +10,11 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.2.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
+[assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
+[assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
 
 namespace TMApps {
     public class AppView : INotifyPropertyChanged {
@@ -61,6 +63,10 @@ namespace TMApps {
             // Both the UI and initial catalog are embedded in the executable.
             string xaml = CleanXaml(Bundled.Read("MainWindow.xaml"));
             window = (Window)XamlReader.Parse(xaml); MainWindow = window;
+            using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
+                window.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+            }
+            Find<System.Windows.Controls.Image>("BrandIcon").Source = window.Icon;
             window.AddHandler(Button.ClickEvent, new RoutedEventHandler(HandleButton));
             Find<TextBox>("Search").TextChanged += (s, ev) => Render();
             apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
@@ -99,8 +105,8 @@ namespace TMApps {
             Find<Button>("NotInstalledFilter").Content = "Not installed  " + apps.Count(a => service.GetInstalled(a.Info) == null);
             foreach (string key in new[] { "all", "installed", "updates", "notinstalled" }) {
                 var button = Find<Button>(key == "all" ? "AllFilter" : key == "installed" ? "InstalledFilter" : key == "updates" ? "UpdatesFilter" : "NotInstalledFilter");
-                button.Background = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#BEF18A" : "#202725");
-                button.Foreground = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#142015" : "#D9DFDB");
+                button.Background = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#CC5500" : "#2D313B");
+                button.Foreground = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#FFFFFF" : "#ECEEF3");
             }
         }
         async void RefreshCatalog() {
@@ -151,6 +157,7 @@ namespace TMApps {
         }
         void ShowAppMenu(Button target, AppView app) {
             var menu = new ContextMenu();
+            menu.Resources = window.Resources;
             Action<string, Action, bool> add = (title, action, enabled) => { var item = new MenuItem { Header = title, IsEnabled = enabled }; item.Click += (s, e) => { try { action(); } catch (Exception ex) { Notice(ex.Message); } }; menu.Items.Add(item); };
             var installed = service.GetInstalled(app.Info);
             add("Open application", () => service.Open(app.Info), installed != null && !app.Busy);
@@ -165,6 +172,7 @@ namespace TMApps {
         }
         void Settings() {
             var dialog = new Window { Owner = window, Title = "Launcher settings", Width = 580, Height = 540, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = window.Background, Foreground = window.Foreground };
+            dialog.Resources = window.Resources;
             var panel = new StackPanel { Margin = new Thickness(24) }; dialog.Content = panel;
             panel.Children.Add(new TextBlock { Text = "Make yourself at home.", FontSize = 23, Margin = new Thickness(0,0,0,18) });
             var check = new CheckBox { Content = "Check for application updates when the launcher opens", IsChecked = preferences.checkOnStartup, Foreground = window.Foreground }; panel.Children.Add(check);

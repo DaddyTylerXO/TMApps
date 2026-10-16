@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [TMApps-Launcher]
-    paths: ['src/**', 'catalog.json', 'build.ps1', 'package.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
+    paths: ['src/**', 'assets/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
 permissions:
   contents: write
 concurrency:

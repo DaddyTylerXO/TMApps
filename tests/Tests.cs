@@ -123,6 +123,12 @@ namespace TMApps {
                 string xaml = File.ReadAllText(Path.Combine(args[0], "src", "MainWindow.xaml"));
                 xaml = System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", "");
                 var window = (Window)XamlReader.Parse(xaml);
+                using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
+                    var decoder = BitmapDecoder.Create(icon, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    Check(decoder.Frames.Count == 7, "Embedded rocket icon has seven Windows display sizes");
+                    ((Image)window.FindName("BrandIcon")).Source = decoder.Frames.Last();
+                }
+                Check(System.Diagnostics.FileVersionInfo.GetVersionInfo(Path.Combine(args[0],"build","TMApps-Launcher.exe")).CompanyName == "DaddyTylerXO", "Executable company metadata uses GitHub username");
                 var cards = (ItemsControl)window.FindName("Cards");
                 cards.ItemsSource = catalog.apps.Select(a => new AppView { Info = a, Action = a.Available ? "↓  Install app" : "Coming soon", CanAct = a.Available, Status = a.Available ? "READY TO INSTALL" : "AWAITING FIRST RELEASE", VersionLabel = "v" + a.version, Detail = "Windows x64 · Beta" }).ToList();
                 var content = (FrameworkElement)window.Content;

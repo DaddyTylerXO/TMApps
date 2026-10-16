@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 — 2026-10-16
+
+- Original white rocket on burnt-orange `#CC5500` icon, embedded into the EXE at seven Windows sizes and applied to the window/header.
+- TMA-Mail-inspired dark palette, rounded panels, pill buttons, rounded search, and matching context menus/settings.
+- Company metadata set to `DaddyTylerXO`; code signing remains deferred by request. Windows verified-publisher and SmartScreen reputation are unchanged.
+- Added embedded-icon and publisher-metadata verification.
+
 ## 1.1.0 — 2026-10-16
 
 - Single downloadable `TMApps-Launcher.exe` with embedded interface and initial app catalog; no extraction or companion files.

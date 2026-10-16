@@ -8,6 +8,8 @@ A standalone Windows launcher for **TMA-Mail** and **TMA-Agent Office**. One EXE
 
 Download [**TMApps-Launcher.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher.exe) and open it. This is the entire launcher: no ZIP extraction, companion files, or developer tools are needed. The interface and initial app catalog are embedded in the EXE. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
 
+The launcher uses a white rocket on a rounded burnt-orange (`#CC5500`) tile, embedded as a multi-resolution Windows executable icon and shown in the title bar and launcher header. Rounded controls and panels follow TMA-Mail's dark theme. File Properties lists **DaddyTylerXO** as Company. This metadata is separate from Windows' verified publisher: code signing is deferred, so SmartScreen can still display **Unknown publisher** and an unrecognised-app warning. A trusted signing identity and publisher reputation are needed for that; a self-signed certificate does not solve public distribution trust. See [Microsoft's signing guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
+
 The release is created by the [Publish Windows launcher and app catalog workflow](https://github.com/DaddyTylerXO/TMApps/actions/workflows/publish.yml). Check that workflow for the first build's status if the release is not available yet.
 
 **Public downloads are available without a GitHub account or token.** Both application packages and the release catalog can be downloaded directly. If you previously connected a GitHub token, choose **Settings → Disconnect GitHub** to use public downloads. Optional token support remains available if private access is needed later; saved tokens are encrypted for your Windows user and removed on disconnect.
@@ -45,6 +47,8 @@ No Node.js or separate .NET SDK is needed for the launcher:
 ```
 
 The build uses the Windows .NET Framework C# compiler and WPF. Tests cover catalog validation, version ordering, archive boundaries, checksum failures, cancellation, install detection, atomic state writes, uninstall data retention, catalog recovery, dates, and actual WPF template rendering. A separate process test copies only the EXE into an empty directory and verifies that the embedded interface and app catalog load without sidecar files. The preview is `build/launcher-preview.png`. Packaging creates `dist/TMApps-Launcher.exe` and an optional checksum sidecar; users only download the EXE.
+
+`make-icon.ps1` regenerates the original vector rocket as PNG and a seven-resolution ICO (16–256 px) under `assets/`. The icon is compiled into the EXE; no separate image download is required.
 
 ## Publish updates
 
