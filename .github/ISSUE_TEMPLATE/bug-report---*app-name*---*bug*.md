@@ -1,5 +1,5 @@
 ---
-name: Bug report - APP NAME  - Bug
+name: Bug report - *App Name* - *Bug*
 about: Create a report to help us improve
 title: ''
 labels: ''

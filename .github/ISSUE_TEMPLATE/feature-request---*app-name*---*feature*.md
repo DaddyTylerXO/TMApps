@@ -1,9 +1,9 @@
 ---
-name: Feature request
+name: Feature request - *App Name* - *Feature*
 about: Suggest an idea for this project
 title: ''
 labels: ''
-assignees: ''
+assignees: DaddyTylerXO
 
 ---
 
