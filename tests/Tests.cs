@@ -73,6 +73,7 @@ namespace TMApps {
                 Check(!LauncherService.TrustedUrl("https://user@github.com/DaddyTylerXO/TMApps/releases/download/file"), "Reject URL credentials");
                 Reject(() => LauncherService.ParseCatalog("{}"), "Reject invalid catalog");
                 string original = File.ReadAllText(Path.Combine(args[0], "catalog.json"));
+                Check(LauncherService.ParseCatalog(original.Replace("AI-Agent-Dashboard","TMA-AgentOffice")).apps.Count==2,"Renamed Agent Office source branch and legacy catalog alias are both supported");
                 Reject(() => LauncherService.ParseCatalog(original.Replace("Agent Office.exe", "..\\\\evil.exe")), "Reject arbitrary executable");
                 Reject(() => LauncherService.ParseCatalog(original.Replace("tma-agent-office", "tma-mail")), "Reject duplicate app");
                 Reject(() => LauncherService.ParseCatalog(original.Replace(catalog.apps[0].sha256, "bad")), "Require checksum");

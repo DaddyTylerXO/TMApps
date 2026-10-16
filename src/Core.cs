@@ -133,7 +133,8 @@ namespace TMApps {
             var ids = new HashSet<string>();
             foreach (var a in c.apps) {
                 if (a == null || (a.id != "tma-mail" && a.id != "tma-agent-office") || !ids.Add(a.id)) throw new InvalidDataException("Unknown or duplicate application.");
-                if (String.IsNullOrWhiteSpace(a.name) || String.IsNullOrWhiteSpace(a.description) || !Regex.IsMatch(a.version ?? "", @"^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$") || a.branch != (a.id == "tma-mail" ? "TMA-Mail" : "AI-Agent-Dashboard") || a.executable != (a.id == "tma-mail" ? "TMA-Mail.exe" : "Agent Office.exe")) throw new InvalidDataException("Invalid application metadata.");
+                bool validBranch=a.id=="tma-mail" ? a.branch=="TMA-Mail" : a.branch=="AI-Agent-Dashboard" || a.branch=="TMA-AgentOffice";
+                if (String.IsNullOrWhiteSpace(a.name) || String.IsNullOrWhiteSpace(a.description) || !Regex.IsMatch(a.version ?? "", @"^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$") || !validBranch || a.executable != (a.id == "tma-mail" ? "TMA-Mail.exe" : "Agent Office.exe")) throw new InvalidDataException("Invalid application metadata.");
                 if (a.Available && (!TrustedUrl(a.downloadUrl) || !Regex.IsMatch(a.sha256 ?? "", "^[a-fA-F0-9]{64}$"))) throw new InvalidDataException("Invalid download location or checksum.");
             }
             return c;

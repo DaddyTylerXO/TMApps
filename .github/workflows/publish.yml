@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/checkout@v4
         with:
-          ref: AI-Agent-Dashboard
+          ref: TMA-AgentOffice
           path: office
       - uses: actions/setup-node@v4
         with:

@@ -266,7 +266,7 @@ namespace TMApps {
             Action<string, Action, bool> add = (title, action, enabled) => { var item = new MenuItem { Header = title, IsEnabled = enabled }; item.Click += (s, e) => { try { action(); } catch (Exception ex) { Notice(ex.Message); } }; menu.Items.Add(item); };
             var installed = service.GetInstalled(app.Info);
             add("Open application", () => service.Open(app.Info), installed != null && !app.Busy);
-            add("View source on GitHub ↗", () => Browse("https://github.com/DaddyTylerXO/TMApps/tree/" + app.Info.branch), true);
+            add("View source on GitHub ↗", () => Browse("https://github.com/DaddyTylerXO/TMApps/tree/" + (app.Id=="tma-agent-office" ? "TMA-AgentOffice" : app.Info.branch)), true);
             add("Open installation folder", () => { if (installed != null) System.Diagnostics.Process.Start("explorer.exe", service.InstalledFolder(app.Info, installed)); }, installed != null && !app.Busy);
             add("Uninstall…", () => {
                 if (MessageBox.Show(window, "Remove " + app.Name + " from this launcher?\n\nYour application accounts, settings, and workspace data will be kept.", "Uninstall application", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes) {

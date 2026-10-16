@@ -40,7 +40,7 @@ Applications installed independently are not automatically adopted. Install them
 | Application | Source branch | Bundled fallback |
 | --- | --- | --- |
 | TMA-Mail | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) | 0.10.0-beta package pinned to its source commit with SHA-256 verification |
-| TMA-Agent Office | [AI-Agent-Dashboard](https://github.com/DaddyTylerXO/TMApps/tree/AI-Agent-Dashboard) | Published 0.2.0 package with SHA-256 verification |
+| TMA-Agent Office | [TMA-AgentOffice](https://github.com/DaddyTylerXO/TMApps/tree/TMA-AgentOffice) | Published 0.2.0 package with SHA-256 verification |
 
 The publishing workflow copies the newest checked-in Mail ZIP after verifying its checksum and builds Agent Office's unpacked Windows Electron app using its lockfile. Both ZIPs and checksums upload before `catalog.json`. The launcher reads that catalog from this repository's `tma-apps` GitHub Release. If publication fails, Mail can still install from the bundled fallback; Agent Office is never shown as installable without a package.
 
@@ -65,7 +65,7 @@ The GitHub button uses the official [Octicons GitHub mark](https://github.com/pr
 
 ## Publish updates
 
-Push launcher changes to `TMApps-Launcher`, or manually run **Publish Windows launcher and app catalog** from GitHub Actions. Actions must be enabled with the workflow's `contents: write` permission. No external secrets are needed for this public repository. Each run builds the current application branches. To release Mail, commit its newer ZIP and `.sha256` sidecar to `TMA-Mail/dist/`. For Agent Office, update its package version and lockfile on `AI-Agent-Dashboard`. Then rerun the launcher workflow. Source-branch pushes alone do not trigger the workflow on this branch.
+Push launcher changes to `TMApps-Launcher`, or manually run **Publish Windows launcher and app catalog** from GitHub Actions. Actions must be enabled with the workflow's `contents: write` permission. No external secrets are needed for this public repository. Each run builds the current application branches. To release Mail, commit its newer ZIP and `.sha256` sidecar to `TMA-Mail/dist/`. For Agent Office, update its package version and lockfile on `TMA-AgentOffice`. Then rerun the launcher workflow. Source-branch pushes alone do not trigger the workflow on this branch.
 
 The catalog requires exactly the two registered app IDs, fixed executable names, semantic versions, HTTPS download URLs within this repository, and SHA-256 checksums. Add another app by extending the catalog validation, UI metadata, and workflow together. Only publish trusted builds: checksums detect damaged/mismatched packages but are not publisher code signatures.
 
