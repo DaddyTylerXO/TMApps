@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
@@ -26,12 +27,58 @@ namespace TMApps {
         public const string CatalogUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/catalog.json";
         public readonly string Root;
         readonly HttpClient http;
+        string githubToken;
+        public bool HasToken { get { return !String.IsNullOrEmpty(githubToken); } }
         public static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
         public LauncherService(string root, HttpMessageHandler handler = null) {
             Root = Path.GetFullPath(root); Directory.CreateDirectory(Root);
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             http = handler == null ? new HttpClient() : new HttpClient(handler); http.Timeout = TimeSpan.FromMinutes(30);
             http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.0");
+            try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
+        }
+        public void SaveToken(string token) {
+            token = (token ?? "").Trim();
+            if (token.Length > 0 && !Regex.IsMatch(token, "^[A-Za-z0-9_]{20,255}$")) throw new ArgumentException("Enter a valid GitHub personal access token.");
+            string path = Path.Combine(Root, "github-token.dat");
+            if (token.Length == 0) { if (File.Exists(path)) File.Delete(path); }
+            else {
+                string temp = path + ".tmp";
+                File.WriteAllBytes(temp, ProtectedData.Protect(Encoding.UTF8.GetBytes(token), null, DataProtectionScope.CurrentUser));
+                if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
+            }
+            githubToken = token;
+        }
+        async Task<HttpResponseMessage> ApiGet(string url, string accept, CancellationToken cancellation) {
+            using (var request = new HttpRequestMessage(HttpMethod.Get, url)) {
+                request.Headers.Accept.ParseAdd(accept);
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", githubToken);
+                return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation);
+            }
+        }
+        async Task<HttpResponseMessage> Download(string url, CancellationToken cancellation) {
+            if (!HasToken) return await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellation);
+            var uri = new Uri(url);
+            if (uri.Host == "raw.githubusercontent.com") {
+                var parts = uri.AbsolutePath.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries);
+                string path = String.Join("/", parts.Skip(3).ToArray());
+                return await ApiGet("https://api.github.com/repos/DaddyTylerXO/TMApps/contents/" + path + "?ref=" + Uri.EscapeDataString(parts[2]), "application/vnd.github.raw+json", cancellation);
+            }
+            var segments = uri.AbsolutePath.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries);
+            string tag = segments[4]; string filename = Uri.UnescapeDataString(segments[5]);
+            using (var metadata = await ApiGet("https://api.github.com/repos/DaddyTylerXO/TMApps/releases/tags/" + tag, "application/vnd.github+json", cancellation)) {
+                metadata.EnsureSuccessStatusCode();
+                string json = await metadata.Content.ReadAsStringAsync();
+                var release = Json.Deserialize<Dictionary<string, object>>(json);
+                var assets = (System.Collections.IEnumerable)release["assets"];
+                foreach (Dictionary<string,object> asset in assets) {
+                    if (Convert.ToString(asset["name"]) == filename) {
+                        long id = Convert.ToInt64(asset["id"]);
+                        return await ApiGet("https://api.github.com/repos/DaddyTylerXO/TMApps/releases/assets/" + id, "application/octet-stream", cancellation);
+                    }
+                }
+                throw new IOException("This application package has not been published yet.");
+            }
         }
         public static bool TrustedUrl(string value) {
             Uri u; if (!Uri.TryCreate(value, UriKind.Absolute, out u) || u.Scheme != "https" || !String.IsNullOrEmpty(u.UserInfo) || !u.IsDefaultPort) return false;
@@ -64,7 +111,7 @@ namespace TMApps {
         public async Task<Catalog> Refresh(CancellationToken token) {
             using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token)) {
                 timeout.CancelAfter(TimeSpan.FromSeconds(25));
-                var response = await http.GetAsync(CatalogUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                var response = await Download(CatalogUrl, timeout.Token);
                 using (response) {
                     response.EnsureSuccessStatusCode();
                     using (var input = await response.Content.ReadAsStreamAsync())
@@ -137,7 +184,7 @@ namespace TMApps {
             string folder = Guid.NewGuid().ToString("N"); string stage = Path.Combine(root, folder); string archive = Path.Combine(root, folder + ".zip");
             bool committed = false;
             try {
-                using (var response = await http.GetAsync(app.downloadUrl, HttpCompletionOption.ResponseHeadersRead, token)) {
+                using (var response = await Download(app.downloadUrl, token)) {
                     response.EnsureSuccessStatusCode(); long? length = response.Content.Headers.ContentLength;
                     using (var input = await response.Content.ReadAsStreamAsync()) using (var output = File.Create(archive)) {
                         byte[] buffer = new byte[81920]; long total = 0; int n; var last = DateTime.MinValue;

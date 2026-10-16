@@ -88,8 +88,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view tma-apps *> $null
-          if ($LASTEXITCODE -ne 0) {
+          $existing = gh release list --json tagName --jq '.[].tagName'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list releases' }
+          if (@($existing) -notcontains 'tma-apps') {
             gh release create tma-apps --target $env:GITHUB_SHA --title 'TMApps · Windows downloads' --notes 'Download and extract TMApps-Launcher-1.0.0-windows-x64.zip, then open TMApps Launcher.exe. The launcher installs and updates TMA-Mail and TMA-Agent Office. Windows 10/11 x64 and .NET Framework 4.8 are required. These beta builds are unsigned.'
             if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
           }

@@ -8,6 +8,8 @@ Download **TMApps-Launcher-1.0.0-windows-x64.zip** from [Windows downloads](http
 
 The release is created by the [Publish Windows launcher and app catalog workflow](https://github.com/DaddyTylerXO/TMApps/actions/workflows/publish.yml). Check that workflow for the first build's status if the release is not available yet.
 
+**This repository is private.** Downloads currently require a GitHub account with access to `DaddyTylerXO/TMApps`. Open launcher Settings, create a fine-grained personal access token for this repository with **Contents: Read-only**, paste it into the private-download field, and save. The token stays on your PC, encrypted for your Windows user. Disconnect removes it. The launcher uses GitHub's authenticated contents/release-asset APIs and does not ship publisher credentials. For distribution to everyone, use a public download repository or make the repository public separately; this launcher does not change repository visibility.
+
 - **Install app** downloads a Windows ZIP and verifies its SHA-256 checksum before extraction.
 - **Open app** starts the installed executable. The options menu also opens an older installed version while an update is available.
 - **Check for updates** fetches the current application catalog. **Update app** installs the newer build when you choose it.

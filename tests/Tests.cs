@@ -17,8 +17,13 @@ namespace TMApps {
     public class Tests {
         class PackageHandler : HttpMessageHandler {
             public byte[] Bytes;
+            public bool UsedAuth; public string LastUrl;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) {
                 token.ThrowIfCancellationRequested();
+                LastUrl = request.RequestUri.AbsoluteUri;
+                UsedAuth = request.Headers.Authorization != null;
+                if (request.RequestUri.AbsolutePath.EndsWith("/releases/tags/tma-apps"))
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"assets\":[{\"name\":\"fixture.zip\",\"id\":123}]}") });
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Bytes) });
             }
         }
@@ -90,6 +95,20 @@ namespace TMApps {
                     Check(service.GetInstalled(candidate).folder == updated.folder, "Cancelled update preserves installation");
                     Check(Directory.GetFiles(Path.Combine(service.Root,"apps",candidate.id), "*.zip").Length == 0, "Failed and cancelled downloads are cleaned up");
                     service.Uninstall(candidate);
+                    string fixtureToken = new string('a',40);
+                    service.SaveToken(fixtureToken);
+                    Check(service.HasToken, "Private GitHub connection saved");
+                    Check(!System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(service.Root,"github-token.dat"))).Contains(fixtureToken), "GitHub token is encrypted on disk");
+                    using (var second = new LauncherService(service.Root)) Check(second.HasToken, "Windows user can reload encrypted token");
+                    using (var sha = SHA256.Create()) candidate.sha256 = BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-", "").ToLowerInvariant();
+                    candidate.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/fixture.zip";
+                    service.Install(candidate, new QuietProgress(), CancellationToken.None).GetAwaiter().GetResult();
+                    Check(handler.UsedAuth && handler.LastUrl == "https://api.github.com/repos/DaddyTylerXO/TMApps/releases/assets/123", "Private release uses authenticated asset API");
+                    candidate.downloadUrl = catalog.apps[0].downloadUrl;
+                    service.Install(candidate, new QuietProgress(), CancellationToken.None).GetAwaiter().GetResult();
+                    Check(handler.UsedAuth && handler.LastUrl.Contains("/contents/dist/") && handler.LastUrl.Contains("?ref="), "Private source artifact uses contents API");
+                    service.SaveToken(""); Check(!service.HasToken && !File.Exists(Path.Combine(service.Root,"github-token.dat")), "Disconnect removes GitHub token");
+                    Reject(() => service.SaveToken("invalid\r\ntoken"), "Reject malformed token");
                 }
                 var application = new Application();
                 string xaml = File.ReadAllText(Path.Combine(args[0], "src", "MainWindow.xaml"));

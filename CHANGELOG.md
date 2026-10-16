@@ -7,3 +7,4 @@
 - TMA-Mail and TMA-Agent Office catalog with release availability and offline fallback.
 - GitHub Actions packaging and publishing for the launcher and both applications.
 - Installation safety checks and real WPF rendering verification.
+- Private GitHub downloads using a user-supplied token encrypted with Windows DPAPI.
