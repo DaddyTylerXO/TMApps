@@ -52,7 +52,7 @@ namespace TMApps {
             Find<TextBox>("Search").TextChanged += (s, ev) => Render();
             apps = service.LoadCatalog(Path.Combine(BasePath, "catalog.json")).apps.Select(a => new AppView { Info = a }).ToList();
             Render();
-            Notice("Install an app to get started. For private repository access, connect GitHub in Settings.");
+            Notice("Install an app to get started. Public downloads do not require a GitHub account.");
             window.Closing += (s, ev) => {
                 if (apps.Any(a => a.Busy) && MessageBox.Show(window, "A download or installation is in progress. Cancel it and close the launcher?", "Close launcher", MessageBoxButton.YesNo) != MessageBoxResult.Yes) { ev.Cancel = true; return; }
                 lifetime.Cancel(); foreach (var app in apps) if (app.Cancellation != null) app.Cancellation.Cancel();
@@ -96,7 +96,7 @@ namespace TMApps {
                 foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
                 Render(); Notice("You're up to date with the latest published catalog. Last checked " + DateTime.Now.ToString("HH:mm") + ".");
             } catch (OperationCanceledException) { if (!lifetime.IsCancellationRequested) Notice("The release check timed out. Your saved library is still available. Try again shortly."); }
-            catch (Exception) { Notice("Could not reach the release catalog. For this private repository, connect GitHub in Settings. Your saved library is still available."); }
+            catch (Exception) { Notice("Could not reach the release catalog. Check your connection and try again. Your saved library is still available."); }
             finally { refreshing = false; Find<Button>("RefreshButton").IsEnabled = true; }
         }
         async void Install(AppView app) {
@@ -106,7 +106,7 @@ namespace TMApps {
                 await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token);
                 app.Detail = "Installed v" + app.Info.version; Notice(app.Name + " is ready. Select Open app to launch it.");
             } catch (OperationCanceledException) { app.Detail = "Installation cancelled. Your previous version is unchanged."; }
-            catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message + (service.HasToken ? "" : " For a private repository, connect GitHub in Settings.")); }
+            catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message); }
             finally { app.Busy = false; app.Cancellation.Dispose(); app.Cancellation = null; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy) && !refreshing; }
         }
         void HandleButton(object sender, RoutedEventArgs e) {
@@ -154,13 +154,13 @@ namespace TMApps {
             var check = new CheckBox { Content = "Check for application updates when the launcher opens", IsChecked = preferences.checkOnStartup, Foreground = window.Foreground }; panel.Children.Add(check);
             panel.Children.Add(new TextBlock { Text = "Applications are installed for your Windows user. Updates are downloaded only when you choose Update app.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray, Margin = new Thickness(0,18,0,12) });
             var folder = new Button { Content = "Open launcher storage", HorizontalAlignment = HorizontalAlignment.Left }; folder.Click += (s,e) => System.Diagnostics.Process.Start("explorer.exe", service.Root); panel.Children.Add(folder);
-            panel.Children.Add(new TextBlock { Text = "Private GitHub downloads", FontSize = 18, Margin = new Thickness(0,22,0,8) });
-            panel.Children.Add(new TextBlock { Text = "Your GitHub account needs access to DaddyTylerXO/TMApps. Use a fine-grained personal access token with Contents: Read-only for that repository. The token is encrypted for your Windows user.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray });
+            panel.Children.Add(new TextBlock { Text = "Optional GitHub connection", FontSize = 18, Margin = new Thickness(0,22,0,8) });
+            panel.Children.Add(new TextBlock { Text = "Public downloads work without a token. If private access is needed later, use a fine-grained token with Contents: Read-only for DaddyTylerXO/TMApps. Saved tokens are encrypted for your Windows user.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray });
             var token = new PasswordBox { Margin = new Thickness(0,12,0,8), Padding = new Thickness(8), ToolTip = "GitHub token (leave blank to keep the current connection)" }; panel.Children.Add(token);
-            var tokenStatus = new TextBlock { Text = service.HasToken ? "GitHub token saved. Leave blank to keep it." : "No GitHub token saved.", Foreground = Brushes.LightGray }; panel.Children.Add(tokenStatus);
+            var tokenStatus = new TextBlock { Text = service.HasToken ? "GitHub token saved. Disconnect to use public downloads." : "Using public downloads. No token needed.", Foreground = Brushes.LightGray }; panel.Children.Add(tokenStatus);
             var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0,10,0,0) }; panel.Children.Add(actions);
             var createToken = new Button { Content = "Create GitHub token ↗", Margin = new Thickness(0,0,8,0) }; createToken.Click += (s,e) => Browse("https://github.com/settings/personal-access-tokens/new"); actions.Children.Add(createToken);
-            var disconnect = new Button { Content = "Disconnect GitHub" }; disconnect.Click += (s,e) => { try { service.SaveToken(""); token.Clear(); tokenStatus.Text = "GitHub disconnected."; } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Could not disconnect"); } }; actions.Children.Add(disconnect);
+            var disconnect = new Button { Content = "Disconnect GitHub" }; disconnect.Click += (s,e) => { try { service.SaveToken(""); token.Clear(); tokenStatus.Text = "Using public downloads. No token needed."; } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Could not disconnect"); } }; actions.Children.Add(disconnect);
             var save = new Button { Content = "Save settings", HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0,12,0,0) };
             save.Click += (s,e) => { try { if (!String.IsNullOrWhiteSpace(token.Password)) service.SaveToken(token.Password); preferences.checkOnStartup = check.IsChecked == true; LauncherService.AtomicWrite(Path.Combine(service.Root, "settings.json"), LauncherService.Json.Serialize(preferences)); dialog.Close(); if (service.HasToken) RefreshCatalog(); } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Could not save settings"); } }; panel.Children.Add(save); dialog.ShowDialog();
         }

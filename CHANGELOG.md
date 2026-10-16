@@ -1,5 +1,10 @@
 # Changelog
 
+## Public distribution — 2026-10-16
+
+- Verified installation and uninstall of both published app packages without GitHub authentication.
+- Updated launcher messages and setup instructions for public downloads; GitHub connection is optional.
+
 ## 1.0.0 — 2026-10-16
 
 - Native Windows library with original TMApps branding, grid/list views, search, filters, and preferences.
