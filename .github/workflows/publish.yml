@@ -1,0 +1,100 @@
+name: Publish Windows launcher and app catalog
+on:
+  workflow_dispatch:
+  push:
+    branches: [TMApps-Launcher]
+    paths: ['src/**', 'catalog.json', 'build.ps1', 'package.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
+permissions:
+  contents: write
+concurrency:
+  group: tmapps-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: launcher
+      - uses: actions/checkout@v4
+        with:
+          ref: TMA-Mail
+          path: mail
+      - uses: actions/checkout@v4
+        with:
+          ref: AI-Agent-Dashboard
+          path: office
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - name: Verify and package launcher
+        shell: powershell
+        run: |
+          ./launcher/test.ps1
+          ./launcher/package.ps1
+      - name: Build Agent Office from its application branch
+        working-directory: office
+        shell: powershell
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed' }
+          node node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { throw 'Electron runtime download failed' }
+          pnpm test
+          if ($LASTEXITCODE -ne 0) { throw 'Agent Office tests failed' }
+          pnpm exec electron-builder --win --dir
+          if ($LASTEXITCODE -ne 0) { throw 'Agent Office packaging failed' }
+      - name: Prepare verified application packages
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force published | Out-Null
+          $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
+          $mail = Get-ChildItem mail/dist/TMA-Mail-*-windows.zip | Sort-Object { [version]([regex]::Match($_.Name,'(\d+\.\d+\.\d+)').Value) } -Descending | Select-Object -First 1
+          if (!$mail) { throw 'No published mail package found' }
+          $expected = (Get-Content ($mail.FullName + '.sha256') -Raw).Split(' ')[0].Trim()
+          if ((Get-FileHash $mail.FullName -Algorithm SHA256).Hash -ne $expected) { throw 'Mail checksum mismatch' }
+          Copy-Item $mail.FullName published/
+          $mailApp = $catalog.apps | Where-Object id -eq 'tma-mail'
+          $mailApp.version = $mail.Name -replace '^TMA-Mail-','' -replace '-windows.zip$',''
+          $mailApp.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/$($mail.Name)"
+          $mailApp.sha256 = $expected.ToLowerInvariant()
+          $officeVersion = (Get-Content office/package.json -Raw | ConvertFrom-Json).version
+          if (!(Test-Path 'office/dist/win-unpacked/Agent Office.exe')) { throw 'Agent Office executable missing' }
+          $officeName = "TMA-Agent-Office-$officeVersion-windows.zip"
+          Compress-Archive -Path office/dist/win-unpacked/* -DestinationPath "published/$officeName" -CompressionLevel Optimal
+          $officeApp = $catalog.apps | Where-Object id -eq 'tma-agent-office'
+          $officeApp.version = $officeVersion
+          $officeApp.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/$officeName"
+          $officeApp.sha256 = (Get-FileHash "published/$officeName" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $catalog | ConvertTo-Json -Depth 6 | Set-Content published/catalog.json -Encoding UTF8
+          Copy-Item launcher/dist/* published/
+          Get-ChildItem published/*.zip | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Set-Content ($_.FullName + '.sha256') -Encoding ascii
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TMApps-Windows
+          path: published/*
+      - name: Publish application packages, then catalog
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view tma-apps *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create tma-apps --target $env:GITHUB_SHA --title 'TMApps · Windows downloads' --notes 'Download and extract TMApps-Launcher-1.0.0-windows-x64.zip, then open TMApps Launcher.exe. The launcher installs and updates TMA-Mail and TMA-Agent Office. Windows 10/11 x64 and .NET Framework 4.8 are required. These beta builds are unsigned.'
+            if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
+          }
+          $assets = Get-ChildItem published/* | Where-Object Name -ne 'catalog.json' | ForEach-Object FullName
+          gh release upload tma-apps @assets --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Package upload failed; catalog was not published' }
+          gh release upload tma-apps published/catalog.json --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }

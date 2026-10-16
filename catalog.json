@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "apps": [
+    {
+      "id": "tma-mail",
+      "name": "TMA-Mail",
+      "category": "COMMUNICATION",
+      "description": "A calmer home for your inbox. Connect your accounts, compose beautifully, and keep your day in focus.",
+      "version": "0.8.0-beta",
+      "branch": "TMA-Mail",
+      "executable": "TMA-Mail.exe",
+      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/a9625524f2717e948285eabfd19d958c556f2d4a/dist/TMA-Mail-0.8.0-beta-windows.zip",
+      "sha256": "2d7b0cc95d7f39a7d69fffa1db80b34375686b91fd8ecd8277a3c04c0325bacd"
+    },
+    {
+      "id": "tma-agent-office",
+      "name": "TMA-Agent Office",
+      "category": "AI WORKSPACE",
+      "description": "Your team, together. Bring AI specialists, projects, and real work into one live office.",
+      "version": "0.2.0",
+      "branch": "AI-Agent-Dashboard",
+      "executable": "Agent Office.exe",
+      "downloadUrl": "",
+      "sha256": ""
+    }
+  ]
+}
