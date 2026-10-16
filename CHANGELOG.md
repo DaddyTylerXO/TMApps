@@ -2,6 +2,16 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.11.0 beta — 17 October 2026
+
+- Add a slim rounded green progress bar below subscription scan counts, showing progress through the current folder and completing when scanning finishes.
+- Style Mailbox management and Calendar like New message. Calendar view changes the navigation actions to Add to Calendar and Return to Mailbox, and removes the separate Mail action from the calendar toolbar.
+- Add a local event editor with title, start/end dates and times, location, and daily/weekly/monthly/yearly recurrence with a repeat count. Save encrypted calendar data on this PC; imported calendars remain read-only and no invitations or provider changes are sent.
+- Make None explicitly stop playback. Remove Notification, Chime and Exclamation choices and migrate those saved selections to Cozy. Missing custom WAV files report an error without playing a Windows fallback sound.
+- Replace grey desktop banners with rounded forest-green cards, a green accent border, the TMA-Mail logo, New Mail / Mail Sent titles, and sender/recipient plus subject details. Add independent address and subject privacy toggles and incoming/sent previews.
+- Add a red unread inbox badge across connected accounts to the running app icon and Windows taskbar overlay, capped visually at 99+. Remove it at zero or when disabled in Notifications settings. Static desktop shortcuts retain their standard icon.
+- Extend synthetic tests for event creation/recurrence/escaping, invalid durations, sound migration/silence, notification privacy and persistence, contextual navigation, and live unread badge updates. No real email, unsubscribe request, or calendar provider write was sent.
+
 ## 0.10.0 beta — 16 October 2026
 
 - Update unread folder counts immediately for local read/unread changes and as server folder status arrives, including custom folder labels. Add Appearance setting to mark messages read when opened, off by default, including clicking an already-selected first message.

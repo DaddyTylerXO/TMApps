@@ -105,13 +105,13 @@ namespace Postbox {
                             Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
                                 if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                                 account.Folders = foldersFound.Select(f => new ServerFolder { Name = f.Name, Path = f.Path, ParentPath = f.ParentPath, LocalName = f.LocalName, Count = f.Count, Unread = f.Unread, Selectable = f.Selectable }).ToList();
-                                if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
+                                UpdateUnreadBadge(); if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             }));
                         }, delegate(ServerFolder completed, List<Message> batch) { Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
                             if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                             bool folderChanged = mailbox.ApplyFolderBatch(completed, batch); changed |= folderChanged;
                             var metadata = account.Folders == null ? null : account.Folders.FirstOrDefault(f => f.Path == completed.Path); if (metadata != null) { metadata.Count = completed.Count; metadata.Unread = completed.Unread; }
-                            if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
+                            UpdateUnreadBadge(); if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             if (folderChanged && activeAccount != null && account.Id == activeAccount.Id && (folder == completed.LocalName || folder == "Starred")) Refresh(selected == null ? null : selected.Id);
                         })); }, mailShutdown.Token));
                     lock (progressGate) reporting = false;
@@ -119,7 +119,7 @@ namespace Postbox {
                     account.Folders = snapshot.Folders; await Task.Run(() => accountStore.SaveTokens(account)); mailHealth[account.Id] = true; UpdateConnectionLamp();
                     if (activeAccount != null && account.Id == activeAccount.Id) { if (oldFolders != FolderState(account.Folders)) ApplyNavigation(); UpdateCounts(); }
                     var fresh = snapshot.Messages.Where(m => m.Folder == "Inbox" && m.Unread && !oldInbox.Contains(m.Id)).ToList();
-                    if (syncedAccounts.Contains(account.Id) && fresh.Count > 0) MailNotification(true, account.Email + " · " + (fresh.Count == 1 ? fresh[0].Subject : fresh.Count + " new messages"));
+                    if (syncedAccounts.Contains(account.Id) && fresh.Count > 0) MailNotification(true, fresh.Count == 1 ? fresh[0].Subject : fresh.Count + " new messages", fresh[0].Address);
                     syncedAccounts.Add(account.Id); Status(account.Email + " · Up to date · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
                 } catch (OperationCanceledException) { }
                 catch (Exception error) { mailHealth[account.Id] = false; UpdateConnectionLamp(); Status(account.Email + " · Sync interrupted: " + error.Message.Split('\n')[0] + " · cached mail kept; retrying automatically"); }

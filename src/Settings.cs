@@ -37,6 +37,9 @@ namespace Postbox {
         public string StartupFolder { get; set; }
         public bool NotifyReceived { get; set; }
         public bool NotifySent { get; set; }
+        public bool NotificationAddress { get; set; }
+        public bool NotificationSubject { get; set; }
+        public bool UnreadBadge { get; set; }
         public string ReceiveSound { get; set; }
         public string SendSound { get; set; }
         public string ReceiveWavePath { get; set; }
@@ -59,6 +62,7 @@ namespace Postbox {
         public string ReplySignatureId { get; set; }
         public Preferences() {
             CalendarMonday = true;
+            NotificationAddress = true; NotificationSubject = true; UnreadBadge = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
             EmailAddress = "";
@@ -89,7 +93,8 @@ namespace Postbox {
             if (!new[] { "Left", "Top", "Right", "Bottom" }.Contains(NavigationEdge)) NavigationEdge = "Left";
             if (!new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive" }.Contains(StartupFolder)) StartupFolder = "Inbox";
             if (!new[] { "en-GB", "en-US", "fr-FR", "de-DE", "es-ES" }.Contains(SpellLanguage)) SpellLanguage = "en-GB";
-            if (!SoundCatalog.Choices.Contains(ReceiveSound)) ReceiveSound = "Notification";
+            if (!SoundCatalog.Choices.Contains(ReceiveSound)) ReceiveSound = "Cozy";
+            if (new[] { "Notification", "Chime", "Exclamation" }.Contains(SendSound)) SendSound = "Cozy";
             if (!SoundCatalog.Choices.Contains(SendSound)) SendSound = "None";
             if (Double.IsNaN(NavigationWidth) || Double.IsInfinity(NavigationWidth)) NavigationWidth = 224;
             if (Double.IsNaN(InboxWidth) || Double.IsInfinity(InboxWidth)) InboxWidth = 365;

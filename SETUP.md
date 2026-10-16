@@ -1,5 +1,9 @@
 # TMA-Mail account setup
 
+In v0.11, **Settings → Notifications** controls banner addresses, subjects, and the unread inbox badge on the running app's Windows taskbar/icon. The badge sums Inbox unread counts across added accounts, shows 99+ above 99, and disappears at zero. Desktop shortcut files retain the static logo. Choosing None stops audio; missing WAV files do not fall back to a Windows sound.
+
+On Calendar, **Add to Calendar** creates a local event with dates, times, location, and an optional repeat count. Local events are stored in the encrypted calendar file on this PC. They are not uploaded to your email provider and do not send invitations. **Return to Mailbox** restores the mail view.
+
 ## For people using the app
 
 On the welcome screen or in **Settings → Accounts**, choose:

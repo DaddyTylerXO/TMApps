@@ -14,6 +14,15 @@ namespace Postbox {
     public class CalendarSource { public string Id { get; set; } public string Name { get; set; } public string Email { get; set; } public string Ics { get; set; } public string Url { get; set; } }
     public class CalendarEntry { public DateTime Start; public DateTime End; public string Summary; public string Location; public string Description; public string Source; public bool AllDay; }
     public static class CalendarImport {
+        public static string CreateEvent(string title, DateTime start, DateTime end, string location, string recurrence, int occurrences) {
+            if (String.IsNullOrWhiteSpace(title)) throw new ArgumentException("Enter an event title.");
+            if (end <= start) throw new ArgumentException("The end must be after the start.");
+            string[] rules = { "None", "Daily", "Weekly", "Monthly", "Yearly" }; if (!rules.Contains(recurrence)) throw new ArgumentException("Choose a recurrence.");
+            if (occurrences < 1 || occurrences > 1000) throw new ArgumentException("Repeat count must be between 1 and 1000.");
+            Func<string, string> escape = value => (value ?? "").Replace("\\", "\\\\").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\\n").Replace(";", "\\;").Replace(",", "\\,");
+            string rule = recurrence == "None" ? "" : "RRULE:FREQ=" + recurrence.ToUpperInvariant() + ";COUNT=" + occurrences.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\r\n";
+            return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//TMA-Mail//Local Calendar//EN\r\nBEGIN:VEVENT\r\nUID:" + Guid.NewGuid().ToString("N") + "@tma-mail.local\r\nDTSTAMP:" + DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", System.Globalization.CultureInfo.InvariantCulture) + "\r\nDTSTART:" + start.ToString("yyyyMMdd'T'HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "\r\nDTEND:" + end.ToString("yyyyMMdd'T'HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "\r\nSUMMARY:" + escape(title.Trim()) + "\r\nLOCATION:" + escape(location) + "\r\n" + rule + "END:VEVENT\r\nEND:VCALENDAR\r\n";
+        }
         private static DateTime LocalTime(CalDateTime date) { return !date.HasTime ? date.Value.Date : String.IsNullOrEmpty(date.TzId) && !date.IsUtc ? DateTime.SpecifyKind(date.Value, DateTimeKind.Local) : date.AsUtc.ToLocalTime(); }
         public static void Validate(string text) { if (String.IsNullOrWhiteSpace(text) || text.Length > 5000000 || !text.Contains("BEGIN:VCALENDAR")) throw new InvalidDataException("Choose an iCalendar (.ics) file of at most 5 MB."); var calendar = Ical.Net.Calendar.Load(text); if (calendar == null || calendar.Events.Count == 0) throw new InvalidDataException("No calendar events were found."); }
         public static List<CalendarEntry> Month(IEnumerable<CalendarSource> sources, DateTime month) {
@@ -39,6 +48,36 @@ namespace Postbox {
         private int calendarGeneration;
         private Grid calendarDays;
         private TextBlock calendarHeading, calendarStatus;
+        private void ShowAddCalendarEvent() {
+            var dialog = Dialog("Add to Calendar · TMA-Mail", 560, 760); dialog.MinWidth = 440; dialog.MinHeight = 540;
+            var root = new DockPanel { Margin = new Thickness(24) }; dialog.Content = root;
+            var row = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) }; DockPanel.SetDock(row, Dock.Bottom); root.Children.Add(row);
+            var panel = new StackPanel(); root.Children.Add(new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            panel.Children.Add(Label("Add to Calendar", 24, "Text")); panel.Children.Add(Label("Saved on this PC in TMA-Mail. This does not send invitations or change your email provider's calendar. Times use your PC time zone.", 12, "Muted"));
+            var title = TextField(panel, "Title", "", false);
+            panel.Children.Add(Label("Start date", 12, "Muted")); var startDate = EventDatePicker(); panel.Children.Add(startDate);
+            var startTime = TextField(panel, "Start time (24-hour HH:mm)", "09:00", false);
+            panel.Children.Add(Label("End date", 12, "Muted")); var endDate = EventDatePicker(); panel.Children.Add(endDate);
+            var endTime = TextField(panel, "End time (24-hour HH:mm)", "10:00", false);
+            var location = TextField(panel, "Location", "", false); var repeat = Choice(panel, "Repeat", "None", new[] { "None", "Daily", "Weekly", "Monthly", "Yearly" });
+            var count = TextField(panel, "Number of occurrences (including first)", "12", false); count.IsEnabled = false; repeat.SelectionChanged += delegate { count.IsEnabled = Value(repeat) != "None"; };
+            var status = Label("", 12, "Muted"); panel.Children.Add(status); var cancel = Action("Cancel", false); var save = Action("Add event", true); row.Children.Add(cancel); row.Children.Add(save); cancel.Click += delegate { dialog.Close(); };
+            save.Click += async delegate {
+                save.IsEnabled = false; CalendarSource added = null; await calendarGate.WaitAsync();
+                try {
+                    DateTime from, until; var culture = System.Globalization.CultureInfo.InvariantCulture;
+                    if (!startDate.SelectedDate.HasValue || !endDate.SelectedDate.HasValue || !DateTime.TryParseExact(startTime.Text.Trim(), "HH:mm", culture, System.Globalization.DateTimeStyles.None, out from) || !DateTime.TryParseExact(endTime.Text.Trim(), "HH:mm", culture, System.Globalization.DateTimeStyles.None, out until)) throw new ArgumentException("Choose start/end dates and times in HH:mm format.");
+                    int number = 1; if (Value(repeat) != "None" && !Int32.TryParse(count.Text, out number)) throw new ArgumentException("Enter a whole number of occurrences.");
+                    var start = startDate.SelectedDate.Value.Date + from.TimeOfDay; var end = endDate.SelectedDate.Value.Date + until.TimeOfDay;
+                    string ics = CalendarImport.CreateEvent(title.Text, start, end, location.Text, Value(repeat), number); CalendarImport.Validate(ics); await EnsureCalendars();
+                    added = new CalendarSource { Id = Guid.NewGuid().ToString("N"), Name = "Local · " + title.Text.Trim(), Email = "Local calendar", Ics = ics }; calendarSources.Add(added); await SaveCalendars(); calendarMonth = new DateTime(start.Year, start.Month, 1); RenderCalendarMonth(); dialog.Close();
+                } catch (Exception ex) { if (added != null) calendarSources.Remove(added); status.Text = "Event could not be saved: " + ex.Message; } finally { calendarGate.Release(); save.IsEnabled = true; }
+            }; dialog.ShowDialog();
+        }
+        private DatePicker EventDatePicker() {
+            var picker = new DatePicker { SelectedDate = DateTime.Today, Margin = new Thickness(0, 4, 0, 8), Foreground = Theme.B("Text"), Background = Theme.B("Surface") };
+            var style = new Style(typeof(System.Windows.Controls.Primitives.DatePickerTextBox)); style.Setters.Add(new Setter(Control.ForegroundProperty, Theme.B("Text"))); style.Setters.Add(new Setter(Control.BackgroundProperty, Theme.B("Surface"))); style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(8))); style.Setters.Add(new Setter(Control.MinHeightProperty, 38.0)); picker.Resources[typeof(System.Windows.Controls.Primitives.DatePickerTextBox)] = style; return picker;
+        }
         private async Task EnsureCalendars() { if (calendarSources != null) return; string path = Path.Combine(dataDirectory, "calendars.protected"); var loaded = await Task.Run(() => File.Exists(path) ? new JavaScriptSerializer { MaxJsonLength = 67108864 }.Deserialize<List<CalendarSource>>(ProtectedFile.Read(path)) : new List<CalendarSource>()); if (calendarSources == null) calendarSources = loaded ?? new List<CalendarSource>(); }
         private async Task SaveCalendars() { var snapshot = calendarSources.ToList(); await Task.Run(() => ProtectedFile.Write(Path.Combine(dataDirectory, "calendars.protected"), new JavaScriptSerializer { MaxJsonLength = 67108864 }.Serialize(snapshot))); }
         private void ShowCalendarView() {
@@ -46,12 +85,12 @@ namespace Postbox {
                 var root = new DockPanel { Margin = new Thickness(24) }; calendarPage = root; Grid.SetRow(root, 1); suiteCenter.Children.Add(root);
                 var top = new DockPanel { Margin = new Thickness(0, 0, 0, 16) }; DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
                 var controls = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(controls, Dock.Right); top.Children.Add(controls);
-                foreach (string action in new[] { "‹", "Today", "›", "Import calendars", "✉ Mail" }) { string choice = action; var button = Action(action, false); button.Click += delegate { if (choice == "✉ Mail") ShowMailView(); else if (choice == "Import calendars") ShowSettings("Calendar"); else { calendarMonth = choice == "Today" ? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1) : calendarMonth.AddMonths(choice == "‹" ? -1 : 1); RenderCalendarMonth(); } }; controls.Children.Add(button); }
+                foreach (string action in new[] { "‹", "Today", "›", "Import calendars" }) { string choice = action; var button = Action(action, false); button.Click += delegate { if (choice == "Import calendars") ShowSettings("Calendar"); else { calendarMonth = choice == "Today" ? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1) : calendarMonth.AddMonths(choice == "‹" ? -1 : 1); RenderCalendarMonth(); } }; controls.Children.Add(button); }
                 calendarHeading = Label("Calendar", 25, "Text"); top.Children.Add(calendarHeading);
                 calendarStatus = Label("", 12, "Muted"); DockPanel.SetDock(calendarStatus, Dock.Bottom); root.Children.Add(calendarStatus);
                 calendarDays = new Grid(); for (int i = 0; i < 7; i++) calendarDays.ColumnDefinitions.Add(new ColumnDefinition()); calendarDays.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); for (int i = 0; i < 6; i++) calendarDays.RowDefinitions.Add(new RowDefinition()); root.Children.Add(calendarDays);
             }
-            mailArea.Visibility = Visibility.Collapsed; calendarPage.Visibility = Visibility.Visible; Find<TextBox>("SearchBox").IsEnabled = false; RenderCalendarMonth();
+            mailArea.Visibility = Visibility.Collapsed; calendarPage.Visibility = Visibility.Visible; Find<TextBox>("SearchBox").IsEnabled = false; UpdateCalendarButtons(); RenderCalendarMonth();
         }
         private async void RenderCalendarMonth() {
             if (calendarDays == null) return; int generation = ++calendarGeneration; DateTime month = calendarMonth; calendarHeading.Text = month.ToString("MMMM yyyy"); calendarStatus.Text = "Loading calendars…";
@@ -67,7 +106,7 @@ namespace Postbox {
                     if (dayEvents.Count > 3) panel.Children.Add(Label("+" + (dayEvents.Count - 3) + " more", 10, "Muted"));
                     var button = Action("", false); button.Content = panel; button.Margin = new Thickness(3); button.Padding = new Thickness(10); button.HorizontalContentAlignment = HorizontalAlignment.Stretch; button.VerticalContentAlignment = VerticalAlignment.Top; button.Click += delegate { ShowCalendarDay(captured, dayEvents); }; Grid.SetColumn(button, i % 7); Grid.SetRow(button, 1 + i / 7); calendarDays.Children.Add(button);
                 }
-                calendarStatus.Text = sources.Count == 0 ? "Import an exported calendar or a calendar invitation to get started." : sources.Count + " imported calendars · read-only snapshots · times shown in your PC time zone";
+                calendarStatus.Text = sources.Count == 0 ? "Import an exported calendar or a calendar invitation to get started." : sources.Count + " calendars · imports are read-only · new events are saved locally · PC time zone";
             } catch (Exception ex) { calendarStatus.Text = "Calendar could not load: " + ex.Message; }
         }
         private void ShowCalendarDay(DateTime date, List<CalendarEntry> entries) { var dialog = Dialog(date.ToString("dddd, d MMMM yyyy"), 620, 580); var panel = new StackPanel { Margin = new Thickness(24) }; dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; panel.Children.Add(Label(date.ToString("D"), 22, "Text")); if (entries.Count == 0) panel.Children.Add(Label("No events", 14, "Muted")); foreach (var entry in entries) { panel.Children.Add(Label(entry.Summary, 17, "Text")); panel.Children.Add(Label((entry.AllDay ? "All day" : entry.Start.ToString("g") + " – " + entry.End.ToString("g")) + " · " + entry.Source + "\n" + entry.Location + "\n" + entry.Description, 13, "Muted")); } dialog.ShowDialog(); }

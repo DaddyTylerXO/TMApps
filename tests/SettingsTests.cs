@@ -17,12 +17,14 @@ class SettingsTests {
         settings.NavigationEdge = "Bottom"; settings.NavigationCollapsed = true;
         settings.SendSound = "Custom WAV"; settings.SendWavePath = "C:\\Sounds\\send.wav";
         settings.ReceiveSound = "None"; settings.StartupFolder = "Drafts";
+        settings.NotificationAddress = false; settings.NotificationSubject = false; settings.UnreadBadge = false;
         store.Save(settings); var loaded = store.Load();
         Check(loaded.DisplayName == "Test Person", "Name saved and trimmed");
         Check(loaded.Signature == settings.Signature, "Unicode signature persisted");
         Check(loaded.NavigationEdge == "Bottom" && loaded.NavigationCollapsed, "Layout persisted");
         Check(loaded.SendSound == "Custom WAV" && loaded.SendWavePath == settings.SendWavePath && loaded.ReceiveSound == "None", "Independent sounds persisted");
         Check(loaded.StartupFolder == "Drafts", "Startup folder persisted");
+        Check(!loaded.NotificationAddress && !loaded.NotificationSubject && !loaded.UnreadBadge, "Notification privacy and badge preferences persisted");
         Check(loaded.AppearanceMode == "Light" && loaded.FavouriteFolders.Count == 2 && loaded.FavouriteFolders.Contains("Archive"), "Theme and favourites persisted and normalized");
         Check(loaded.ComposeFont == "Georgia" && loaded.ComposeFontSize == 18, "Composer defaults persisted");
         Check(loaded.InitialBody(false) == "\n\n" + loaded.Signature, "New mail signature");

@@ -5,6 +5,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shell;
+using System.Globalization;
 using Microsoft.Win32;
 namespace Postbox {
     public partial class App {
@@ -12,9 +15,27 @@ namespace Postbox {
         private Border headerSearch;
         private Button managementButton, calendarButton;
         private FrameworkElement calendarPage;
+        private int lastUnreadBadge = -1;
+        private void UpdateUnreadBadge() {
+            if (window == null || preferences == null) return;
+            int count = !preferences.UnreadBadge ? 0 : mailAccounts != null && mailAccounts.Count > 0 ? mailAccounts.Sum(a => a.Folders == null ? 0 : a.Folders.Where(f => f.LocalName == "Inbox").Select(f => Math.Max(0, f.Unread)).DefaultIfEmpty(0).Max()) : store == null ? 0 : store.Messages.Count(m => m.Folder == "Inbox" && m.Unread);
+            if (count == lastUnreadBadge) return; lastUnreadBadge = count;
+            if (window.TaskbarItemInfo == null) window.TaskbarItemInfo = new TaskbarItemInfo();
+            if (count == 0) { window.Icon = AppBrand.Logo(); window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail"; return; }
+            string number = count > 99 ? "99+" : count.ToString(CultureInfo.InvariantCulture);
+            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 0, 64, 64)); DrawUnreadCircle(draw, number, 45, 45, 19); }
+            var icon = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32); icon.Render(visual); icon.Freeze(); window.Icon = icon;
+            var overlayVisual = new DrawingVisual(); using (var draw = overlayVisual.RenderOpen()) DrawUnreadCircle(draw, number, 16, 16, 16);
+            var overlay = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32); overlay.Render(overlayVisual); overlay.Freeze(); window.TaskbarItemInfo.Overlay = overlay; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
+        }
+        private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
+            draw.DrawEllipse(new SolidColorBrush(Color.FromRgb(231, 49, 67)), null, new Point(x, y), radius, radius);
+            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? radius * 0.78 : radius, Brushes.White, 1.0);
+            draw.DrawText(label, new Point(x - label.Width / 2, y - label.Height / 2));
+        }
         private void InitializeSuiteUi() {
             managementButton = Action("🔧  Mailbox management", false); managementButton.ToolTip = "Mailbox management"; managementButton.Click += delegate { ShowMailboxManagement(); };
-            calendarButton = Action("▦  Calendar", false); calendarButton.ToolTip = "Calendar"; calendarButton.Click += delegate { ShowCalendarView(); };
+            calendarButton = Action("▦  Calendar", false); calendarButton.ToolTip = "Calendar"; calendarButton.Click += delegate { if (CalendarVisible) ShowMailView(); else ShowCalendarView(); };
             var profileRow = (StackPanel)Find<Button>("AccountTop").Parent;
             var quickNew = Action("✉⁺", false); quickNew.ToolTip = "New message"; quickNew.FontSize = 23; quickNew.Padding = new Thickness(9, 3, 9, 3); quickNew.Margin = new Thickness(0, 0, 12, 0); quickNew.Click += delegate { Compose(null, ""); }; profileRow.Children.Insert(0, quickNew);
             var toolbar = (Panel)Find<Button>("DeleteButton").Parent;
@@ -35,6 +56,13 @@ namespace Postbox {
             else if (action == "⇩ Save .eml") { var dialog = new SaveFileDialog { Filter = "Email message (*.eml)|*.eml", FileName = "message.eml" }; if (dialog.ShowDialog(window) == true) { var message = selected.CopyForSync(); message.To = message.To ?? ""; Postbox.MailTransport.CreateMime(message).WriteTo(dialog.FileName); Status("Message exported as .eml"); } }
             else if (action == "▧ Print") { var dialog = new PrintDialog(); if (dialog.ShowDialog() == true) { var document = new FlowDocument(new Paragraph(new Run(selected.Subject + "\n\n" + selected.Sender + " <" + selected.Address + ">\n\n" + selected.Body))) { FontFamily = new FontFamily("Segoe UI"), FontSize = 12, Foreground = Brushes.Black, Background = Brushes.White }; dialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, "TMA-Mail message"); } }
         }
-        private void ShowMailView() { if (calendarPage != null) calendarPage.Visibility = Visibility.Collapsed; if (mailArea != null) mailArea.Visibility = Visibility.Visible; if (window != null) Find<TextBox>("SearchBox").IsEnabled = true; }
+        private bool CalendarVisible { get { return calendarPage != null && calendarPage.Visibility == Visibility.Visible; } }
+        private void UpdateCalendarButtons() {
+            bool compact = preferences.NavigationCollapsed; bool calendar = CalendarVisible;
+            Find<Button>("ComposeButton").Content = calendar ? (compact ? "▦⁺" : "▦⁺  Add to Calendar") : (compact ? "✉⁺" : "✉⁺  New message");
+            Find<Button>("ComposeButton").ToolTip = calendar ? "Add a local calendar event" : "New message (Ctrl+N)";
+            if (calendarButton != null) { calendarButton.Content = calendar ? (compact ? "↶✉" : "↶  Return to Mailbox") : (compact ? "▦" : "▦  Calendar"); calendarButton.ToolTip = calendar ? "Return to Mailbox" : "Calendar"; }
+        }
+        private void ShowMailView() { if (calendarPage != null) calendarPage.Visibility = Visibility.Collapsed; if (mailArea != null) mailArea.Visibility = Visibility.Visible; if (window != null) { Find<TextBox>("SearchBox").IsEnabled = true; UpdateCalendarButtons(); } }
     }
 }

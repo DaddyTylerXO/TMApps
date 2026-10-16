@@ -141,7 +141,8 @@ namespace Postbox {
             var compose = Find<Button>("ComposeButton"); compose.Content = compact ? "✉⁺" : horizontal ? "✉⁺ New" : "✉⁺   New message";
             compose.Height = Double.NaN; compose.FontSize = 12; compose.Background = Theme.B("SidebarAccent"); compose.ToolTip = "New message (Ctrl+N)"; compose.Margin = new Thickness(8, horizontal ? 4 : 8, 8, horizontal ? 4 : 6); compose.Padding = new Thickness(compact ? 12 : 14, 10, compact ? 12 : 14, 10);
             DockPanel.SetDock(compose, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(compose);
-            foreach (var entry in new[] { managementButton, calendarButton }) if (entry != null) { entry.Content = entry == managementButton ? (compact ? "🔧" : "🔧  Mailbox management") : (compact ? "▦" : "▦  Calendar"); entry.Margin = new Thickness(8, 3, 8, 3); entry.Padding = new Thickness(8); entry.FontSize = compact ? 20 : 12; entry.Height = 40; entry.HorizontalContentAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Left; entry.Background = Brushes.Transparent; entry.Foreground = Brush("#C5D4EC"); DockPanel.SetDock(entry, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(entry); }
+            foreach (var entry in new[] { managementButton, calendarButton }) if (entry != null) { entry.Content = entry == managementButton ? (compact ? "🔧" : "🔧  Mailbox management") : (compact ? "▦" : "▦  Calendar"); entry.Margin = new Thickness(8, 3, 8, 6); entry.Padding = new Thickness(14, 10, 14, 10); entry.FontSize = compact ? 20 : 12; entry.FontWeight = FontWeights.SemiBold; entry.Height = 40; entry.HorizontalContentAlignment = HorizontalAlignment.Center; entry.Background = Theme.B("SidebarAccent"); entry.Foreground = Brushes.White; DockPanel.SetDock(entry, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(entry); }
+            UpdateCalendarButtons();
             var footer = new StackPanel { Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical }; navigationFooter = footer;
             settingsButton.Content = compact ? "⚙" : "⚙  Settings"; settingsButton.HorizontalAlignment = HorizontalAlignment.Stretch; settingsButton.HorizontalContentAlignment = HorizontalAlignment.Left;
             var accounts = Find<Button>("AccountsButton"); accounts.Visibility = Visibility.Collapsed;
@@ -175,6 +176,7 @@ namespace Postbox {
             UpdateConnectionLamp();
         }
         private void UpdateNavigationLabels() {
+            UpdateUnreadBadge();
             if (navigationButtons == null || store == null) return;
             UpdateCustomFolderSelection();
             for (int i = 0; i < folders.Length; i++) {
@@ -192,23 +194,25 @@ namespace Postbox {
         private void RestoreWindow() { window.Show(); window.WindowState = preferences.StartMaximized ? WindowState.Maximized : WindowState.Normal; tray.Visible = false; window.Activate(); }
         private void PlaySound(string choice, string file, bool sent = false) {
             try {
-                if (choice == "Custom WAV" || SoundCatalog.Cozy.Contains(choice)) { if (soundPlayer != null) soundPlayer.Dispose(); soundPlayer = new SoundPlayer(choice == "Custom WAV" ? file : SoundCatalog.PathFor(choice, sent)); soundPlayer.Play(); }
-                else if (choice == "Notification") SystemSounds.Asterisk.Play();
-                else if (choice == "Chime") SystemSounds.Beep.Play();
-                else if (choice == "Exclamation") SystemSounds.Exclamation.Play();
+                if (soundPlayer != null) { soundPlayer.Stop(); soundPlayer.Dispose(); soundPlayer = null; }
+                if (choice == "None") return;
+                if (choice == "Custom WAV" || SoundCatalog.Cozy.Contains(choice)) { string path = choice == "Custom WAV" ? file : SoundCatalog.PathFor(choice, sent); if (String.IsNullOrWhiteSpace(path) || !File.Exists(path)) throw new FileNotFoundException("Choose an existing WAV file."); soundPlayer = new SoundPlayer(path); soundPlayer.Load(); soundPlayer.Play(); }
             } catch (Exception ex) { Status("Sound could not be played: " + ex.Message); }
         }
-        private void MailNotification(bool received, string subject) {
+        private void MailNotification(bool received, string subject, string address = "") {
             PlaySound(received ? preferences.ReceiveSound : preferences.SendSound, received ? preferences.ReceiveWavePath : preferences.SendWavePath, !received);
             if (received ? !preferences.NotifyReceived : !preferences.NotifySent) return;
-            ShowNotification(received ? "New mail" : "Message sent", subject);
+            ShowNotification(received ? "New Mail" : "Mail Sent", NotificationDetail(address, subject));
         }
+        private string NotificationDetail(string address, string subject) { return String.Join(" — ", new[] { preferences.NotificationAddress ? address : "", preferences.NotificationSubject ? subject : "" }.Where(s => !String.IsNullOrWhiteSpace(s))); }
         private void ShowNotification(string title, string message) {
             if (banners.Count >= 3) banners[0].Close();
-            var notification = new Window { Title = "TMA-Mail notification", Width = 340, Height = 140, WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, ShowActivated = false, Topmost = true, Background = Theme.B("Surface"), FontFamily = new FontFamily("Segoe UI") };
-            var panel = new StackPanel { Margin = new Thickness(20) }; notification.Content = panel;
-            panel.Children.Add(Label("TMA-Mail  ·  " + title, 14, "Text"));
-            var detail = Label(message, 12, "#B7C6DF"); detail.MaxHeight = 50; panel.Children.Add(detail);
+            var notification = new Window { Title = "TMA-Mail notification", Width = 380, Height = 140, WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, ShowActivated = false, Topmost = true, AllowsTransparency = true, Background = Brushes.Transparent, FontFamily = new FontFamily("Segoe UI") };
+            var card = new Border { Background = Brush("#0D2419"), BorderBrush = Theme.B("SidebarAccent"), BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(18), Padding = new Thickness(16) }; notification.Content = card;
+            var panel = new DockPanel(); card.Child = panel;
+            var logo = new Image { Source = AppBrand.Logo(), Width = 44, Height = 44, Margin = new Thickness(0, 0, 14, 0), VerticalAlignment = VerticalAlignment.Top }; DockPanel.SetDock(logo, Dock.Left); panel.Children.Add(logo);
+            var text = new StackPanel(); panel.Children.Add(text); text.Children.Add(new TextBlock { Text = title, Foreground = Brushes.White, FontSize = 17, FontWeight = FontWeights.SemiBold });
+            var detail = new TextBlock { Text = message, Foreground = Brush("#D6EDDF"), FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxHeight = 56, Margin = new Thickness(0, 9, 0, 0) }; text.Children.Add(detail);
             notification.MouseLeftButtonUp += delegate { RestoreWindow(); notification.Close(); };
             banners.Add(notification);
             var bounds = SystemParameters.WorkArea;
@@ -285,6 +289,10 @@ namespace Postbox {
             var notifications = SettingsSection("Stay in the loop", "Banners and sounds work while the app is running and your mailbox is connected.");
             var received = Toggle(notifications, "Show a desktop banner for incoming mail", preferences.NotifyReceived);
             var sent = Toggle(notifications, "Show a desktop banner for sent mail", preferences.NotifySent);
+            var notifyAddress = Toggle(notifications, "Show sender / recipient address in banners", preferences.NotificationAddress);
+            var notifySubject = Toggle(notifications, "Show email subject in banners", preferences.NotificationSubject);
+            var unreadBadge = Toggle(notifications, "Show unread inbox count on the running app icon (all mailboxes)", preferences.UnreadBadge);
+            notifications.Children.Add(Label("The badge appears on the Windows taskbar/app icon, capped at 99+. Desktop shortcuts keep the standard logo.", 11, "Muted"));
             string[] sounds = SoundCatalog.Choices;
             var receiveSound = Choice(notifications, "Incoming mail sound", preferences.ReceiveSound, sounds);
             var receivePath = SoundFileField(notifications, preferences.ReceiveWavePath);
@@ -292,12 +300,13 @@ namespace Postbox {
             var sendSound = Choice(notifications, "Sending mail sound", preferences.SendSound, sounds);
             var sendPath = SoundFileField(notifications, preferences.SendWavePath);
             var sendPreview = Action("▶  Preview sending sound", false); sendPreview.Margin = new Thickness(0, 8, 0, 10); sendPreview.HorizontalAlignment = HorizontalAlignment.Left; sendPreview.Click += delegate { PlaySound(Value(sendSound), sendPath.Text, true); }; notifications.Children.Add(sendPreview);
-            var testBanner = Action("Preview desktop banner", false); testBanner.HorizontalAlignment = HorizontalAlignment.Left; testBanner.Click += delegate { ShowNotification("Notification preview", "This is how your mail notifications will look."); }; notifications.Children.Add(testBanner);
+            var testBanner = Action("Preview incoming banner", false); testBanner.HorizontalAlignment = HorizontalAlignment.Left; testBanner.Click += delegate { ShowNotification("New Mail", NotificationDetail("hello@example.com", "Your incoming mail notification")); }; notifications.Children.Add(testBanner);
+            var sentBanner = Action("Preview sent banner", false); sentBanner.HorizontalAlignment = HorizontalAlignment.Left; sentBanner.Click += delegate { ShowNotification("Mail Sent", NotificationDetail("recipient@example.com", "Your sent mail notification")); }; notifications.Children.Add(sentBanner);
             var demoReceive = Action(activeAccount == null ? "Receive a sample message" : "Test incoming notification", false); demoReceive.Margin = new Thickness(0, 12, 0, 12); demoReceive.HorizontalAlignment = HorizontalAlignment.Left;
             demoReceive.Click += delegate {
-                if (activeAccount != null) { ShowNotification("Notification preview", "Your incoming mail notification is ready."); return; }
+                if (activeAccount != null) { ShowNotification("New Mail", NotificationDetail("hello@example.com", "Your incoming mail notification is ready.")); return; }
                 var message = new Message { Id = Guid.NewGuid().ToString(), Sender = "TMA-Mail Demo", Address = "demo@example.com", To = "you@tma-mail.local", Subject = "Your notification test", Body = "This local sample message tests your saved incoming mail notification settings. No mail server was contacted.", Date = DateTime.Now, Folder = "Inbox", Unread = true };
-                store.Messages.Add(message); store.Save(); Refresh(selected == null ? null : selected.Id); MailNotification(true, message.Subject); Status("Demo mail received · uses your saved notification preferences");
+                store.Messages.Add(message); store.Save(); Refresh(selected == null ? null : selected.Id); MailNotification(true, message.Subject, message.Address); Status("Demo mail received · uses your saved notification preferences");
             }; notifications.Children.Add(demoReceive);
             notifications.Children.Add(Label("Sounds are independent of banners. Choose None for silence. The demo receive action uses the current preview choices.", 11, "#8793A7")); Tab(tabs, "Notifications", notifications);
             var writing = SettingsSection("A little help writing", "Built-in Windows spellchecking underlines misspelled words as you type.");
@@ -320,6 +329,7 @@ namespace Postbox {
                 updated.NavigationEdge = Value(edge); updated.NavigationCollapsed = collapsed.IsChecked == true; updated.TextSize = Int32.Parse(Value(textSize));
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);
                 updated.NotifyReceived = received.IsChecked == true; updated.NotifySent = sent.IsChecked == true; updated.ReceiveSound = Value(receiveSound); updated.SendSound = Value(sendSound); updated.ReceiveWavePath = receivePath.Text; updated.SendWavePath = sendPath.Text;
+                updated.NotificationAddress = notifyAddress.IsChecked == true; updated.NotificationSubject = notifySubject.IsChecked == true; updated.UnreadBadge = unreadBadge.IsChecked == true;
                 updated.SpellCheckEnabled = spell.IsChecked == true; updated.SpellLanguage = Value(language); updated.Normalize();
                 editing.DisplayName = updated.DisplayName; editing.ComposeFont = updated.ComposeFont; editing.ComposeFontSize = updated.ComposeFontSize; editing.SpellCheckEnabled = updated.SpellCheckEnabled; editing.SpellLanguage = updated.SpellLanguage;
                 return updated;

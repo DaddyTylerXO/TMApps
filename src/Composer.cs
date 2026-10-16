@@ -65,6 +65,7 @@ namespace Postbox {
         private SpeechSynthesizer speaker;
         private Button dictateButton;
         public event Action<bool, string> Saved;
+        public string RecipientAddresses { get { return String.Join(", ", new[] { to.Text, cc.Text, bcc.Text }.Where(v => !String.IsNullOrWhiteSpace(v))); } }
         public ComposerWindow(Preferences prefs, MailStore mailbox, Message existing, string mode, Message original) {
             preferences = prefs; store = mailbox; draft = existing;
             Title = existing == null ? "New message · TMA-Mail" : "Edit draft · TMA-Mail";

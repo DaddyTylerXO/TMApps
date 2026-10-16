@@ -2,11 +2,11 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.10.0 beta** adds live unread-count updates, optional automatic reading, mailbox subscription management, calendar imports and a month view, a web-tool plug-in manager, GitHub update checks, and 14 original mail sounds. The header and mailbox toolbar have also been expanded and tidied.
+**Version 0.11.0 beta** adds live unread-count updates, optional automatic reading, mailbox subscription management, calendar imports and a month view, a web-tool plug-in manager, GitHub update checks, and 14 original mail sounds. The header and mailbox toolbar have also been expanded and tidied.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.10.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.11.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -32,6 +32,8 @@ Choose a provider or **Explore for now** with sample mail. You can add an accoun
 - Three-pane mailbox, search, unread filtering, Ctrl/Shift multi-selection, favourites, and bulk actions.
 - Live footer progress identifies the mailbox, folder, and item count. A neon green indicator means the active mail server is connected and Windows reports a network; red means disconnected, reconnecting, or waiting for confirmation.
 - Mailbox Management scans all selectable server folders for List-Unsubscribe headers, with checkboxes and bulk unsubscribe requests where senders advertise one-click support. Other senders need a browser/email step. Scanning is read-only, cancellable by closing the dialog, and runs on its own connection. A discovered list does not prove the subscription is still active.
+- Notifications use green branded cards with optional address/subject details, silent None, and an optional red unread inbox badge on the running app/taskbar icon (99+ cap). Desktop shortcuts keep the static logo.
+- Add to Calendar creates encrypted local events with start/end dates, times, location, and counted recurrence. Return to Mailbox restores email navigation. Local events do not change provider calendars or send invitations.
 - Calendar opens a large month view while retaining the folder navigation. **Settings → Calendar** imports .ics files, public HTTPS/webcal export URLs, and cached email invitations. Time zones, all-day events, recurrence and exceptions use iCal.NET. Imports are read-only snapshots; no live Google/Microsoft/iCloud calendar API sync or meeting responses are sent.
 - **Settings → Add-ins / plug-ins** installs TMA-Mail JSON web-tool launchers, with enable/disable and removal. Outlook Office.js/COM/VSTO add-ins are not supported; see [PLUGINS.md](PLUGINS.md).
 - **Settings → App Info** shows the installed version and checks the GitHub branch update manifest on demand. Downloads open in the browser; the app does not install updates automatically.
@@ -55,7 +57,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.10.0/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.11.0/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 

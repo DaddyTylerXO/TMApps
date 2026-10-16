@@ -63,7 +63,7 @@ namespace Postbox {
             };
             Find<Button>("AllFilter").Click += delegate { unreadOnly = false; Refresh(null); };
             Find<Button>("UnreadFilter").Click += delegate { unreadOnly = true; Refresh(null); };
-            Find<Button>("ComposeButton").Click += delegate { Compose(null, ""); };
+            Find<Button>("ComposeButton").Click += delegate { if (CalendarVisible) ShowAddCalendarEvent(); else Compose(null, ""); };
             Find<Button>("ArchiveButton").Click += delegate { MoveSelected("Archive"); };
             Find<Button>("DeleteButton").Click += delegate { MoveSelected(folder == "Trash" ? "Inbox" : "Trash"); };
             Find<Button>("StarButton").Click += delegate {
@@ -164,7 +164,7 @@ namespace Postbox {
             var composingAccount = activeAccount;
             var composer = new ComposerWindow(settingsStore.Clone(preferences), store, draft, mode, selected);
             composer.Owner = window; if (composingAccount != null) composer.Deliver = message => SendMail(message, composingAccount);
-            composer.Saved += delegate(bool sent, string subject) { Refresh(selected == null ? null : selected.Id); Status(sent ? "Message accepted by your mail server" : "Draft saved on this PC"); if (sent) MailNotification(false, subject); };
+            composer.Saved += delegate(bool sent, string subject) { Refresh(selected == null ? null : selected.Id); Status(sent ? "Message accepted by your mail server" : "Draft saved on this PC"); if (sent) MailNotification(false, subject, composer.RecipientAddresses); };
             composer.ShowDialog();
         }
         private void ShowAccounts() { ShowConnectedAccounts(); }
