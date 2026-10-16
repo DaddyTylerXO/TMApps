@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.4.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.4.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -37,6 +37,7 @@ namespace TMApps {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
         EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
+        Func<AppInfo,string> chooseInstallLocation;
         string filter = "all"; bool listView = true; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
@@ -65,8 +66,9 @@ namespace TMApps {
             window.Show();
             if (preferences.checkOnStartup) RefreshCatalog();
         }
-        internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop) {
+        internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop, Func<AppInfo,string> locationPicker = null) {
             service = new LauncherService(root, handler);
+            chooseInstallLocation=locationPicker ?? new Func<AppInfo,string>(PromptInstallLocation);
             preferences = DesktopIntegration.LoadPreferences(root);
             window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
             using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
@@ -184,14 +186,39 @@ namespace TMApps {
             finally { refreshing = false; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy); }
         }
         async void Install(AppView app) {
+            string destination=null;
+            if(service.GetInstalled(app.Info)==null) {
+                destination=chooseInstallLocation(app.Info);
+                if(destination==null) return;
+            }
             app.Busy = true; app.CanAct = false; app.Action = "Please wait…"; app.Status = "INSTALLING"; app.Cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             Render(); Find<Button>("RefreshButton").IsEnabled = false;
             try {
-                await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token);
+                await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token,destination);
                 app.Detail = "Installed v" + app.Info.version; Notice(app.Name + " is ready. Select Open app to launch it.");
             } catch (OperationCanceledException) { app.Detail = "Installation cancelled. Your previous version is unchanged."; }
             catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message); }
             finally { app.Busy = false; app.Cancellation.Dispose(); app.Cancellation = null; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy) && !refreshing; }
+        }
+        string PromptInstallLocation(AppInfo app) {
+            var dialog=new Window { Owner=window,Title="Install "+app.name,Width=620,Height=320,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
+            var panel=new StackPanel { Margin=new Thickness(24) }; dialog.Content=panel;
+            panel.Children.Add(new TextBlock { Text="Install "+app.name,FontSize=23,Margin=new Thickness(0,0,0,12) });
+            panel.Children.Add(new TextBlock { Text="Choose an empty application folder. Future updates will use this location.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,Margin=new Thickness(0,0,0,15) });
+            var line=new DockPanel(); panel.Children.Add(line);
+            var location=new TextBox { Text=service.DefaultAppInstallDirectory(app),MinHeight=40 };
+            var browse=new Button { Content="Browse…",Margin=new Thickness(8,0,0,0) }; DockPanel.SetDock(browse,Dock.Right); line.Children.Add(browse); line.Children.Add(location);
+            browse.Click+=(s,e)=> {
+                using(var picker=new System.Windows.Forms.FolderBrowserDialog { Description="Choose the installation folder for "+app.name,SelectedPath=Directory.Exists(location.Text) ? location.Text : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),ShowNewFolderButton=true }) {
+                    if(picker.ShowDialog()==System.Windows.Forms.DialogResult.OK) location.Text=picker.SelectedPath;
+                }
+            };
+            var error=new TextBlock { Foreground=Brushes.LightSalmon,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,10,0,0),MinHeight=35 }; panel.Children.Add(error);
+            var actions=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,12,0,0) }; panel.Children.Add(actions);
+            string selected=null;
+            var cancel=new Button { Content="Cancel",Margin=new Thickness(0,0,8,0),IsCancel=true }; cancel.Click+=(s,e)=>dialog.Close(); actions.Children.Add(cancel);
+            var install=new Button { Content="Install",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500"),IsDefault=true }; install.Click+=(s,e)=> { try { selected=service.ValidateInstallDirectory(app,location.Text); dialog.Close(); } catch(Exception ex) { error.Text=ex.Message; } }; actions.Children.Add(install);
+            dialog.ShowDialog(); return selected;
         }
         internal static Button ResolveButton(object source) {
             var item=source as DependencyObject;

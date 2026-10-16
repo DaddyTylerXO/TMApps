@@ -125,6 +125,24 @@ namespace TMApps {
                     Reject(() => service.SaveToken("invalid\r\ntoken"), "Reject malformed token");
                 }
                 string standalone = Path.Combine(root,"standalone"); Directory.CreateDirectory(standalone);
+                Reject(()=>InstallationPaths.Normalize(Path.GetPathRoot(root)),"Reject a drive root as an installation folder");
+                Reject(()=>InstallationPaths.Normalize("C:relative"),"Reject drive-relative installation paths");
+                string unrelated=Path.Combine(root,"unrelated"); Directory.CreateDirectory(unrelated); File.WriteAllText(Path.Combine(unrelated,"keep.txt"),"keep");
+                using(var custom=new LauncherService(Path.Combine(root,"custom-profile"),new PackageHandler { Bytes=handler.Bytes })) {
+                    var selected=LauncherService.ParseCatalog(original).apps[0];
+                    using(var sha=SHA256.Create()) selected.sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
+                    Reject(()=>custom.ValidateInstallDirectory(selected,unrelated),"Reject unrelated nonempty application folders");
+                    string destination=Path.Combine(root,"Another Drive","Custom Mail");
+                    custom.Install(selected,new QuietProgress(),CancellationToken.None,destination).GetAwaiter().GetResult();
+                    var first=custom.GetInstalled(selected); Check(InstallationPaths.Same(first.installRoot,destination) && File.Exists(Path.Combine(custom.InstalledFolder(selected,first),selected.executable)),"Custom application path is recorded and used for executable lookup");
+                    string other=Path.Combine(destination,"other-folder"); Directory.CreateDirectory(other); File.WriteAllText(Path.Combine(other,"keep.txt"),"keep");
+                    selected.version="9.0.0";
+                    custom.Install(selected,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
+                    var updated=custom.GetInstalled(selected);
+                    Check(InstallationPaths.Same(updated.installRoot,destination) && updated.folder!=first.folder,"Updates automatically reuse the custom application location");
+                    Check(!Directory.Exists(custom.InstalledFolder(selected,first)) && File.Exists(Path.Combine(other,"keep.txt")),"Custom-path update removes only the previous version");
+                    custom.Uninstall(selected); Check(File.Exists(Path.Combine(other,"keep.txt")) && custom.GetInstalled(selected)==null,"Custom-path uninstall preserves unrelated folders and clears installation state");
+                }
                 string exe = Path.Combine(standalone,"TMApps-Launcher.exe"); File.Copy(Path.Combine(args[0],"build","TMApps-Launcher.exe"),exe);
                 string report = Path.Combine(standalone,"verification.txt");
                 var start = new System.Diagnostics.ProcessStartInfo(exe, "--verify-package \"" + report + "\"") { WorkingDirectory = standalone, UseShellExecute = false, CreateNoWindow = true };
@@ -143,7 +161,9 @@ namespace TMApps {
                 var uiCatalog=LauncherService.ParseCatalog(original);
                 using(var sha=SHA256.Create()) uiCatalog.apps[0].sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
                 LauncherService.AtomicWrite(Path.Combine(uiRoot,"catalog.json"),LauncherService.Json.Serialize(uiCatalog));
-                var window=application.Initialize(uiRoot,new PackageHandler { Bytes=handler.Bytes },false);
+                int locationPrompts=0;
+                string chosenAppFolder=Path.Combine(root,"Chosen Application Folder");
+                var window=application.Initialize(uiRoot,new PackageHandler { Bytes=handler.Bytes },false,app=>{ locationPrompts++; return locationPrompts==1 ? null : chosenAppFolder; });
                 using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
                     var decoder = BitmapDecoder.Create(icon, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                     Check(decoder.Frames.Count == 7, "Embedded rocket icon has seven Windows display sizes");
@@ -166,8 +186,11 @@ namespace TMApps {
                 mailButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,mailButton));
                 var mailView=((System.Collections.IEnumerable)cards.ItemsSource).Cast<AppView>().First(a=>a.Id=="tma-mail");
                 using(var uiService=new LauncherService(uiRoot)) {
+                    Check(!mailView.Busy && !Directory.Exists(chosenAppFolder),"Cancelling the install-location prompt starts no installation");
+                    mailButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,mailButton));
                     PumpUntil(()=>!mailView.Busy && uiService.GetInstalled(uiCatalog.apps[0])!=null);
                     Check(uiService.GetInstalled(uiCatalog.apps[0])!=null,"Real Install button click performs a verified installation through the UI");
+                    Check(locationPrompts==2 && InstallationPaths.Same(uiService.GetInstalled(uiCatalog.apps[0]).installRoot,chosenAppFolder),"Install button prompts and saves the selected application folder");
                     var menuButton=Buttons(cards).First(b=>Convert.ToString(b.Tag)=="tma-mail" && Convert.ToString(b.Content)=="•••");
                     menuButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,menuButton));
                     Check(menuButton.ContextMenu!=null && menuButton.ContextMenu.Items.Count==4,"Real three-dot click creates application options menu");

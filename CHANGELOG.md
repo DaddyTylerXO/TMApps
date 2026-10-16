@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0 — 2026-10-16
+
+- Launcher setup now offers an editable destination and Browse picker, remembers the registered folder, and supports launcher relocation and custom-location uninstall.
+- App installation prompts for a destination before downloading; cancellation starts no install. Updates, launching, folder browsing, and uninstall use the recorded custom location.
+- Retained support for existing installations and limited cleanup to launcher-owned files and recorded app version folders.
+- Added custom-path, update reuse, cancellation, and unrelated-file retention regression checks.
+
 ## 1.3.0 — 2026-10-16
 
 - Per-user setup EXE with startup, desktop shortcut, close-to-tray, and launch-after-install options; Start menu and Windows Apps uninstall integration.

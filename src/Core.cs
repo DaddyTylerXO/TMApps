@@ -30,7 +30,28 @@ namespace TMApps {
         public string updatedAt { get; set; }
         public bool Available { get { return !String.IsNullOrEmpty(downloadUrl); } }
     }
-    public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } }
+    public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } public string installRoot { get; set; } }
+    public static class InstallationPaths {
+        public static string Normalize(string directory) {
+            if(String.IsNullOrWhiteSpace(directory)) throw new IOException("Choose an installation folder.");
+            directory=Environment.ExpandEnvironmentVariables(directory.Trim());
+            if(!Regex.IsMatch(directory,@"^(?:[A-Za-z]:[\\/]|\\\\)") || directory.StartsWith(@"\\?\") || directory.StartsWith(@"\\.\")) throw new IOException("Choose a full folder path, such as D:\\TMApps\\TMA-Mail.");
+            string full=Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
+            if(String.Equals(full,Path.GetPathRoot(full).TrimEnd(Path.DirectorySeparatorChar),StringComparison.OrdinalIgnoreCase) || File.Exists(full)) throw new IOException("Choose an application folder, not a drive root or an existing file.");
+            return full;
+        }
+        public static bool Same(string a,string b) { return String.Equals(Normalize(a),Normalize(b),StringComparison.OrdinalIgnoreCase); }
+        public static string Marker(string root) { return Path.Combine(root,".tmapps-install-owner"); }
+        public static bool Owned(string root,string owner) { try { return File.ReadAllText(Marker(root))==owner; } catch { return false; } }
+        public static void Validate(string directory,string owner,bool allowLegacy) {
+            string root=Normalize(directory);
+            if(Directory.Exists(root) && Directory.GetFileSystemEntries(root).Length>0 && !Owned(root,owner) && !allowLegacy) throw new IOException("This folder already contains other files. Choose an empty folder dedicated to this application.");
+        }
+        public static void Prepare(string directory,string owner,bool allowLegacy) {
+            Validate(directory,owner,allowLegacy); Directory.CreateDirectory(directory);
+            if(!Owned(directory,owner)) File.WriteAllText(Marker(directory),owner);
+        }
+    }
     public class Preferences {
         public bool checkOnStartup { get; set; } public bool runAtStartup { get; set; } public bool desktopShortcut { get; set; }
         public bool closeToTray { get; set; } public string navigationEdge { get; set; } public bool compactNavigation { get; set; }
@@ -147,6 +168,18 @@ namespace TMApps {
             if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
         }
         string AppRoot(AppInfo app) { return Path.Combine(Root, "apps", app.id); }
+        public string DefaultAppInstallDirectory(AppInfo app) { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs",app.name); }
+        public string ValidateInstallDirectory(AppInfo app,string directory) {
+            string full=InstallationPaths.Normalize(directory);
+            InstallationPaths.Validate(full,app.id,InstallationPaths.Same(full,AppRoot(app)));
+            return full;
+        }
+        string InstallRoot(AppInfo app, Installed installed) {
+            if(installed==null || String.IsNullOrEmpty(installed.installRoot)) return AppRoot(app);
+            string root=InstallationPaths.Normalize(installed.installRoot);
+            if(!InstallationPaths.Same(root,AppRoot(app)) && !InstallationPaths.Owned(root,app.id)) throw new InvalidDataException("The application installation folder is no longer registered to this app.");
+            return root;
+        }
         public Installed GetInstalled(AppInfo app) {
             string state = Path.Combine(AppRoot(app), "installed.json");
             if (!File.Exists(state)) return null;
@@ -154,12 +187,12 @@ namespace TMApps {
                 var installed = Json.Deserialize<Installed>(File.ReadAllText(state));
                 if (installed == null || !Regex.IsMatch(installed.folder ?? "", "^[a-f0-9]{32}$") || installed.executable != app.executable) return null;
                 Version.Parse(installed.version.Split('-')[0]);
-                return File.Exists(Path.Combine(AppRoot(app), installed.folder, installed.executable)) ? installed : null;
+                return File.Exists(Path.Combine(InstallRoot(app,installed), installed.folder, installed.executable)) ? installed : null;
             } catch { return null; }
         }
-        public string InstalledFolder(AppInfo app, Installed installed) { return Path.Combine(AppRoot(app), installed.folder); }
+        public string InstalledFolder(AppInfo app, Installed installed) { return Path.Combine(InstallRoot(app,installed), installed.folder); }
         public bool IsRunning(AppInfo app) {
-            string prefix = AppRoot(app) + Path.DirectorySeparatorChar;
+            string prefix = InstallRoot(app,GetInstalled(app)) + Path.DirectorySeparatorChar;
             foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(app.executable))) {
                 using (process) { try { if (process.MainModule.FileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true; } catch { return true; } }
             }
@@ -192,10 +225,13 @@ namespace TMApps {
                 }
             }
         }
-        public async Task Install(AppInfo app, IProgress<string> progress, CancellationToken token) {
+        public async Task Install(AppInfo app, IProgress<string> progress, CancellationToken token, string installationDirectory = null) {
             if (!app.Available || !TrustedUrl(app.downloadUrl)) throw new InvalidOperationException("This application has not been published yet.");
             if (IsRunning(app)) throw new IOException("Close " + app.name + " before updating it.");
-            string root = AppRoot(app); Directory.CreateDirectory(root);
+            var previous=GetInstalled(app);
+            string root=ValidateInstallDirectory(app,installationDirectory ?? InstallRoot(app,previous));
+            InstallationPaths.Prepare(root,app.id,InstallationPaths.Same(root,AppRoot(app)));
+            Directory.CreateDirectory(AppRoot(app));
             string folder = Guid.NewGuid().ToString("N"); string stage = Path.Combine(root, folder); string archive = Path.Combine(root, folder + ".zip");
             bool committed = false;
             try {
@@ -215,9 +251,9 @@ namespace TMApps {
                 if (!File.Exists(Path.Combine(stage, app.executable))) throw new InvalidDataException("The package does not contain the expected application.");
                 token.ThrowIfCancellationRequested();
                 if (IsRunning(app)) throw new IOException("Close " + app.name + " and retry the update.");
-                AtomicWrite(Path.Combine(root, "installed.json"), Json.Serialize(new Installed { version = app.version, folder = folder, executable = app.executable }));
+                AtomicWrite(Path.Combine(AppRoot(app), "installed.json"), Json.Serialize(new Installed { version = app.version, folder = folder, executable = app.executable,installRoot=root }));
                 committed = true;
-                foreach (string old in Directory.GetDirectories(root)) if (old != stage) { try { Directory.Delete(old, true); } catch { } }
+                if(previous!=null) { string old=InstalledFolder(app,previous); if(!String.Equals(old,stage,StringComparison.OrdinalIgnoreCase)) { try { Directory.Delete(old,true); } catch { } } }
             } finally {
                 if (File.Exists(archive)) File.Delete(archive);
                 if (!committed && Directory.Exists(stage)) Directory.Delete(stage, true);
@@ -225,10 +261,10 @@ namespace TMApps {
         }
         public void Uninstall(AppInfo app) {
             if (IsRunning(app)) throw new IOException("Close " + app.name + " before uninstalling it.");
-            string root = AppRoot(app); if (!Directory.Exists(root)) return;
-            // Remove binaries first; retain the record if Windows reports a locked file.
-            foreach (var folder in Directory.GetDirectories(root)) Directory.Delete(folder, true);
-            File.Delete(Path.Combine(root, "installed.json"));
+            var installed=GetInstalled(app); if(installed==null) return;
+            // Delete only the recorded version folder, never the user-selected parent or unrelated files.
+            Directory.Delete(InstalledFolder(app,installed),true);
+            File.Delete(Path.Combine(AppRoot(app), "installed.json"));
         }
         public void Dispose() { http.Dispose(); }
     }

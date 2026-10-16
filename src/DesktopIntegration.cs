@@ -8,6 +8,9 @@ namespace TMApps {
         public static string DefaultInstallDirectory { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "TMApps Launcher"); } }
         public static string ProfileDirectory { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TMApps", "Launcher"); } }
         public static string StartMenuDirectory { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "TMApps Launcher"); } }
+        public static string RegisteredInstallDirectory {
+            get { try { using(var key=Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\TMAppsLauncher")) { var path=key==null ? null : key.GetValue("InstallLocation") as string; return String.IsNullOrWhiteSpace(path) ? DefaultInstallDirectory : InstallationPaths.Normalize(path); } } catch { return DefaultInstallDirectory; } }
+        }
         public static Preferences LoadPreferences(string root) {
             try { var p = LauncherService.Json.Deserialize<Preferences>(File.ReadAllText(Path.Combine(root,"settings.json"))); p.Normalize(); return p; } catch { return new Preferences(); }
         }
@@ -38,7 +41,7 @@ namespace TMApps {
             string exe = Path.Combine(directory,"TMApps-Launcher.exe");
             CreateShortcut(Path.Combine(StartMenuDirectory,"TMApps Launcher.lnk"),exe);
             using(var key=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\TMAppsLauncher")) {
-                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.3.0"); key.SetValue("Publisher","DaddyTylerXO");
+                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.4.0"); key.SetValue("Publisher","DaddyTylerXO");
                 key.SetValue("InstallLocation",directory); key.SetValue("DisplayIcon",exe);
                 key.SetValue("UninstallString","\""+Path.Combine(directory,"Uninstall.exe")+"\" --uninstall");
                 key.SetValue("NoModify",1); key.SetValue("NoRepair",1);
