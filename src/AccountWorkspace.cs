@@ -35,9 +35,19 @@ namespace Postbox {
     public partial class App {
         private readonly Dictionary<string, bool> expandedMailboxes = new Dictionary<string, bool>();
         private readonly Dictionary<Button, string> customFolderButtons = new Dictionary<Button, string>();
+        private FrameworkElement CompactMailboxNavigation() {
+            var host = new StackPanel { HorizontalAlignment = HorizontalAlignment.Stretch };
+            var chooser = Action("✉  ▾", false); chooser.Height = 42; chooser.Margin = new Thickness(10, 6, 10, 10); chooser.Padding = new Thickness(4); chooser.ToolTip = activeAccount == null ? "Choose mailbox" : activeAccount.Email + " · choose mailbox";
+            chooser.Click += delegate {
+                var menu = new ContextMenu(); foreach (var account in mailAccounts) { var captured = account; var entry = new MenuItem { Header = account.Email, IsCheckable = true, IsChecked = activeAccount != null && account.Id == activeAccount.Id }; entry.Click += delegate { SelectMailbox(captured, "Inbox"); }; menu.Items.Add(entry); }
+                menu.PlacementTarget = chooser; menu.IsOpen = true;
+            };
+            host.Children.Add(chooser); host.Children.Add(navigationButtons); AddCustomFolders(navigationButtons, activeAccount); return host;
+        }
         private FrameworkElement MailboxNavigation(bool horizontal, bool compact) {
             customFolderButtons.Clear();
             if (mailAccounts == null || mailAccounts.Count == 0) return navigationButtons;
+            if (compact && !horizontal) return CompactMailboxNavigation();
             if (horizontal || compact) {
                 var host = new StackPanel { Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical };
                 foreach (var account in mailAccounts) {

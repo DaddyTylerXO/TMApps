@@ -87,6 +87,11 @@ class LiveMailboxTests {
         folderButton = Children<Button>(window).First(b => b.Content != null && b.Content.ToString().Contains("Design & notes"));
         Check(folderButton.Content.ToString().StartsWith("★") && ((SolidColorBrush)folderButton.Foreground).Color == (Color)ColorConverter.ConvertFromString("#75D49B") && actualSettings.Load().FolderAppearances.Count == 1, "Folder appearance did not apply and persist");
         Check(App.FolderAppearanceKey(first.Id, "same") != App.FolderAppearanceKey(second.Id, "same"), "Folder appearance leaked between mailboxes");
+        prefs.NavigationCollapsed = true; Call(app, "ApplyPreferences");
+        var compactRoot = (FrameworkElement)window.Content; compactRoot.Measure(new Size(984, 760)); compactRoot.Arrange(new Rect(0, 0, 984, 760)); compactRoot.UpdateLayout();
+        Check(Math.Abs(((Border)Get(app, "navigation")).ActualWidth - 88) < 1, "Compact sidebar does not have sufficient width");
+        var inboxIcon = (Button)window.FindName("InboxNav"); Check(inboxIcon.ActualWidth >= 44 && inboxIcon.ActualHeight >= 44 && inboxIcon.Content.ToString() == "▣", "Compact folder icon is clipped or too small");
+        Check(Children<Button>(window).Any(b => b.Content != null && b.Content.ToString() == "★" && b.ToolTip != null && b.ToolTip.ToString().Contains("Design & notes")), "Compact custom folder lost its icon or folder tooltip");
         window.Close(); app.Shutdown();
         accounts.Remove(first.Id); Check(accounts.LoadAll().Count == 1 && accounts.Load().Id == second.Id, "Removing one account removed another mailbox");
         Console.WriteLine("Passed " + checks + " live-mail workspace checks. Synthetic data only; no server contacted.");

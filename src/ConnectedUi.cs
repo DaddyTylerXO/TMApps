@@ -24,13 +24,26 @@ namespace Postbox {
             accountStore = new AccountStore(dataDirectory); activeAccount = accountStore.Load(); mailAccounts = accountStore.LoadAll();
             if (activeAccount != null) transport = new MailTransport(activeAccount, accountStore);
         }
-        private MailStore CurrentMailbox() { return activeAccount == null ? new MailStore(Path.Combine(dataDirectory, "mailbox.json")) : new MailStore(Path.Combine(dataDirectory, "mail-" + activeAccount.Id + ".protected"), true, false); }
+        private readonly Dictionary<string, MailStore> connectedMailboxes = new Dictionary<string, MailStore>();
+        private MailStore CurrentMailbox() {
+            if (activeAccount == null) return new MailStore(Path.Combine(dataDirectory, "mailbox.json"));
+            MailStore cached; if (!connectedMailboxes.TryGetValue(activeAccount.Id, out cached)) { cached = new MailStore(Path.Combine(dataDirectory, "mail-" + activeAccount.Id + ".protected"), true, false); connectedMailboxes[activeAccount.Id] = cached; }
+            return cached;
+        }
+        private async Task<MailStore> GetMailboxAsync(MailAccount account) {
+            MailStore cached; if (connectedMailboxes.TryGetValue(account.Id, out cached)) return cached;
+            var loaded = await Task.Run(() => new MailStore(Path.Combine(dataDirectory, "mail-" + account.Id + ".protected"), true, false));
+            if (connectedMailboxes.TryGetValue(account.Id, out cached)) return cached;
+            connectedMailboxes[account.Id] = loaded; return loaded;
+        }
+        private bool periodicSyncRunning;
         private async void StartMailConnection() {
             var toolbar = (StackPanel)Find<Button>("DeleteButton").Parent;
             var sync = Action("↻ Sync", false); sync.Click += async delegate { await SyncMail(); }; toolbar.Children.Add(sync);
+            InitializeCacheShutdown();
             if (offlinePreview) { Status("Offline preview · synthetic mailboxes · no server connections"); return; }
             syncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-            syncTimer.Tick += async delegate { foreach (var item in mailAccounts.ToList()) await SyncMail(item.Id); };
+            syncTimer.Tick += async delegate { if (periodicSyncRunning || syncing || mailGate.CurrentCount == 0) return; periodicSyncRunning = true; try { foreach (var item in mailAccounts.ToList()) { if (mailShutdown.IsCancellationRequested) break; await SyncMail(item.Id); } } finally { periodicSyncRunning = false; } };
             syncTimer.Start(); EnsureMailWatchers(); window.Closed += delegate { syncTimer.Stop(); StopMailWatchers(); };
             if (activeAccount != null) { preferences.EmailAddress = activeAccount.Email; ApplyPreferences(); await SyncMail(); foreach (var item in mailAccounts.Where(a => a.Id != activeAccount.Id).ToList()) await SyncMail(item.Id); }
             else Status("Explore mode · connect an account to receive and send real mail");
@@ -62,7 +75,7 @@ namespace Postbox {
                 var previous = mailAccounts.FirstOrDefault(a => String.Equals(value.Email, a.Email, StringComparison.OrdinalIgnoreCase)); if (previous != null) value.Id = previous.Id;
                 var candidate = new MailTransport(value, accountStore, false);
                 await Task.Run(() => candidate.Test()); cancellation.ThrowIfCancellationRequested();
-                var mailbox = new MailStore(Path.Combine(dataDirectory, "mail-" + value.Id + ".protected"), true, false);
+                var mailbox = await GetMailboxAsync(value);
                 accountStore.Save(value, true); mailAccounts = accountStore.LoadAll(); RestartMailWatcher(value.Id); activeAccount = value; transport = new MailTransport(value, accountStore); store = mailbox;
                 lastBatchMove = null; selected = null; preferences.EmailAddress = value.Email;
                 try { settingsStore.Save(preferences); } catch { Status("Account connected. Profile preferences could not be saved."); }

@@ -12,8 +12,7 @@ namespace Postbox {
         public static string FolderKey(string path) { return "Server:" + Uri.EscapeDataString(path); }
         public SyncSnapshot Synchronize(List<Message> cached, Action<SyncProgress> progress, Action<List<ServerFolder>> discovered, Action<ServerFolder, List<Message>> folderComplete, CancellationToken cancellation) {
             var snapshot = new SyncSnapshot();
-            var copies = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = 268435456 };
-            cached = copies.Deserialize<List<Message>>(copies.Serialize(cached));
+            var cacheIndex = cached.Where(m => m.RemoteUid != 0 && m.ContentVersion >= 2 && !String.IsNullOrEmpty(m.RemoteFolder)).GroupBy(m => m.RemoteFolder).ToDictionary(g => g.Key, g => g.GroupBy(m => m.RemoteUid).ToDictionary(u => u.Key, u => u.First()));
             Action<string, string, int, int> report = delegate(string phase, string name, int done, int total) { if (progress != null) progress(new SyncProgress { Phase = phase, Folder = name, Completed = done, Total = total }); };
             report("Connecting securely", "", 0, 0);
             using (var client = Connect(cancellation)) {
@@ -36,7 +35,9 @@ namespace Postbox {
                         var summaries = folder.Fetch(Math.Max(0, folder.Count - 200), -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags | MessageSummaryItems.Size, cancellation);
                         foreach (var summary in summaries) {
                             cancellation.ThrowIfCancellationRequested();
-                            var existing = cached.FirstOrDefault(m => m.RemoteFolder == folder.FullName && m.UidValidity == folder.UidValidity && m.RemoteUid == summary.UniqueId.Id && m.ContentVersion >= 2);
+                            Dictionary<uint, Message> folderCache; Message existing = null;
+                            if (cacheIndex.TryGetValue(folder.FullName, out folderCache)) folderCache.TryGetValue(summary.UniqueId.Id, out existing);
+                            if (existing != null) existing = existing.UidValidity == folder.UidValidity ? existing.CopyForSync() : null;
                             if (existing != null) { existing.Folder = item.LocalName; existing.Unread = (summary.Flags & MessageFlags.Seen) == 0; existing.Starred = (summary.Flags & MessageFlags.Flagged) != 0; batch.Add(existing); }
                             else if (summary.Size <= 25 * 1024 * 1024) batch.Add(ConvertMessage(folder.GetMessage(summary.UniqueId, cancellation), account.Id, item.LocalName, folder.FullName, folder.UidValidity, summary.UniqueId.Id, summary.Flags ?? MessageFlags.None));
                             report("Syncing", item.Name, ++completed, Math.Max(total, completed));

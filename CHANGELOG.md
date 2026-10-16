@@ -2,6 +2,17 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.9.2 beta — 16 October 2026
+
+- Fix an expensive sync path that serialized, encrypted, and rewrote the complete cache on the UI thread after every folder. Merge completed folders in memory, persist changed data once per sync in a worker, and retain completed batches after an interrupted sync.
+- Reuse loaded mailbox stores when switching accounts, load inactive caches in the background, and avoid resetting unchanged message lists. Refresh only the displayed folder when its contents change.
+- Replace JSON round-trip cloning and repeated full-cache UID scans with lightweight message copies and folder/UID dictionaries. Share immutable body/attachment data and omit computed presentation properties from serialized caches.
+- Coalesce progress updates at background dispatcher priority, prevent overlapping periodic sync cycles, and reuse parsed folder-menu templates. Enable message-list container recycling explicitly.
+- Save read/star cache updates asynchronously. Order concurrent writes so an older snapshot cannot replace a newer one, and finish pending sync/cache work asynchronously when exiting instead of blocking the window thread.
+- Set native scrollbar thumb minimum length to 44 pixels using WPF Track resources, and apply the same minimum to HTML-reader scrollbars.
+- Expand the collapsed sidebar to 88 pixels, centre folder icons in 44-pixel targets, keep custom folders as icons with full tooltips, and use one mailbox chooser rather than stacked account buttons.
+- Pass the existing suite and 43 synthetic workspace checks. Add a real WPF responsiveness regression using 2,400 synthetic messages (roughly 40 MB), background DPAPI cache writes, UI timer activity, minimise/restore during saving, latest-write ordering, unchanged-folder reuse, and measured 44-pixel vertical/horizontal thumbs. The measured run processed 87 UI timer ticks during the initial write; snapshot capture rounded to 0 ms.
+- Verify the collapsed sidebar visually and rerun the isolated WebView2 picture/script-policy test. No real mailbox data was changed or uploaded. Live-provider sync throughput remains unbenchmarked; the responsiveness check exercises local cache/merge work.
 ## 0.9.1 beta — 16 October 2026
 
 - Load external HTTPS email pictures automatically by default. Add an Appearance toggle with live preview/Cancel restoration to return to per-message Load images. Keep message scripts, forms, frames, and unrelated resources blocked.

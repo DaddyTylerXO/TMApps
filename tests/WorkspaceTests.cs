@@ -27,7 +27,7 @@ class WorkspaceTests {
                 var navPosition = navigation.TranslatePoint(new Point(0, 0), workspace);
                 if (edge == "Right" && navPosition.X < 700) throw new Exception("Right navigation is not on right");
                 if (edge == "Bottom" && navPosition.Y < 600) throw new Exception("Bottom navigation is not on bottom");
-                if ((edge == "Left" || edge == "Right") && Math.Abs(navigation.ActualWidth - (collapsed ? 66 : 224)) > 1) throw new Exception("Incorrect ribbon width");
+                if ((edge == "Left" || edge == "Right") && Math.Abs(navigation.ActualWidth - (collapsed ? 88 : 224)) > 1) throw new Exception("Incorrect ribbon width");
                 var list = (ListBox)window.FindName("MessageList");
                 var point = list.TranslatePoint(new Point(list.ActualWidth, 0), content);
                 if (list.ActualWidth < 280 || point.X > 984) throw new Exception("List outside workspace");

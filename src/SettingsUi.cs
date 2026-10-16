@@ -129,16 +129,16 @@ namespace Postbox {
             foreach (string name in folders) Detach(Find<Button>(name + "Nav"));
             foreach (var button in new[] { Find<Button>("ComposeButton"), Find<Button>("AccountsButton"), collapseButton, settingsButton }) Detach(button);
             var brand = (StackPanel)navigation.Tag; Detach(brand);
-            navigation.Width = horizontal ? Double.NaN : compact ? 66 : FittedNavigationWidth();
+            navigation.Width = horizontal ? Double.NaN : compact ? 88 : FittedNavigationWidth();
             navigation.Height = Double.NaN;
             Grid.SetColumn(navigation, preferences.NavigationEdge == "Right" ? 2 : preferences.NavigationEdge == "Left" ? 0 : 1);
             Grid.SetRow(navigation, preferences.NavigationEdge == "Top" ? 0 : preferences.NavigationEdge == "Bottom" ? 2 : 1);
             var layout = new DockPanel { LastChildFill = true, Margin = new Thickness(horizontal ? 8 : 0) }; navigation.Child = layout;
-            collapseButton.Content = "☰"; collapseButton.HorizontalAlignment = HorizontalAlignment.Right; collapseButton.Background = Brushes.Transparent; collapseButton.Foreground = Brush("#C5D4EC"); collapseButton.Margin = new Thickness(0, 4, 4, 0); collapseButton.Padding = new Thickness(10, 9, 10, 9);
+            collapseButton.Width = Double.NaN; collapseButton.Height = Double.NaN; settingsButton.Height = Double.NaN; settingsButton.FontSize = 12; collapseButton.Content = "☰"; collapseButton.HorizontalAlignment = HorizontalAlignment.Right; collapseButton.Background = Brushes.Transparent; collapseButton.Foreground = Brush("#C5D4EC"); collapseButton.Margin = new Thickness(0, 4, 4, 0); collapseButton.Padding = new Thickness(10, 9, 10, 9);
             DockPanel.SetDock(collapseButton, horizontal ? Dock.Right : Dock.Top); layout.Children.Add(collapseButton);
             if (!horizontal && !compact) { brand.Margin = new Thickness(24, 17, 16, 18); DockPanel.SetDock(brand, Dock.Top); layout.Children.Add(brand); }
             var compose = Find<Button>("ComposeButton"); compose.Content = compact ? "＋" : horizontal ? "＋ New" : "＋   New message";
-            compose.Background = Theme.B("SidebarAccent"); compose.ToolTip = "New message (Ctrl+N)"; compose.Margin = new Thickness(8, horizontal ? 4 : 8, 8, horizontal ? 4 : 24); compose.Padding = new Thickness(compact ? 12 : 14, 10, compact ? 12 : 14, 10);
+            compose.Height = Double.NaN; compose.FontSize = 12; compose.Background = Theme.B("SidebarAccent"); compose.ToolTip = "New message (Ctrl+N)"; compose.Margin = new Thickness(8, horizontal ? 4 : 8, 8, horizontal ? 4 : 24); compose.Padding = new Thickness(compact ? 12 : 14, 10, compact ? 12 : 14, 10);
             DockPanel.SetDock(compose, horizontal ? Dock.Left : Dock.Top); layout.Children.Add(compose);
             var footer = new StackPanel { Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical }; navigationFooter = footer;
             settingsButton.Content = compact ? "⚙" : "⚙  Settings"; settingsButton.HorizontalAlignment = HorizontalAlignment.Stretch; settingsButton.HorizontalContentAlignment = HorizontalAlignment.Left;
@@ -147,13 +147,20 @@ namespace Postbox {
             DockPanel.SetDock(footer, horizontal ? Dock.Right : Dock.Bottom); layout.Children.Add(footer);
             navigationButtons = new StackPanel { Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical, VerticalAlignment = horizontal ? VerticalAlignment.Center : VerticalAlignment.Top };
             foreach (string name in folders) {
-                var button = Find<Button>(name + "Nav"); button.ToolTip = name; button.Margin = new Thickness(horizontal ? 2 : 8, 3, horizontal ? 2 : 8, 3); button.Padding = new Thickness(compact ? 12 : 10, 11, compact ? 12 : 10, 11); button.FontSize = compact ? 18 : 13; navigationButtons.Children.Add(button);
+                var button = Find<Button>(name + "Nav"); button.ToolTip = name; button.Height = Double.NaN; button.HorizontalContentAlignment = HorizontalAlignment.Left; button.Margin = new Thickness(horizontal ? 2 : 8, 3, horizontal ? 2 : 8, 3); button.Padding = new Thickness(compact ? 12 : 10, 11, compact ? 12 : 10, 11); button.FontSize = compact ? 18 : 13; navigationButtons.Children.Add(button);
+            }
+            if (compact) {
+                collapseButton.HorizontalAlignment = HorizontalAlignment.Center; collapseButton.Width = 44; collapseButton.Height = 40; collapseButton.Margin = new Thickness(0, 5, 0, 3); collapseButton.Padding = new Thickness(4);
+                compose.Height = 44; compose.FontSize = 24; compose.Padding = new Thickness(4); compose.Margin = new Thickness(10, 8, 10, 10);
+                settingsButton.HorizontalContentAlignment = HorizontalAlignment.Center; settingsButton.Height = 44; settingsButton.FontSize = 21; settingsButton.Padding = new Thickness(4);
+                foreach (string name in folders) { var button = Find<Button>(name + "Nav"); button.HorizontalContentAlignment = HorizontalAlignment.Center; button.Height = 44; button.Margin = new Thickness(10, 3, 10, 3); button.Padding = new Thickness(4); button.FontSize = 20; }
             }
             var navContent = new DockPanel();
             var navTabs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(3) };
             var allTab = Action(compact ? "▤" : "Folders", false); var favTab = Action(compact ? "★" : "Favourites", false);
             allTab.ToolTip = "All folders"; favTab.ToolTip = "Favourite folders";
             foreach (var tabButton in new[] { allTab, favTab }) { tabButton.Padding = new Thickness(6); tabButton.Margin = new Thickness(1); tabButton.FontSize = 11; tabButton.Foreground = Brushes.White; }
+            if (compact) { navTabs.HorizontalAlignment = HorizontalAlignment.Center; foreach (var tabButton in new[] { allTab, favTab }) { tabButton.Width = 30; tabButton.Height = 32; tabButton.Padding = new Thickness(2); tabButton.FontSize = 14; } }
             allTab.Background = Brush(favouritesTab ? "#14243E" : "SidebarSelected"); favTab.Background = Brush(favouritesTab ? "SidebarSelected" : "#14243E");
             allTab.Click += delegate { favouritesTab = false; ApplyNavigation(); }; favTab.Click += delegate { favouritesTab = true; ApplyNavigation(); };
             navTabs.Children.Add(allTab); navTabs.Children.Add(favTab); DockPanel.SetDock(navTabs, horizontal ? Dock.Left : Dock.Top); navContent.Children.Add(navTabs);

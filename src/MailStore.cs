@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web.Script.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Postbox {
     public class MailAttachment {
@@ -42,9 +44,10 @@ namespace Postbox {
         public DateTime Date { get; set; }
         public bool Unread { get; set; }
         public bool Starred { get; set; }
-        public string Initials { get { return String.Join("", (Sender ?? "?").Split(' ').Where(s => s.Length > 0).Take(2).Select(s => s.Substring(0, 1))).ToUpperInvariant(); } }
+        [ScriptIgnore] public string Initials { get { return String.Join("", (Sender ?? "?").Split(' ').Where(s => s.Length > 0).Take(2).Select(s => s.Substring(0, 1))).ToUpperInvariant(); } }
+        public Message CopyForSync() { return (Message)MemberwiseClone(); }
         private string previewHtml, previewText;
-        public string Preview { get {
+        [ScriptIgnore] public string Preview { get {
             string text = Body ?? "";
             if (!String.IsNullOrWhiteSpace(HtmlBody)) {
                 if (previewHtml != HtmlBody) { previewHtml = HtmlBody; try { previewText = MailTransport.PlainHtml(HtmlBody); } catch { previewText = ""; } }
@@ -52,14 +55,16 @@ namespace Postbox {
             }
             return System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
         } }
-        public string TimeLabel { get { return Date.Date == DateTime.Today ? Date.ToString("HH:mm") : Date.ToString("dd MMM"); } }
-        public string StarLabel { get { return Starred ? "★" : "☆"; } }
+        [ScriptIgnore] public string TimeLabel { get { return Date.Date == DateTime.Today ? Date.ToString("HH:mm") : Date.ToString("dd MMM"); } }
+        [ScriptIgnore] public string StarLabel { get { return Starred ? "★" : "☆"; } }
     }
 
     public class MailStore {
         public List<Message> Messages { get; private set; }
         private readonly string path;
         private readonly bool encrypted;
+        private readonly object writeGate = new object();
+        private long writeVersion;
         private readonly JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 268435456 };
         public string LoadWarning { get; private set; }
         public MailStore(string dataPath) : this(dataPath, false, true) { }
@@ -81,11 +86,40 @@ namespace Postbox {
             if (Messages == null) { Messages = seed ? Seed() : new List<Message>(); Save(); }
         }
         public void Save() {
-            if (encrypted) { ProtectedFile.Write(path, serializer.Serialize(Messages)); return; }
+            long version = Interlocked.Increment(ref writeVersion);
+            lock (writeGate) { if (version == Interlocked.Read(ref writeVersion)) Write(Messages); }
+        }
+        public Task SaveAsync() {
+            // Capture only message records on the UI thread. Large immutable bodies and
+            // attachment strings are shared; JSON, encryption and disk writes run off-thread.
+            long version = Interlocked.Increment(ref writeVersion);
+            var snapshot = Messages.Select(m => m.CopyForSync()).ToList();
+            return Task.Run(delegate {
+                if (version != Interlocked.Read(ref writeVersion)) return;
+                string json = Serialize(snapshot);
+                lock (writeGate) { if (version == Interlocked.Read(ref writeVersion)) WriteSerialized(json); }
+            });
+        }
+        private static string Serialize(List<Message> messages) { return new JavaScriptSerializer { MaxJsonLength = 268435456 }.Serialize(messages); }
+        private void Write(List<Message> messages) {
+            WriteSerialized(Serialize(messages));
+        }
+        private void WriteSerialized(string json) {
+            if (encrypted) { ProtectedFile.Write(path, json); return; }
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
             string temp = path + ".tmp";
-            File.WriteAllText(temp, serializer.Serialize(Messages), Encoding.UTF8);
+            File.WriteAllText(temp, json, Encoding.UTF8);
             if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
+        }
+        public bool ApplyFolderBatch(ServerFolder folder, List<Message> batch) {
+            var old = Messages.Where(m => m.RemoteUid != 0 && m.RemoteFolder == folder.Path).GroupBy(m => m.Id).ToDictionary(g => g.Key, g => g.First());
+            var sentIds = new HashSet<string>(batch.Where(m => !String.IsNullOrEmpty(m.InternetMessageId)).Select(m => m.InternetMessageId));
+            bool localSent = folder.LocalName == "Sent" && Messages.Any(m => m.Folder == "Sent" && m.RemoteUid == 0 && !String.IsNullOrEmpty(m.InternetMessageId) && sentIds.Contains(m.InternetMessageId));
+            bool changed = localSent || old.Count != batch.Count || batch.Any(m => { Message previous; return !old.TryGetValue(m.Id, out previous) || previous.Unread != m.Unread || previous.Starred != m.Starred || previous.ContentVersion != m.ContentVersion || previous.HtmlBody != m.HtmlBody || previous.Body != m.Body; });
+            if (!changed) return false;
+            Messages.RemoveAll(m => m.RemoteUid != 0 && m.RemoteFolder == folder.Path);
+            if (localSent) Messages.RemoveAll(m => m.Folder == "Sent" && m.RemoteUid == 0 && !String.IsNullOrEmpty(m.InternetMessageId) && sentIds.Contains(m.InternetMessageId));
+            Messages.AddRange(batch); return true;
         }
         public IEnumerable<Message> Query(string folder, string search, bool unreadOnly) {
             IEnumerable<Message> result = Messages.Where(m => folder == "Starred" ? m.Starred && m.Folder != "Trash" : m.Folder == folder);

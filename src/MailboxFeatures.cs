@@ -65,7 +65,7 @@ namespace Postbox {
         private void UndoMove() {
             if (lastBatchMove == null) return;
             var originals = store.Messages.Where(m => lastBatchMove.ContainsKey(m.Id)).ToDictionary(m => m, m => m.Folder);
-            try { foreach (var message in originals.Keys) message.Folder = lastBatchMove[message.Id]; store.Save(); }
+            try { foreach (var message in originals.Keys) message.Folder = lastBatchMove[message.Id]; SaveMailboxInBackground(store); }
             catch { foreach (var item in originals) item.Key.Folder = item.Value; throw; }
             string id = lastBatchMove.Keys.First(); folder = lastBatchMove[id]; lastBatchMove = null; Refresh(id); Status("Move undone");
         }
@@ -73,13 +73,13 @@ namespace Postbox {
             var messages = SelectedMessages(); if (messages.Count == 0) return;
             bool star = messages.Any(m => !m.Starred); foreach (var message in messages) message.Starred = star;
             foreach (var message in messages) SaveServerFlags(message);
-            store.Save(); Refresh(selected.Id);
+            SaveMailboxInBackground(store); Refresh(selected.Id);
         }
         private void ToggleSelectedRead() {
             var messages = SelectedMessages(); if (messages.Count == 0) return;
             bool markUnread = !messages.Any(m => m.Unread); foreach (var message in messages) message.Unread = markUnread;
             foreach (var message in messages) SaveServerFlags(message);
-            store.Save(); Refresh(selected.Id);
+            SaveMailboxInBackground(store); Refresh(selected.Id);
         }
         private bool RenderMultipleSelection() {
             var messages = SelectedMessages(); bool multiple = messages.Count > 1;

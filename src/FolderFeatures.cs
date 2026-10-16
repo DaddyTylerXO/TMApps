@@ -8,16 +8,19 @@ using System.Windows.Media;
 
 namespace Postbox {
     public partial class App {
+        private ControlTemplate folderMenuTemplate, folderMenuItemTemplate;
         public static string FolderAppearanceKey(string accountId, string path) { return accountId + ":" + path; }
         private void StyleServerFolder(Button button, MailAccount account, ServerFolder value) {
             FolderAppearance look; preferences.FolderAppearances.TryGetValue(FolderAppearanceKey(account.Id, value.Path), out look);
             string icon = look == null || String.IsNullOrWhiteSpace(look.Icon) ? "▱" : look.Icon;
             button.Content = icon + "   " + value.Name + (value.Unread > 0 ? "  " + value.Unread : "");
-            button.FontSize = 13; button.FontWeight = FontWeights.Normal; button.Foreground = Brush("#C5D4EC");
+            bool compact = preferences.NavigationCollapsed;
+            button.FontSize = compact ? 20 : 13; button.FontWeight = FontWeights.Normal; button.Foreground = Brush("#C5D4EC");
+            if (compact) { button.Content = icon; button.Height = 44; button.Margin = new Thickness(10, 3, 10, 3); button.Padding = new Thickness(4); button.HorizontalContentAlignment = HorizontalAlignment.Center; }
             if (look != null && !String.IsNullOrEmpty(look.Colour)) { try { button.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(look.Colour)); } catch (FormatException) { } }
-            button.ToolTip = value.Path;
+            button.ToolTip = value.Name + " · " + account.Email + "\n" + value.Path;
             var menu = new ContextMenu { Background = Brush("Surface"), Foreground = Brush("Text"), Padding = new Thickness(6) };
-            menu.Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='ContextMenu'><Border Background='{TemplateBinding Background}' BorderBrush='#555B68' BorderThickness='1' CornerRadius='14' Padding='6'><ItemsPresenter/></Border></ControlTemplate>");
+            menu.Template = folderMenuTemplate ?? (folderMenuTemplate = (ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='ContextMenu'><Border Background='{TemplateBinding Background}' BorderBrush='#555B68' BorderThickness='1' CornerRadius='14' Padding='6'><ItemsPresenter/></Border></ControlTemplate>"));
             var read = new MenuItem { Header = "Mark all as read", IsEnabled = value.Selectable }; read.Click += async delegate { await UpdateServerFolder(account, value, false); }; menu.Items.Add(read);
             var appearance = new MenuItem { Header = "Change folder appearance…" }; appearance.Click += delegate { EditFolderAppearance(account, value); }; menu.Items.Add(appearance);
             var favourite = new MenuItem { Header = preferences.FavouriteFolders.Contains(value.LocalName) ? "Remove from favourites" : "Add to favourites" };
@@ -25,7 +28,7 @@ namespace Postbox {
             menu.Items.Add(new Separator()); var delete = new MenuItem { Header = "Delete folder…" }; delete.Click += async delegate { await UpdateServerFolder(account, value, true); }; menu.Items.Add(delete);
             foreach (var item in menu.Items.OfType<MenuItem>()) {
                 item.Foreground = Brush("Text"); item.Background = Brush("Surface"); item.Padding = new Thickness(12, 8, 12, 8);
-                item.Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='MenuItem'><Border x:Name='b' CornerRadius='9' Background='{TemplateBinding Background}' Padding='{TemplateBinding Padding}'><ContentPresenter ContentSource='Header'/></Border><ControlTemplate.Triggers><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='b' Property='Background' Value='#35415B'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='b' Property='Opacity' Value='0.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate>");
+                item.Template = folderMenuItemTemplate ?? (folderMenuItemTemplate = (ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='MenuItem'><Border x:Name='b' CornerRadius='9' Background='{TemplateBinding Background}' Padding='{TemplateBinding Padding}'><ContentPresenter ContentSource='Header'/></Border><ControlTemplate.Triggers><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='b' Property='Background' Value='#35415B'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='b' Property='Opacity' Value='0.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate>"));
             }
             button.ContextMenu = menu;
         }
@@ -38,13 +41,13 @@ namespace Postbox {
                 if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new InvalidOperationException("This account has changed. Open the folder again.");
                 var service = new MailTransport(account, accountStore);
                 await Task.Run(delegate { if (delete) service.DeleteFolder(value.Path); else service.MarkFolderRead(value.Path); });
-                var mailbox = activeAccount != null && activeAccount.Id == account.Id ? store : new MailStore(Path.Combine(dataDirectory, "mail-" + account.Id + ".protected"), true, false);
+                var mailbox = await GetMailboxAsync(account);
                 if (delete) {
                     mailbox.Messages.RemoveAll(m => m.RemoteFolder == value.Path); account.Folders.RemoveAll(f => f.Path == value.Path); accountStore.Save(account);
                     preferences.FolderAppearances.Remove(FolderAppearanceKey(account.Id, value.Path)); SavePaneSizes();
                     if (activeAccount != null && activeAccount.Id == account.Id && folder == value.LocalName) folder = "Inbox";
                 } else { foreach (var message in mailbox.Messages.Where(m => m.RemoteFolder == value.Path)) message.Unread = false; value.Unread = 0; accountStore.Save(account); }
-                mailbox.Save(); ApplyNavigation(); Refresh(selected == null ? null : selected.Id); Status(value.Name + (delete ? " deleted" : " · all messages marked read"));
+                await PersistMailboxAsync(mailbox); ApplyNavigation(); Refresh(selected == null ? null : selected.Id); Status(value.Name + (delete ? " deleted" : " · all messages marked read"));
             } catch (Exception ex) { Status("Folder action failed: " + ex.Message); MessageBox.Show(window, ex.Message, "Folder action could not finish"); }
             finally { mailGate.Release(); }
             QueueMailSync(account.Id);

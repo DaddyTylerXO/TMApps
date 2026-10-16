@@ -47,7 +47,7 @@ namespace Postbox {
                 if (refreshing) return;
                 selected = Find<ListBox>("MessageList").SelectedItem as Message;
                 if (selected != null && selected.Unread && SelectedMessages().Count == 1) {
-                    selected.Unread = false; store.Save(); SaveServerFlags(selected);
+                    selected.Unread = false; SaveMailboxInBackground(store); SaveServerFlags(selected);
                     // Preserve the current view while reading; explicit filtering refreshes it.
                     refreshing = true; Find<ListBox>("MessageList").Items.Refresh(); refreshing = false;
                     UpdateCounts();

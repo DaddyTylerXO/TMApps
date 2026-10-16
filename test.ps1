@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.9.1-release')
+param([string]$OutputDirectory = 'build\v0.9.2')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -51,3 +51,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Live mailbox test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'LiveMailboxTests.exe.config') -Force
 & (Join-Path $out 'LiveMailboxTests.exe') --data-dir (Join-Path $out ('test-data\live-' + [guid]::NewGuid().ToString()))
 if ($LASTEXITCODE -ne 0) { throw 'Live mailbox workspace checks failed.' }
+
+$responsivenessArguments = @('/nologo', '/target:exe', ('/out:' + (Join-Path $out 'ResponsivenessTests.exe')), ('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach ($reference in @('System.dll','System.Core.dll','System.Xaml.dll','WPF\PresentationFramework.dll','WPF\PresentationCore.dll','WPF\WindowsBase.dll')) { $responsivenessArguments += '/reference:' + (Join-Path $framework $reference) }
+$responsivenessArguments += Join-Path $PSScriptRoot 'tests\ResponsivenessTests.cs'
+& (Join-Path $framework 'csc.exe') @responsivenessArguments
+if ($LASTEXITCODE -ne 0) { throw 'Responsiveness test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'ResponsivenessTests.exe.config') -Force
+& (Join-Path $out 'ResponsivenessTests.exe') --data-dir (Join-Path $out ('test-data\responsive-' + [guid]::NewGuid().ToString()))
+if ($LASTEXITCODE -ne 0) { throw 'Responsiveness checks failed.' }
