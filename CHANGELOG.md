@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 — 2026-10-16
+
+- Per-user setup EXE with startup, desktop shortcut, close-to-tray, and launch-after-install options; Start menu and Windows Apps uninstall integration.
+- Burnt-orange sidebar inspired by TMA-Mail; dock Left/Top/Right/Bottom or collapse to an icon ribbon, with live preview and Save/Cancel settings.
+- Explicit Grid and List controls with saved preferences.
+- Fixed item-template button routing using the original clicked button; regression tests click Install and the three-dot menu through the real UI.
+- Added tray reopen/update/quit controls and second-instance restoration.
+
 ## 1.2.0 — 2026-10-16
 
 - Original white rocket on burnt-orange `#CC5500` icon, embedded into the EXE at seven Windows sizes and applied to the window/header.

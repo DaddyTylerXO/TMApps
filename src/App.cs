@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -35,6 +35,8 @@ namespace TMApps {
     }
     public class LauncherApplication : Application {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
+        System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
+        EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
         string filter = "all"; bool listView = true; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
@@ -50,34 +52,92 @@ namespace TMApps {
             }
             bool created;
             using (var mutex = new Mutex(true, "Local\\TMApps-Launcher", out created)) {
-                if (!created) { MessageBox.Show("TMApps Launcher is already open.", "TMApps"); return; }
+                if (!created) { try { using(var show=EventWaitHandle.OpenExisting("Local\\TMApps-Launcher-Show")) show.Set(); } catch { } return; }
                 try { new LauncherApplication().Run(); }
                 catch (Exception ex) { MessageBox.Show("TMApps Launcher could not start.\n\n" + ex.Message, "TMApps", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
         }
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
-            service = new LauncherService(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TMApps", "Launcher"));
-            preferences = new Preferences();
-            try { preferences = LauncherService.Json.Deserialize<Preferences>(File.ReadAllText(Path.Combine(service.Root, "settings.json"))) ?? preferences; } catch { }
-            // Both the UI and initial catalog are embedded in the executable.
-            string xaml = CleanXaml(Bundled.Read("MainWindow.xaml"));
-            window = (Window)XamlReader.Parse(xaml); MainWindow = window;
-            using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
-                window.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-            }
-            Find<System.Windows.Controls.Image>("BrandIcon").Source = window.Icon;
-            window.AddHandler(Button.ClickEvent, new RoutedEventHandler(HandleButton));
-            Find<TextBox>("Search").TextChanged += (s, ev) => Render();
-            apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
-            Render();
-            Notice("Install an app to get started. Public downloads do not require a GitHub account.");
-            window.Closing += (s, ev) => {
-                if (apps.Any(a => a.Busy) && MessageBox.Show(window, "A download or installation is in progress. Cancel it and close the launcher?", "Close launcher", MessageBoxButton.YesNo) != MessageBoxResult.Yes) { ev.Cancel = true; return; }
-                lifetime.Cancel(); foreach (var app in apps) if (app.Cancellation != null) app.Cancellation.Cancel();
-            };
+            if (window != null) return; // An explicitly initialized verification window already owns this Application.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Initialize(DesktopIntegration.ProfileDirectory, null, true);
             window.Show();
             if (preferences.checkOnStartup) RefreshCatalog();
+        }
+        internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop) {
+            service = new LauncherService(root, handler);
+            preferences = DesktopIntegration.LoadPreferences(root);
+            window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
+            using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
+                window.Icon = System.Windows.Media.Imaging.BitmapDecoder.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames.Last();
+            }
+            Find<System.Windows.Controls.Image>("BrandIcon").Source = window.Icon;
+            window.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, new RoutedEventHandler(HandleButton), true);
+            Find<TextBox>("Search").TextChanged += (s, ev) => Render();
+            apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
+            ApplyNavigation(window, preferences); ApplyView(window, preferences.libraryView); listView = preferences.libraryView == "List";
+            Render(); Notice("Choose an application to install. Downloads and installation happen here.");
+            if (desktop) {
+                SetupTray();
+                showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Local\\TMApps-Launcher-Show");
+                showRegistration = ThreadPool.RegisterWaitForSingleObject(showEvent, (state,timedOut) => Dispatcher.BeginInvoke(new Action(Restore)), null, Timeout.Infinite, false);
+                window.Closing += (s,ev) => {
+                    if (!quitting && preferences.closeToTray && tray != null) {
+                        ev.Cancel = true; window.Hide();
+                        if (!trayNoticeShown) { tray.ShowBalloonTip(3000,"TMApps Launcher","Still running in the tray. Right-click the rocket icon to open or quit.",System.Windows.Forms.ToolTipIcon.Info); trayNoticeShown = true; }
+                        return;
+                    }
+                    if (!quitting && !ConfirmExit()) { ev.Cancel = true; return; }
+                    quitting = true; Shutdown();
+                };
+            }
+            return window;
+        }
+        void SetupTray() {
+            using (var input = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) using (var icon = new System.Drawing.Icon(input)) {
+                tray = new System.Windows.Forms.NotifyIcon { Text = "TMApps Launcher", Icon = (System.Drawing.Icon)icon.Clone(), Visible = true };
+            }
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            menu.Items.Add("Open launcher",null,(s,e) => Dispatcher.BeginInvoke(new Action(Restore)));
+            menu.Items.Add("Check for updates",null,(s,e) => Dispatcher.BeginInvoke(new Action(() => { Restore(); RefreshCatalog(); })));
+            menu.Items.Add("Quit",null,(s,e) => Dispatcher.BeginInvoke(new Action(() => { if (ConfirmExit()) { quitting = true; Shutdown(); } })));
+            tray.ContextMenuStrip = menu; tray.DoubleClick += (s,e) => Dispatcher.BeginInvoke(new Action(Restore));
+        }
+        void Restore() { window.Show(); window.WindowState = WindowState.Normal; window.Activate(); }
+        bool ConfirmExit() { return !apps.Any(a => a.Busy) || MessageBox.Show(window,"An installation is in progress. Cancel it and quit?","Quit TMApps Launcher",MessageBoxButton.YesNo) == MessageBoxResult.Yes; }
+        protected override void OnExit(ExitEventArgs e) {
+            lifetime.Cancel(); if (apps != null) foreach(var a in apps) if(a.Cancellation != null) a.Cancellation.Cancel();
+            if(showRegistration != null) showRegistration.Unregister(null); if(showEvent != null) showEvent.Dispose();
+            if(tray != null) { tray.Visible = false; var icon=tray.Icon; tray.Dispose(); if(icon != null) icon.Dispose(); }
+            if(service != null) service.Dispose(); base.OnExit(e);
+        }
+        internal static void ApplyView(Window target, string view) {
+            bool list = view != "Grid";
+            var cards=(ItemsControl)target.FindName("Cards"); cards.ItemTemplate=(DataTemplate)target.Resources[list ? "AppList" : "AppCard"];
+            var factory=new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.UniformGrid)); factory.SetValue(System.Windows.Controls.Primitives.UniformGrid.ColumnsProperty,list ? 1 : 2); cards.ItemsPanel=new ItemsPanelTemplate(factory);
+            foreach(string name in new[]{"ListViewButton","GridViewButton"}) {
+                var b=(Button)target.FindName(name); b.Background=(Brush)new BrushConverter().ConvertFromString((name=="ListViewButton")==list ? "#CC5500" : "#2D313B");
+            }
+        }
+        internal static void ApplyNavigation(Window target, Preferences p) {
+            p.Normalize(); bool side=p.navigationEdge=="Left" || p.navigationEdge=="Right";
+            var panel=(Border)target.FindName("NavigationPanel"); DockPanel.SetDock(panel,(Dock)Enum.Parse(typeof(Dock),p.navigationEdge));
+            panel.Width=side ? (p.compactNavigation ? 76 : 214) : Double.NaN;
+            ((WrapPanel)target.FindName("NavigationLayout")).Orientation=side ? Orientation.Vertical : Orientation.Horizontal;
+            foreach(string name in new[]{"NavActions","NavUtilities"}) ((StackPanel)target.FindName(name)).Orientation=side ? Orientation.Vertical : Orientation.Horizontal;
+            ((StackPanel)target.FindName("BrandTitle")).Visibility=p.compactNavigation ? Visibility.Collapsed : Visibility.Visible;
+            ((StackPanel)target.FindName("BrandBlock")).Margin=side ? new Thickness(8,7,8,24) : new Thickness(8,7,20,7);
+            ((StackPanel)target.FindName("NavUtilities")).Margin=side ? new Thickness(0,22,0,0) : new Thickness(8,0,0,0);
+            foreach(string name in new[]{"AllFilter","InstalledFilter","UpdatesFilter","NotInstalledFilter","CompactButton","RefreshButton","SettingsButton","GitHubButton"}) {
+                var b=(Button)target.FindName(name); b.Margin=side ? new Thickness(0,0,0,8) : new Thickness(4,3,4,3);
+                b.Padding=side && p.compactNavigation ? new Thickness(9,12,9,12) : new Thickness(13,10,13,10);
+            }
+            var compact=(Button)target.FindName("CompactButton"); compact.Content=p.compactNavigation ? "☰" : "☰  Navigation"; compact.ToolTip="Collapse or expand navigation";
+            ((Button)target.FindName("RefreshButton")).Content=p.compactNavigation ? "↻" : "↻  Check updates";
+            ((Button)target.FindName("SettingsButton")).Content=p.compactNavigation ? "⚙" : "⚙  Settings";
+            ((Button)target.FindName("SettingsButton")).ToolTip="Settings";
+            ((Button)target.FindName("GitHubButton")).Content=p.compactNavigation ? "↗" : "GitHub ↗";
         }
         static string CleanXaml(string xaml) { return System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", ""); }
         void Notice(string value) { Find<TextBlock>("Notice").Text = value; }
@@ -103,9 +163,12 @@ namespace TMApps {
             Find<Button>("InstalledFilter").Content = "Installed  " + apps.Count(a => service.GetInstalled(a.Info) != null);
             Find<Button>("UpdatesFilter").Content = "Updates  " + apps.Count(a => { var i = service.GetInstalled(a.Info); return i != null && LauncherService.IsNewer(a.Info.version, i.version); });
             Find<Button>("NotInstalledFilter").Content = "Not installed  " + apps.Count(a => service.GetInstalled(a.Info) == null);
+            Find<Button>("AllFilter").Content="All applications  " + apps.Count;
             foreach (string key in new[] { "all", "installed", "updates", "notinstalled" }) {
                 var button = Find<Button>(key == "all" ? "AllFilter" : key == "installed" ? "InstalledFilter" : key == "updates" ? "UpdatesFilter" : "NotInstalledFilter");
-                button.Background = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#CC5500" : "#2D313B");
+                button.ToolTip=Convert.ToString(button.Content);
+                if(preferences.compactNavigation) button.Content=key=="all" ? "▦" : key=="installed" ? "✓" : key=="updates" ? "↓" : "+";
+                button.Background = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#CC5500" : "#5B321E");
                 button.Foreground = (Brush)new BrushConverter().ConvertFromString(filter == key ? "#FFFFFF" : "#ECEEF3");
             }
         }
@@ -130,16 +193,28 @@ namespace TMApps {
             catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message); }
             finally { app.Busy = false; app.Cancellation.Dispose(); app.Cancellation = null; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy) && !refreshing; }
         }
+        internal static Button ResolveButton(object source) {
+            var item=source as DependencyObject;
+            while(item != null) {
+                var button=item as Button; if(button != null) return button;
+                var content=item as FrameworkContentElement;
+                item=content != null ? content.Parent : VisualTreeHelper.GetParent(item);
+            }
+            return null;
+        }
         void HandleButton(object sender, RoutedEventArgs e) {
-            var b = e.Source as Button; if (b == null) return;
+            // Source can be retargeted to ItemsControl across a DataTemplate boundary.
+            var b = ResolveButton(e.OriginalSource); if (b == null) return;
+            e.Handled=true;
             string name = b.Name; string tag = b.Tag as string;
+            if(name=="CompactButton") { preferences.compactNavigation=!preferences.compactNavigation; ApplyNavigation(window,preferences); Render(); DesktopIntegration.SavePreferences(service.Root,preferences); return; }
+            if(name=="SettingsButton") { Settings(); return; }
+            if(name=="GitHubButton") { Browse("https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher"); return; }
             if (name == "RefreshButton") { RefreshCatalog(); return; }
             if (name.EndsWith("Filter")) { filter = tag; Render(); return; }
-            if (name == "ViewButton") {
-                listView = !listView; b.Content = listView ? "▦  Grid" : "☷  List";
-                Find<ItemsControl>("Cards").ItemTemplate = (DataTemplate)window.Resources[listView ? "AppList" : "AppCard"];
-                var factory = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.UniformGrid)); factory.SetValue(System.Windows.Controls.Primitives.UniformGrid.ColumnsProperty, listView ? 1 : 2);
-                Find<ItemsControl>("Cards").ItemsPanel = new ItemsPanelTemplate(factory); return;
+            if (name == "GridViewButton" || name == "ListViewButton") {
+                preferences.libraryView=name=="GridViewButton" ? "Grid" : "List";
+                listView=preferences.libraryView=="List"; ApplyView(window,preferences.libraryView); DesktopIntegration.SavePreferences(service.Root,preferences); return;
             }
             var app = apps.FirstOrDefault(a => a.Id == tag);
             if (app != null) {
@@ -168,25 +243,55 @@ namespace TMApps {
                     service.Uninstall(app.Info); app.Detail = null; Render(); Notice(app.Name + " was uninstalled. Application data was kept.");
                 }
             }, installed != null && !app.Busy);
-            target.ContextMenu = menu; menu.IsOpen = true;
+            target.ContextMenu = menu; menu.PlacementTarget=target; menu.IsOpen = true;
         }
         void Settings() {
-            var dialog = new Window { Owner = window, Title = "Launcher settings", Width = 580, Height = 540, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = window.Background, Foreground = window.Foreground };
-            dialog.Resources = window.Resources;
-            var panel = new StackPanel { Margin = new Thickness(24) }; dialog.Content = panel;
-            panel.Children.Add(new TextBlock { Text = "Make yourself at home.", FontSize = 23, Margin = new Thickness(0,0,0,18) });
-            var check = new CheckBox { Content = "Check for application updates when the launcher opens", IsChecked = preferences.checkOnStartup, Foreground = window.Foreground }; panel.Children.Add(check);
-            panel.Children.Add(new TextBlock { Text = "Applications are installed for your Windows user. Updates are downloaded only when you choose Update app.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray, Margin = new Thickness(0,18,0,12) });
-            var folder = new Button { Content = "Open launcher storage", HorizontalAlignment = HorizontalAlignment.Left }; folder.Click += (s,e) => System.Diagnostics.Process.Start("explorer.exe", service.Root); panel.Children.Add(folder);
-            panel.Children.Add(new TextBlock { Text = "Optional GitHub connection", FontSize = 18, Margin = new Thickness(0,22,0,8) });
-            panel.Children.Add(new TextBlock { Text = "Public downloads work without a token. If private access is needed later, use a fine-grained token with Contents: Read-only for DaddyTylerXO/TMApps. Saved tokens are encrypted for your Windows user.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray });
-            var token = new PasswordBox { Margin = new Thickness(0,12,0,8), Padding = new Thickness(8), ToolTip = "GitHub token (leave blank to keep the current connection)" }; panel.Children.Add(token);
-            var tokenStatus = new TextBlock { Text = service.HasToken ? "GitHub token saved. Disconnect to use public downloads." : "Using public downloads. No token needed.", Foreground = Brushes.LightGray }; panel.Children.Add(tokenStatus);
-            var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0,10,0,0) }; panel.Children.Add(actions);
-            var createToken = new Button { Content = "Create GitHub token ↗", Margin = new Thickness(0,0,8,0) }; createToken.Click += (s,e) => Browse("https://github.com/settings/personal-access-tokens/new"); actions.Children.Add(createToken);
-            var disconnect = new Button { Content = "Disconnect GitHub" }; disconnect.Click += (s,e) => { try { service.SaveToken(""); token.Clear(); tokenStatus.Text = "Using public downloads. No token needed."; } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Could not disconnect"); } }; actions.Children.Add(disconnect);
-            var save = new Button { Content = "Save settings", HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0,12,0,0) };
-            save.Click += (s,e) => { try { if (!String.IsNullOrWhiteSpace(token.Password)) service.SaveToken(token.Password); preferences.checkOnStartup = check.IsChecked == true; LauncherService.AtomicWrite(Path.Combine(service.Root, "settings.json"), LauncherService.Json.Serialize(preferences)); dialog.Close(); if (service.HasToken) RefreshCatalog(); } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Could not save settings"); } }; panel.Children.Add(save); dialog.ShowDialog();
+            var original=LauncherService.Json.Deserialize<Preferences>(LauncherService.Json.Serialize(preferences));
+            bool saved=false;
+            var dialog=new Window { Owner=window,Title="TMApps Launcher / Settings",Width=820,Height=650,MinWidth=740,MinHeight=570,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
+            var root=new DockPanel(); dialog.Content=root;
+            var heading=new TextBlock { Text="TMApps Launcher / Settings",FontSize=23,Margin=new Thickness(24) }; DockPanel.SetDock(heading,Dock.Top); root.Children.Add(heading);
+            var footer=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(20) }; DockPanel.SetDock(footer,Dock.Bottom); root.Children.Add(footer);
+            var navigation=new StackPanel { Width=168,Margin=new Thickness(10) }; DockPanel.SetDock(navigation,Dock.Left); root.Children.Add(navigation);
+            var body=new StackPanel { Margin=new Thickness(20,16,26,10) }; root.Children.Add(new ScrollViewer { Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto });
+            var token=new PasswordBox { Padding=new Thickness(10),Margin=new Thickness(0,8,0,12) };
+            Action preview=() => { ApplyNavigation(window,preferences); ApplyView(window,preferences.libraryView); listView=preferences.libraryView=="List"; Render(); };
+            Action<string> label=text => body.Children.Add(new TextBlock { Text=text,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,16,0,8) });
+            Action<string, bool, Action<bool>> checkbox=(text,value,set) => { var c=new CheckBox { Content=text,IsChecked=value,Foreground=window.Foreground,Margin=new Thickness(0,12,0,5) }; c.Checked+=(s,e)=>set(true); c.Unchecked+=(s,e)=>set(false); body.Children.Add(c); };
+            Action<string> page=null;
+            page=section => {
+                body.Children.Clear(); body.Children.Add(new TextBlock { Text=section=="Appearance" ? "Your workspace" : section=="Startup" ? "Startup and closing" : "Downloads and storage",FontSize=23,Margin=new Thickness(0,0,0,8) });
+                body.Children.Add(new TextBlock { Text="Preview changes immediately. Save keeps them; Cancel restores your previous settings.",Foreground=Brushes.LightGray,TextWrapping=TextWrapping.Wrap,FontSize=11 });
+                if(section=="Appearance") {
+                    label("Navigation position"); var edge=new ComboBox { ItemsSource=new[]{"Left","Top","Right","Bottom"},SelectedItem=preferences.navigationEdge,MinHeight=38 }; edge.SelectionChanged+=(s,e)=>{ preferences.navigationEdge=Convert.ToString(edge.SelectedItem); preview(); }; body.Children.Add(edge);
+                    label("Application display"); var view=new ComboBox { ItemsSource=new[]{"List","Grid"},SelectedItem=preferences.libraryView,MinHeight=38 }; view.SelectionChanged+=(s,e)=>{ preferences.libraryView=Convert.ToString(view.SelectedItem); preview(); }; body.Children.Add(view);
+                    checkbox("Use a compact icon ribbon",preferences.compactNavigation,value=>{ preferences.compactNavigation=value; preview(); });
+                    body.Children.Add(new TextBlock { Text="Use the ☰ button to collapse or expand navigation at any time. Hover an icon to see its name.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11,Margin=new Thickness(0,8,0,0) });
+                } else if(section=="Startup") {
+                    checkbox("Open TMApps Launcher when I sign in to Windows",preferences.runAtStartup,value=>preferences.runAtStartup=value);
+                    checkbox("Create a desktop shortcut",preferences.desktopShortcut,value=>preferences.desktopShortcut=value);
+                    checkbox("Keep running in the tray when the window is closed",preferences.closeToTray,value=>preferences.closeToTray=value);
+                    checkbox("Check for application updates when the launcher opens",preferences.checkOnStartup,value=>preferences.checkOnStartup=value);
+                    body.Children.Add(new TextBlock { Text="Double-click the rocket in the Windows tray to reopen the launcher. Right-click it and choose Quit to exit completely.",Foreground=Brushes.LightGray,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,18,0,0) });
+                } else {
+                    body.Children.Add(new TextBlock { Text="Public downloads need no GitHub token. Application updates are installed only when you choose Update.",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,18,0,12) });
+                    var folder=new Button { Content="Open launcher storage",HorizontalAlignment=HorizontalAlignment.Left }; folder.Click+=(s,e)=>System.Diagnostics.Process.Start("explorer.exe",service.Root); body.Children.Add(folder);
+                    label("Optional GitHub token"); body.Children.Add(token);
+                    var disconnect=new Button { Content="Disconnect GitHub",HorizontalAlignment=HorizontalAlignment.Left }; disconnect.Click+=(s,e)=>{ service.SaveToken(""); token.Clear(); }; body.Children.Add(disconnect);
+                }
+            };
+            foreach(string section in new[]{"Appearance","Startup","Downloads"}) { string selected=section; var b=new Button { Content=section,Margin=new Thickness(0,0,0,7),Padding=new Thickness(15,18,15,18) }; b.Click+=(s,e)=>page(selected); navigation.Children.Add(b); }
+            var cancel=new Button { Content="Cancel",Margin=new Thickness(0,0,8,0) }; cancel.Click+=(s,e)=>dialog.Close(); footer.Children.Add(cancel);
+            var save=new Button { Content="Save changes",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500") }; save.Click+=(s,e)=> {
+                try {
+                    if(!String.IsNullOrWhiteSpace(token.Password)) service.SaveToken(token.Password);
+                    string exe=System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    DesktopIntegration.SetStartup(exe,preferences.runAtStartup); DesktopIntegration.SetDesktopShortcut(exe,preferences.desktopShortcut);
+                    DesktopIntegration.SavePreferences(service.Root,preferences); saved=true; dialog.Close();
+                } catch(Exception ex) { MessageBox.Show(dialog,ex.Message,"Could not save settings"); }
+            }; footer.Children.Add(save);
+            dialog.Closed+=(s,e)=>{ if(!saved) { preferences=original; preview(); } };
+            page("Appearance"); dialog.ShowDialog();
         }
         void Browse(string url) { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception ex) { Notice("Could not open your browser: " + ex.Message); } }
     }

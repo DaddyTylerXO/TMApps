@@ -31,7 +31,13 @@ namespace TMApps {
         public bool Available { get { return !String.IsNullOrEmpty(downloadUrl); } }
     }
     public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } }
-    public class Preferences { public bool checkOnStartup { get; set; } public Preferences() { checkOnStartup = true; } }
+    public class Preferences {
+        public bool checkOnStartup { get; set; } public bool runAtStartup { get; set; } public bool desktopShortcut { get; set; }
+        public bool closeToTray { get; set; } public string navigationEdge { get; set; } public bool compactNavigation { get; set; }
+        public string libraryView { get; set; }
+        public Preferences() { checkOnStartup = true; closeToTray = true; desktopShortcut = true; navigationEdge = "Left"; libraryView = "List"; }
+        public void Normalize() { if (!new[] { "Left", "Right", "Top", "Bottom" }.Contains(navigationEdge)) navigationEdge = "Left"; if (libraryView != "Grid") libraryView = "List"; }
+    }
     public sealed class LauncherService : IDisposable {
         public const string CatalogUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/catalog.json";
         public readonly string Root;

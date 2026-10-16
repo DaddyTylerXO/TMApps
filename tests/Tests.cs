@@ -28,6 +28,19 @@ namespace TMApps {
             }
         }
         class QuietProgress : IProgress<string> { public void Report(string value) {} }
+        static System.Collections.Generic.IEnumerable<Button> Buttons(DependencyObject root) {
+            var button=root as Button; if(button!=null) yield return button;
+            for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++) foreach(var child in Buttons(VisualTreeHelper.GetChild(root,i))) yield return child;
+        }
+        static void PumpUntil(Func<bool> ready) {
+            var end=DateTime.UtcNow.AddSeconds(15);
+            while(!ready() && DateTime.UtcNow<end) {
+                var frame=new System.Windows.Threading.DispatcherFrame();
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,new Action(()=>frame.Continue=false));
+                System.Windows.Threading.Dispatcher.PushFrame(frame); Thread.Sleep(5);
+            }
+            if(!ready()) throw new Exception("UI operation timed out");
+        }
         static int count;
         static void Check(bool condition, string label) { if (!condition) throw new Exception(label); count++; Console.WriteLine("PASS " + label); }
         static void Reject(Action action, string label) { try { action(); } catch { count++; Console.WriteLine("PASS " + label); return; } throw new Exception("Expected rejection: " + label); }
@@ -117,12 +130,20 @@ namespace TMApps {
                 var start = new System.Diagnostics.ProcessStartInfo(exe, "--verify-package \"" + report + "\"") { WorkingDirectory = standalone, UseShellExecute = false, CreateNoWindow = true };
                 using (var process = System.Diagnostics.Process.Start(start)) { if (!process.WaitForExit(15000)) { process.Kill(); throw new Exception("Standalone startup timed out"); } Check(process.ExitCode == 0 && File.ReadAllText(report).StartsWith("OK:"), "EXE loads UI and catalog alone in empty folder"); }
                 Check(Directory.GetFiles(standalone).Length == 2, "Standalone startup needs no config, XAML, JSON, or DLL sidecars");
+                string shortcut=Path.Combine(standalone,"Launcher.lnk"); DesktopIntegration.CreateShortcut(shortcut,exe);
+                Check(File.Exists(shortcut) && BitConverter.ToInt32(File.ReadAllBytes(shortcut),0)==76,"Windows desktop/Start menu shortcut helper creates a real shell link");
                 Check(new AppView { Info = catalog.apps[0] }.UpdatedLabel == "Oct 16, 2026", "App update date displayed from metadata");
                 using (var embedded = new LauncherService(Path.Combine(root,"embedded-profile"))) Check(embedded.LoadCatalog().apps.Count == 2, "Embedded catalog fallback works without source files");
-                var application = new Application();
-                string xaml = File.ReadAllText(Path.Combine(args[0], "src", "MainWindow.xaml"));
-                xaml = System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", "");
-                var window = (Window)XamlReader.Parse(xaml);
+                string installerRoot=Path.Combine(root,"installer");
+                var installStart=new System.Diagnostics.ProcessStartInfo(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"),"--verify-install \""+installerRoot+"\"") { UseShellExecute=false,CreateNoWindow=true };
+                using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
+                var application = new LauncherApplication();
+                SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
+                string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
+                var uiCatalog=LauncherService.ParseCatalog(original);
+                using(var sha=SHA256.Create()) uiCatalog.apps[0].sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
+                LauncherService.AtomicWrite(Path.Combine(uiRoot,"catalog.json"),LauncherService.Json.Serialize(uiCatalog));
+                var window=application.Initialize(uiRoot,new PackageHandler { Bytes=handler.Bytes },false);
                 using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
                     var decoder = BitmapDecoder.Create(icon, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                     Check(decoder.Frames.Count == 7, "Embedded rocket icon has seven Windows display sizes");
@@ -130,7 +151,7 @@ namespace TMApps {
                 }
                 Check(System.Diagnostics.FileVersionInfo.GetVersionInfo(Path.Combine(args[0],"build","TMApps-Launcher.exe")).CompanyName == "DaddyTylerXO", "Executable company metadata uses GitHub username");
                 var cards = (ItemsControl)window.FindName("Cards");
-                cards.ItemsSource = catalog.apps.Select(a => new AppView { Info = a, Action = a.Available ? "↓  Install app" : "Coming soon", CanAct = a.Available, Status = a.Available ? "READY TO INSTALL" : "AWAITING FIRST RELEASE", VersionLabel = "v" + a.version, Detail = "Windows x64 · Beta" }).ToList();
+
                 var content = (FrameworkElement)window.Content;
                 content.Measure(new Size(1180,800)); content.Arrange(new Rect(0,0,1180,800)); content.UpdateLayout();
                 var bitmap = new RenderTargetBitmap(1180,800,96,96,PixelFormats.Pbgra32); bitmap.Render(content);
@@ -139,11 +160,34 @@ namespace TMApps {
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 using (var output = File.Create(Path.Combine(args[0], "build", "launcher-preview.png"))) encoder.Save(output);
                 Check(cards.Items.Count == 2, "Render real WPF templates for both apps");
-                cards.ItemTemplate = (DataTemplate)window.Resources["AppCard"];
-                var gridFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.UniformGrid)); gridFactory.SetValue(System.Windows.Controls.Primitives.UniformGrid.ColumnsProperty, 2);
-                cards.ItemsPanel = new ItemsPanelTemplate(gridFactory);
-                content.Measure(new Size(900,600)); content.Arrange(new Rect(0,0,900,600)); content.UpdateLayout();
-                Check(cards.ActualWidth > 0 && cards.Items.Count == 2, "Grid template loads at minimum supported width");
+                var mailButton=Buttons(cards).First(b=>Convert.ToString(b.Tag)=="tma-mail" && Convert.ToString(b.Content).Contains("Install"));
+                var text=new TextBlock { Text="nested content" }; var nestedButton=new Button { Content=text }; nestedButton.ApplyTemplate();
+                Check(LauncherApplication.ResolveButton(mailButton)==mailButton,"Click resolver uses original button across item-template boundaries");
+                mailButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,mailButton));
+                var mailView=((System.Collections.IEnumerable)cards.ItemsSource).Cast<AppView>().First(a=>a.Id=="tma-mail");
+                using(var uiService=new LauncherService(uiRoot)) {
+                    PumpUntil(()=>!mailView.Busy && uiService.GetInstalled(uiCatalog.apps[0])!=null);
+                    Check(uiService.GetInstalled(uiCatalog.apps[0])!=null,"Real Install button click performs a verified installation through the UI");
+                    var menuButton=Buttons(cards).First(b=>Convert.ToString(b.Tag)=="tma-mail" && Convert.ToString(b.Content)=="•••");
+                    menuButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,menuButton));
+                    Check(menuButton.ContextMenu!=null && menuButton.ContextMenu.Items.Count==4,"Real three-dot click creates application options menu");
+                    menuButton.ContextMenu.IsOpen=false;
+                    uiService.Uninstall(uiCatalog.apps[0]);
+                }
+                ((Button)window.FindName("GridViewButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent,(Button)window.FindName("GridViewButton")));
+                Check(cards.ItemTemplate==(DataTemplate)window.Resources["AppCard"] && DesktopIntegration.LoadPreferences(uiRoot).libraryView=="Grid","Grid button switches the real template and saves display preference");
+                ((Button)window.FindName("ListViewButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent,(Button)window.FindName("ListViewButton")));
+                Check(cards.ItemTemplate==(DataTemplate)window.Resources["AppList"],"List button restores the list template");
+                foreach(string edge in new[]{"Left","Right","Top","Bottom"}) {
+                    LauncherApplication.ApplyNavigation(window,new Preferences { navigationEdge=edge });
+                    Check(DockPanel.GetDock((Border)window.FindName("NavigationPanel")).ToString()==edge,"Navigation can dock "+edge);
+                }
+                LauncherApplication.ApplyNavigation(window,new Preferences { compactNavigation=true });
+                Check(((Border)window.FindName("NavigationPanel")).Width==76,"Compact navigation ribbon collapses");
+                LauncherApplication.ApplyNavigation(window,new Preferences());
+                LauncherApplication.ApplyView(window,"Grid");
+                content.Measure(new Size(1000,640)); content.Arrange(new Rect(0,0,1000,640)); content.UpdateLayout();
+                Check(cards.ActualWidth>0 && cards.Items.Count==2,"Grid template loads at minimum supported width");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

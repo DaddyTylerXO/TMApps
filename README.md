@@ -1,12 +1,16 @@
 # TMApps Launcher
 
-A standalone Windows launcher for **TMA-Mail** and **TMA-Agent Office**. One EXE opens a compact application list with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and installation all happen inside the launcher.
+A Windows launcher for **TMA-Mail** and **TMA-Agent Office**, installed through a single setup EXE. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
 
 ![TMApps Launcher library](docs/launcher-preview.png)
 
 ## Download and run
 
-Download [**TMApps-Launcher.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher.exe) and open it. This is the entire launcher: no ZIP extraction, companion files, or developer tools are needed. The interface and initial app catalog are embedded in the EXE. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
+Download [**TMApps-Launcher-Setup.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) and run it. Setup installs the launcher for your Windows user, creates a Start menu entry, and adds a normal Windows Apps uninstall entry. No ZIP extraction, administrator access, or developer tools are needed. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
+
+During setup choose **Open when I sign in to Windows**, **Create a desktop icon**, **Stay in the tray when the window is closed**, and whether to open the launcher immediately. The default installation folder is `%LOCALAPPDATA%\Programs\TMApps Launcher`. Re-run setup to upgrade; first quit the running launcher using its tray menu. Preferences and installed application data are preserved.
+
+The rocket tray icon has **Open launcher**, **Check for updates**, and **Quit** actions. Double-click to reopen a hidden launcher. Turn off close-to-tray in Settings if closing the window should exit instead. Opening the installed launcher again restores an existing hidden instance.
 
 The launcher uses a white rocket on a rounded burnt-orange (`#CC5500`) tile, embedded as a multi-resolution Windows executable icon and shown in the title bar and launcher header. Rounded controls and panels follow TMA-Mail's dark theme. File Properties lists **DaddyTylerXO** as Company. This metadata is separate from Windows' verified publisher: code signing is deferred, so SmartScreen can still display **Unknown publisher** and an unrecognised-app warning. A trusted signing identity and publisher reputation are needed for that; a self-signed certificate does not solve public distribution trust. See [Microsoft's signing guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
 
@@ -17,7 +21,9 @@ The release is created by the [Publish Windows launcher and app catalog workflow
 - **Install app** downloads a Windows ZIP and verifies its SHA-256 checksum before extraction.
 - **Open app** starts the installed executable. The options menu also opens an older installed version while an update is available.
 - **Check for updates** fetches the current application catalog. **Update app** installs the newer build when you choose it.
-- Search, **Installed** / **Updates** / **Not installed** filters, and grid/list views help navigate the library. List is the default view.
+- Search, **Installed** / **Updates** / **Not installed** filters, and explicit **Grid** / **List** buttons help navigate the library. The selected view is saved.
+- **Settings → Appearance** moves navigation to **Left**, **Top**, **Right**, or **Bottom**, just like TMA-Mail, and offers a compact icon ribbon. The ☰ button collapses or expands navigation. Appearance changes preview immediately; Cancel reverts them and Save keeps them.
+- **Settings → Startup** changes Windows startup, desktop shortcut, close-to-tray, and startup release-check options after installation.
 - Every app shows its current published version and source update date. Publishing records the Mail package's last source commit date and Agent Office's source commit date; rebuilding the launcher does not invent a new app update date.
 - App options open its source, show its installation folder, or uninstall its managed binaries. Separate app accounts, mail, and workspace profiles are retained.
 - Settings can disable startup release checks. Updates download only when clicked.
@@ -46,7 +52,7 @@ No Node.js or separate .NET SDK is needed for the launcher:
 & '.\build\TMApps-Launcher.exe'
 ```
 
-The build uses the Windows .NET Framework C# compiler and WPF. Tests cover catalog validation, version ordering, archive boundaries, checksum failures, cancellation, install detection, atomic state writes, uninstall data retention, catalog recovery, dates, and actual WPF template rendering. A separate process test copies only the EXE into an empty directory and verifies that the embedded interface and app catalog load without sidecar files. The preview is `build/launcher-preview.png`. Packaging creates `dist/TMApps-Launcher.exe` and an optional checksum sidecar; users only download the EXE.
+The build uses the Windows .NET Framework C# compiler and WPF, with no external installer compiler. Tests cover the installation engine, a real installer payload install/launch/uninstall in an isolated folder, real routed Install and three-dot clicks, saved Grid/List controls, all four navigation positions, compact mode, and WPF rendering. The preview is `build/launcher-preview.png`. Packaging creates `dist/TMApps-Launcher-Setup.exe` and its checksum; users download only the setup EXE. The installed runtime remains a single `TMApps-Launcher.exe` with its UI, icon, and initial catalog embedded.
 
 `make-icon.ps1` regenerates the original vector rocket as PNG and a seven-resolution ICO (16–256 px) under `assets/`. The icon is compiled into the EXE; no separate image download is required.
 
@@ -60,4 +66,4 @@ The catalog requires exactly the two registered app IDs, fixed executable names,
 
 Preferences and the cached catalog live in `%LOCALAPPDATA%\TMApps\Launcher`. Binaries live under `apps/<app-id>/<unique-install-folder>/`. Downloads extract into a new folder. The installation record switches atomically after verification, extraction, executable checks, cancellation checks, and checking the existing app is closed. Failed/cancelled updates preserve the previous record. ZIP traversal paths, links, excessive file counts, and oversized packages are rejected.
 
-Install and uninstall work for the current Windows user without administrator access. A launcher mutex prevents concurrent launcher instances. An interrupted process can leave an inactive staging folder; the next successful install cleans old folders. Quit application processes before retrying locked-file errors. Update the launcher itself by replacing its EXE with the latest download; application installations and settings remain in your profile.
+Install and uninstall work for the current Windows user without administrator access. A launcher mutex prevents concurrent launcher instances. An interrupted app installation can leave an inactive staging folder; the next successful install cleans old folders. Quit application processes before retrying locked-file errors. Update the launcher by re-running the latest setup. Uninstall the launcher through Windows Apps or its installed `Uninstall.exe`; launcher-managed applications and profile data are kept. The uninstaller removes launcher binaries, shortcuts, its startup entry, and its Windows Apps registration.
