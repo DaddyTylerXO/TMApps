@@ -2,17 +2,17 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.15.6 beta** fixes a reproduced `json_parse_failed` error after Microsoft browser authentication by correcting JSON encoder and async-support assembly bindings. Adds MSAL client-info, token-response and cache parsing regression checks.
+**Version 0.15.7 beta** verifies both Google sign-in methods for locally configured builds and prevents public ZIPs from bundling the local Google OAuth client secret. Public packages retain Gmail app-password setup; Google browser sign-in requires local configuration.
 
 ## Download and run
 
 This build is for Windows. The [macOS and Linux migration plan](PORTABILITY.md) describes the proposed cross-platform edition and the work needed before platform-specific releases can be tested and shipped.
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.15.6-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.15.7-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
-**Microsoft/Google sign-in must be enabled by the app publisher before distribution.** No provider registrations have been supplied for this repository yet. Unconfigured builds explain this on the relevant sign-in screen; ordinary users never see client-ID/server fields for Outlook or Gmail. [SETUP.md](SETUP.md) separates user instructions from the one-time developer configuration. Outlook/Gmail sign-in and round-trip delivery remain unverified. A read-only check verified the connected IMAP server, folder discovery, HTML extraction, and IMAP IDLE.
+**Provider configuration:** the public package includes Microsoft's public client ID. Google OAuth configuration stays in ignored local provider-settings.json and is excluded from public ZIPs. Gmail app-password setup remains available; Google browser sign-in requires local configuration. Unconfigured source builds explain the missing setup on the relevant sign-in screen; ordinary users never see client-ID/server fields. [SETUP.md](SETUP.md) separates user instructions from publisher configuration. The account holder confirmed Outlook sign-in works; live Google sign-in and round-trip delivery remain unverified.
 
 ## Mail and writing
 
@@ -61,7 +61,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.6/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.7/`. Close that executable before rebuilding.
 
 Outlook browser sign-in is configured in the public release. Source builds use `provider-settings.public.json` unless a local override exists. Forks should register their own application. To override provider configuration, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 

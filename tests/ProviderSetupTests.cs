@@ -64,6 +64,12 @@ class ProviderSetupTests {
         Descendants<TextBox>(cloud).Single().Text = "test@icloud.com"; Descendants<PasswordBox>(cloud).Single().Password = "fake-app-password";
         Descendants<Button>(cloud).Single(b => b.Content as string == "Connect iCloud").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(cloud.Connected && connected != null && connected.Email == "test@icloud.com" && connected.ImapPort == 993 && connected.SmtpPort == 587, "Simple iCloud form did not connect using hidden presets");
+        var googlePassword = new AccountSetupWindow(null, config, fake, delegate { }, "Gmail");
+        Check(Descendants<Button>(googlePassword).Any(b => b.Content as string == "Continue with Gmail") && Descendants<Button>(googlePassword).Any(b => b.Content as string == "Use a Google app password instead"), "Configured Gmail did not retain both browser sign-in and app-password choices");
+        Descendants<Button>(googlePassword).Single(b => b.Content as string == "Use a Google app password instead").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Descendants<TextBox>(googlePassword).Single().Text = "synthetic@gmail.com"; Descendants<PasswordBox>(googlePassword).Single().Password = "synthetic-app-password";
+        Descendants<Button>(googlePassword).Single(b => b.Content as string == "Connect Gmail").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(googlePassword.Connected && connected.Email == "synthetic@gmail.com" && !ProviderLogin.UsesOAuth(connected) && connected.Password == "synthetic-app-password", "Gmail app-password fallback stopped working when OAuth is configured");
         var failure = new TaskCompletionSource<int>(); failure.SetException(new MailKit.Security.SslHandshakeException(new string('x', 1200)));
         var failed = new AccountSetupWindow(null, config, delegate(MailAccount value, CancellationToken token) { return failure.Task; }, delegate { }, "iCloud");
         Descendants<TextBox>(failed).Single().Text = "test@icloud.com"; Descendants<PasswordBox>(failed).Single().Password = "fake-app-password";

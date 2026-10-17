@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.7 beta — 17 October 2026
+
+- Keep Google desktop OAuth configuration local and preserve the Google app-specific password option. Public packaging uses only the public provider configuration and refuses a nonempty Google OAuth client secret.
+- Add a provider setup regression confirming that Google browser sign-in and password setup are both available and that password setup keeps password authentication.
+- Google sign-in initially requires a listed test account. Production availability and any required Google verification remain separate provider setup steps.
+
 ## 0.15.6 beta — 17 October 2026
 
 - Fix a reproduced MSAL json_parse_failed error while parsing valid Microsoft client-info JSON. The packaged JSON encoder version differs from MSAL's requested assembly version; redirect it to the shipped version, together with the async interfaces and task extensions dependencies.

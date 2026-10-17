@@ -20,7 +20,7 @@ namespace Postbox {
         }
         public static async Task<string> GetText(string address, int limit) {
             var uri = Https(address); await ValidateHost(uri);
-            using (var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.15.6");
+            using (var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.15.7");
                 using (var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead)) { response.EnsureSuccessStatusCode(); using (var input = await response.Content.ReadAsStreamAsync()) using (var output = new MemoryStream()) { var buffer = new byte[8192]; int read; while ((read = await input.ReadAsync(buffer, 0, buffer.Length)) > 0) { if (output.Length + read > limit) throw new InvalidDataException("The downloaded file is too large."); output.Write(buffer, 0, read); } return System.Text.Encoding.UTF8.GetString(output.ToArray()); } }
             }
         }

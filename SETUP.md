@@ -66,9 +66,11 @@ References: [Microsoft native-app authorization code flow](https://learn.microso
 ### Gmail
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create/select the publisher's project, enable Gmail, and configure the Google Auth Platform branding, audience, and consent screen.
-2. Create an OAuth client with application type **Desktop app**. Copy its client ID and installed-app client value into `GmailClientId` and `GmailDesktopClientSecret`.
+2. Create an OAuth client with application type **Desktop app**. Copy its client ID and installed-app client value into `GmailClientId` and `GmailDesktopClientSecret` in the ignored local `provider-settings.json`; do not put the client secret in public configuration or distribute it.
 3. Request `openid`, `email`, and **https://mail.google.com/**. The latter is the scope required for Gmail IMAP/SMTP and is restricted. Public distribution needs Google's applicable verification requirements; while testing, add the intended accounts as test users. Testing-mode refresh tokens may expire and require sign-in again.
 4. Rebuild and package. Users select Gmail and finish consent on Google's site; the app reads the verified signed-in email address automatically.
+
+Google desktop client configuration is retained locally in ignored provider-settings.json and excluded from public packages. Its Google registration is in **Testing**; only named test users can use browser sign-in. The Google app-specific password option remains available independently. Calendar connections request separate consent for `https://www.googleapis.com/auth/calendar.events` (view/edit events) and `https://www.googleapis.com/auth/calendar.calendarlist.readonly` (list subscribed calendars); enable the Google Calendar API for the same project. Mail setup does not automatically connect a calendar: use **Settings → Calendar → Connect provider calendar**.
 
 Google sign-in uses the official Google .NET library's PKCE flow with a loopback callback and default browser. It uses no embedded web view and no plaintext Google credential store. Refresh tokens are saved only inside TMA-Mail's protected account file.
 
@@ -76,7 +78,7 @@ References: [Google desktop OAuth](https://developers.google.com/identity/protoc
 
 ## First live verification and current limits
 
-Automated tests use synthetic accounts and fake delivery. A read-only check against the connected IMAP mailbox discovered 14 server folders, preserved the latest message HTML, and successfully entered IMAP IDLE. It did not send mail or change message flags, credentials, or cached mail. Outlook/Gmail browser sign-in and round-trip delivery remain **unverified**. After enabling a provider, verify sign-in, receiving, a small message to an address you own, reply/attachment, read/star, and Trash/restore before relying on the build.
+Automated tests use synthetic accounts and fake delivery. A read-only check against the connected IMAP mailbox discovered 14 server folders, preserved the latest message HTML, and successfully entered IMAP IDLE. It did not send mail or change message flags, credentials, or cached mail. The account holder confirmed Outlook sign-in. Google browser sign-in, mail/calendar token renewal, Gmail IMAP/SMTP login and discovery of two calendars passed a read-only live check with local configuration on 17 October 2026. Actual message sending and calendar writes remain **unverified**. After enabling a provider, verify sign-in, receiving, a small message to an address you own, reply/attachment, read/star, and Trash/restore before relying on the build.
 
 Add multiple accounts under **Settings → Accounts → Add email account**. Expand an email-address heading to see its folders, or choose **Open mailbox** in Settings. New Inbox mail is detected through IMAP IDLE when supported, with polling otherwise. Every account and its custom/nested server folders refresh automatically every 30 seconds while the app runs. Initial sync starts after connecting; the footer shows folder/item progress. Green confirms the selected server is connected and Windows has a network; red indicates a connection issue or a connection still being established. A network adapter alone does not guarantee Internet access.
 
