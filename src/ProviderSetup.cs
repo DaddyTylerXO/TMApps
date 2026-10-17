@@ -49,6 +49,7 @@ namespace Postbox {
 
     public sealed class AccountSetupWindow : Window {
         private readonly MailAccount current;
+        private readonly string[] launcherEmails;
         private readonly ProviderConfiguration configuration;
         private readonly Func<MailAccount, CancellationToken, Task> connect;
         private readonly Action disconnect;
@@ -61,7 +62,8 @@ namespace Postbox {
         private bool busy, closeAfterCancel;
         public string SelectedProvider { get; private set; }
         public bool Connected { get; private set; }
-        public AccountSetupWindow(MailAccount existing, ProviderConfiguration config, Func<MailAccount, CancellationToken, Task> connection, Action remove, string initialProvider) {
+        public AccountSetupWindow(MailAccount existing, ProviderConfiguration config, Func<MailAccount, CancellationToken, Task> connection, Action remove, string initialProvider, System.Collections.Generic.IEnumerable<string> suggestedEmails = null) {
+            launcherEmails=(suggestedEmails ?? new string[0]).ToArray();
             current = existing; configuration = config; connect = connection; disconnect = remove;
             Title = "Add an account · TMA-Mail"; Width = 610; Height = 690; MinWidth = 500; MinHeight = 560; MaxHeight = Math.Max(560, SystemParameters.WorkArea.Height - 30); WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = true; Theme.Install(this); Background = Theme.B("Canvas");
             var root = new DockPanel { Margin = new Thickness(30, 22, 30, 24), MaxWidth = 500, HorizontalAlignment = HorizontalAlignment.Center }; Content = root;
@@ -92,6 +94,7 @@ namespace Postbox {
         public void ShowPicker() {
             if (busy) return; SelectedProvider = null; back.Visibility = Visibility.Hidden;
             Heading(current == null ? "Add your email" : "Your connected account", current == null ? "Choose your provider. We’ll take care of the settings." : current.Email + "\nYou can reconnect or choose a different provider.");
+            if(launcherEmails.Length>0) form.Children.Add(new TextBlock { Text="From TMApps Launcher: "+String.Join(", ",launcherEmails)+". Choose a provider to connect an address. Your app-specific password or provider sign-in is still required.",TextWrapping=TextWrapping.Wrap,Foreground=Theme.B("Muted"),Margin=new Thickness(0,0,0,14) });
             form.Children.Add(ProviderChoices.Picker(SelectProvider));
             if (current != null) AddAction("Disconnect " + current.Email, delegate { disconnect(); Close(); }, false);
         }
@@ -128,16 +131,26 @@ namespace Postbox {
             }
             var password = new PasswordBox { Padding = new Thickness(12, 10, 12, 10), Background = Theme.B("Surface"), Foreground = Theme.B("Text"), BorderBrush = Theme.B("Borders") }; System.Windows.Automation.AutomationProperties.SetName(password, "App-specific password"); form.Children.Add(password); return password;
         }
+        private TextBox EmailField(string currentEmail) {
+            var email=Field("Email address",currentEmail ?? launcherEmails.FirstOrDefault() ?? "");
+            if(launcherEmails.Length>0) {
+                var suggestions=new ComboBox { ItemsSource=launcherEmails,SelectedIndex=-1,Margin=new Thickness(0,8,0,12),ToolTip="Email addresses saved in TMApps Launcher" };
+                System.Windows.Automation.AutomationProperties.SetName(suggestions,"TMApps Launcher email suggestions");
+                suggestions.SelectionChanged+=delegate { if(suggestions.SelectedItem!=null) email.Text=(string)suggestions.SelectedItem; };
+                form.Children.Add(suggestions);
+            }
+            return email;
+        }
         private void ShowPassword(string provider) {
             SelectedProvider = provider;
             Heading("Sign in with " + ProviderChoices.Name(provider), provider == "iCloud" ? "Enter your iCloud Mail address and an app-specific password from Apple. Your server settings are filled in automatically." : "Use a Google app password with 2-Step Verification. Your Gmail settings are already filled in.");
-            var email = Field("Email address", current != null && current.Provider == provider ? current.Email : ""); var password = Password(provider == "iCloud");
+            var email = EmailField(current != null && current.Provider == provider ? current.Email : null); var password = Password(provider == "iCloud");
             AddAction(provider == "iCloud" ? "Get an app-specific password from Apple ↗" : "Get a Google app password ↗", delegate { Process.Start(provider == "iCloud" ? "https://account.apple.com/" : "https://myaccount.google.com/apppasswords"); }, false);
             AddAction("Connect " + ProviderChoices.Name(provider), async delegate { await RunConnection(delegate(CancellationToken token) { var value = ProviderChoices.Account(provider); value.Email = email.Text.Trim(); value.Password = password.Password.Replace(" ", ""); value.Validate(); return Task.FromResult(value); }); }, true);
         }
         private void ShowAdvanced() {
             Heading("Advanced setup", "For other email providers. Use the server settings supplied by your email service.");
-            var email = Field("Email address", ""); var user = Field("Username (optional)", ""); var password = Password();
+            var email = EmailField(null); var user = Field("Username (optional)", ""); var password = Password();
             var imap = Field("Incoming IMAP server", ""); var imapPort = Field("IMAP port", "993"); var smtp = Field("Outgoing SMTP server", ""); var smtpPort = Field("SMTP port", "587");
             AddAction("Connect account", async delegate { await RunConnection(delegate(CancellationToken token) {
                 int incoming, outgoing; if (!Int32.TryParse(imapPort.Text, out incoming) || !Int32.TryParse(smtpPort.Text, out outgoing)) throw new ArgumentException("Enter valid port numbers.");

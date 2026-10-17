@@ -86,7 +86,7 @@ namespace Postbox {
         }
         private async void ShowConnectedAccounts(string initialProvider = null) {
             try {
-                var setup = new AccountSetupWindow(activeAccount, ProviderConfiguration.Load(), ConnectAccount, DisconnectAccount, initialProvider) { Owner = window };
+                var setup = new AccountSetupWindow(activeAccount, ProviderConfiguration.Load(), ConnectAccount, DisconnectAccount, initialProvider, preferences.LauncherEmailSuggestions) { Owner = window };
                 setup.ShowDialog();
                 if (setup.Connected) await SyncMail();
             } catch (Exception ex) { Status("Account setup could not open: " + ex.Message); }

@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.14.0')
+param([string]$OutputDirectory = 'build\v0.14.1')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -31,6 +31,8 @@ foreach ($reference in $references) { $arguments += '/reference:' + (Join-Path $
 $arguments += (Join-Path $root 'src\MailStore.cs')
 $arguments += (Join-Path $root 'src\App.cs')
 $arguments += (Join-Path $root 'src\Settings.cs')
+$arguments += (Join-Path $root 'src\SuiteProfile.cs')
+$arguments += (Join-Path $root 'src\LauncherProfile.cs')
 $arguments += (Join-Path $root 'src\SettingsUi.cs')
 $arguments += (Join-Path $root 'src\Theme.cs')
 $arguments += (Join-Path $root 'src\MailboxFeatures.cs')

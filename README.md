@@ -2,11 +2,11 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.14.0 beta** adds inbox filters and sorting, drag-to-swap toolbar editing, multi-action Fast Functions with recipient presets, music Widgets settings, full-Inbox mail analytics, and green controls across menus.
+**Version 0.14.1 beta** adds inbox filters and sorting, drag-to-swap toolbar editing, multi-action Fast Functions with recipient presets, music Widgets settings, full-Inbox mail analytics, and green controls across menus.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.14.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.14.1-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -59,7 +59,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.14.0/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.14.1/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 
@@ -75,3 +75,11 @@ Default data folder: `%LOCALAPPDATA%\TMA-Mail`. Account secrets/MSAL cache are p
 Multiple saved accounts are supported, with one selected mailbox at a time. Background sync runs while the app is open; it is not a Windows service. Full-history sync and a signed installer remain outstanding. Composing saves local drafts; editing a server draft makes a local copy. Deleted or renamed server folders disappear from navigation on the next successful discovery, but older encrypted cache entries may remain on disk. Profile names, signatures, and photos are shared across the workspace. Desktop banners appear while the app runs and are not persistent Windows Notification Center entries. Music controls need an active Windows media session; unrecognised/browser players require choosing their source in Widgets. Shared browser sources can follow another tab. SMTP acceptance does not guarantee final delivery; if sending is interrupted, check Sent/the recipient before retrying.
 
 Close older versions before opening this build: the saved account file migrates to a multi-account catalog. Do not run older builds against the migrated profile. `--data-dir <path>` selects an isolated test profile, `--setup` reopens the provider chooser, and `--splash-preview` displays the animated splash only.
+
+## Optional TMApps Launcher profile
+
+TMApps Launcher 1.8.0 can share an optional display name and multiple email addresses with TMA-Mail 0.14.1 or later on the same Windows user account. Configure this through the launcher's top-right profile icon and enable sharing. Mail imports the name and offers those addresses during account setup, at startup and within a few seconds while running. Existing connected account addresses and credentials remain unchanged.
+
+This does not sign you in. Connect each mailbox in Mail using its app-specific password/key (where required, such as iCloud) or provider sign-in. Launcher profile sharing never supplies or transfers passwords, app keys, or tokens. Disable sharing in the launcher to remove suggestions and stop future profile updates; connected accounts and the existing Mail display name remain.
+
+The shared file is `%LOCALAPPDATA%\TMApps\profile.json`. Custom `--data-dir` profiles do not read it by default; `--launcher-profile <path>` explicitly opts them in. This is local sharing, not cloud/device sync.

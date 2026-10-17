@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.14.0')
+param([string]$OutputDirectory = 'build\v0.14.1')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -96,3 +96,12 @@ if($LASTEXITCODE -ne 0) { throw 'Mail tools test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'MailToolsTests.exe.config') -Force
 & (Join-Path $out 'MailToolsTests.exe') --data-dir (Join-Path $out ('test-data\mail-tools-' + [guid]::NewGuid().ToString())) --offline-preview
 if($LASTEXITCODE -ne 0) { throw 'Mail tools integration tests failed.' }
+$profileArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'LauncherProfileTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach($reference in @('System.dll','System.Core.dll','System.Web.Extensions.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $profileArguments += '/reference:' + (Join-Path $framework $reference) }
+$profileArguments += Join-Path $PSScriptRoot 'tests\LauncherProfileTests.cs'
+& (Join-Path $framework 'csc.exe') @profileArguments
+if($LASTEXITCODE -ne 0) { throw 'Launcher profile test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'LauncherProfileTests.exe.config') -Force
+$suiteProfileFixture=Join-Path $out ('test-data\suite-profile-'+[guid]::NewGuid().ToString('N'))
+& (Join-Path $out 'LauncherProfileTests.exe') --data-dir $suiteProfileFixture --launcher-profile (Join-Path $suiteProfileFixture 'suite-profile.json') --offline-preview
+if($LASTEXITCODE -ne 0) { throw 'Launcher profile sync checks failed.' }

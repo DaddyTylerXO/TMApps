@@ -262,6 +262,7 @@ namespace Postbox {
             Tab(tabs, "Accounts", AccountsSettings(dialog));
             var profile = SettingsSection("Make it yours", "Set the name and signature used for messages you compose.");
             var name = TextField(profile, "Display name", preferences.DisplayName, false);
+            if(preferences.LauncherEmailSuggestions.Count>0) profile.Children.Add(Label("From TMApps Launcher: "+String.Join(", ",preferences.LauncherEmailSuggestions)+". Connect each account in Accounts; app-specific passwords or provider sign-in are still required.",11,"Muted"));
             var photoEditor = new ProfilePhotoEditor(profile, dialog, preferences.ProfilePhoto);
             var email = TextField(profile, "Email address (saved locally)", preferences.EmailAddress, false);
             if (activeAccount != null) { email.Text = activeAccount.Email; email.IsReadOnly = true; email.ToolTip = "Change connected accounts in Accounts."; }

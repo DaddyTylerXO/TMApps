@@ -31,6 +31,8 @@ namespace Postbox {
         public Dictionary<string, FolderAppearance> FolderAppearances { get; set; }
         public string DisplayName { get; set; }
         public string ProfilePhoto { get; set; }
+        public string LauncherProfileRevision { get; set; }
+        public List<string> LauncherEmailSuggestions { get; set; }
         public string EmailAddress { get; set; }
         public bool SetupCompleted { get; set; }
         public string Signature { get; set; }
@@ -81,7 +83,7 @@ namespace Postbox {
             NotificationAddress = true; NotificationSubject = true; UnreadBadge = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
-            EmailAddress = "";
+            EmailAddress = ""; LauncherEmailSuggestions=new List<string>();
             StartupFolder = "Inbox"; NotifyReceived = true; NotifySent = false;
             ReceiveSound = "Cozy"; SendSound = "Cozy"; ReceiveWavePath = ""; SendWavePath = "";
             SpellCheckEnabled = true; SpellLanguage = "en-GB"; NavigationEdge = "Left"; TextSize = 14;
@@ -96,6 +98,7 @@ namespace Postbox {
             MusicSessionId = MusicSessionId ?? "";
             DisplayName = String.IsNullOrWhiteSpace(DisplayName) ? "Tyler" : DisplayName.Trim();
             EmailAddress = (EmailAddress ?? "").Trim();
+            LauncherEmailSuggestions=LauncherEmailSuggestions ?? new List<string>();
             Signature = Signature ?? "";
             Signatures = (Signatures ?? new List<MailSignature>()).Where(s => s != null && !String.IsNullOrEmpty(s.Id)).GroupBy(s => s.Id).Select(g => g.First()).ToList();
             SignatureTemplates = (SignatureTemplates ?? new List<MailSignature>()).Where(s => s != null && !String.IsNullOrEmpty(s.Id)).ToList();

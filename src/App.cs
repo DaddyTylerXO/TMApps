@@ -30,6 +30,7 @@ namespace Postbox {
             using (var stream = File.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MainWindow.xaml"))) window = (Window)XamlReader.Load(stream);
             InitializePreferences();
             InitializeConnection(); store = CurrentMailbox();
+            ReadLauncherProfile();
             folder = preferences.StartupFolder;
             Theme.SetMode(preferences.AppearanceMode); Theme.Install(window);
             InitializeWorkspace();
@@ -84,6 +85,7 @@ namespace Postbox {
                 else if (e.Key == Key.Escape) Find<TextBox>("SearchBox").Clear();
             };
             ApplyPreferences();
+            StartLauncherProfileSync();
             Refresh(null);
             if (store.LoadWarning != null) window.Loaded += delegate { MessageBox.Show(window, store.LoadWarning, "Mailbox recovered"); };
         }

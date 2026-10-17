@@ -109,12 +109,12 @@ namespace Postbox {
                     var captured = account; var card = new StackPanel { Margin = new Thickness(0, 12, 0, 14) }; card.Children.Add(Label(account.Email, 16, "Text")); card.Children.Add(Label(account.Provider + (activeAccount != null && activeAccount.Id == account.Id ? " · selected mailbox" : ""), 12, "Muted"));
                     var row = new WrapPanel(); card.Children.Add(row);
                     var open = Action("Open mailbox", false); open.Click += delegate { SelectMailbox(captured, "Inbox"); render(); }; row.Children.Add(open);
-                    var reconnect = Action("Reconnect", false); reconnect.Click += async delegate { var setup = new AccountSetupWindow(captured, ProviderConfiguration.Load(), ConnectAccount, delegate { RemoveMailAccount(captured.Id); }, captured.Provider) { Owner = owner }; setup.ShowDialog(); render(); if (setup.Connected) await SyncMail(); }; row.Children.Add(reconnect);
+                    var reconnect = Action("Reconnect", false); reconnect.Click += async delegate { var setup = new AccountSetupWindow(captured, ProviderConfiguration.Load(), ConnectAccount, delegate { RemoveMailAccount(captured.Id); }, captured.Provider, preferences.LauncherEmailSuggestions) { Owner = owner }; setup.ShowDialog(); render(); if (setup.Connected) await SyncMail(); }; row.Children.Add(reconnect);
                     var remove = Action("Remove account", false); remove.Click += delegate { if (mailGate.CurrentCount == 0) { MessageBox.Show(owner, "Please wait for the current sync to finish.", "Accounts"); return; } if (MessageBox.Show(owner, "Disconnect " + captured.Email + "? Your encrypted local cache will remain on this PC.", "Remove account", MessageBoxButton.YesNo) == MessageBoxResult.Yes) { RemoveMailAccount(captured.Id); render(); } }; row.Children.Add(remove); list.Children.Add(card);
                 }
             }; render();
             var add = Action("＋ Add email account", true); add.HorizontalAlignment = HorizontalAlignment.Left; add.Margin = new Thickness(0, 18, 0, 0);
-            add.Click += async delegate { var setup = new AccountSetupWindow(null, ProviderConfiguration.Load(), ConnectAccount, delegate { }, null) { Owner = owner }; setup.ShowDialog(); render(); if (setup.Connected) await SyncMail(); }; section.Children.Add(add); return section;
+            add.Click += async delegate { var setup = new AccountSetupWindow(null, ProviderConfiguration.Load(), ConnectAccount, delegate { }, null, preferences.LauncherEmailSuggestions) { Owner = owner }; setup.ShowDialog(); render(); if (setup.Connected) await SyncMail(); }; section.Children.Add(add); return section;
         }
     }
 }

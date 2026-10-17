@@ -2,6 +2,13 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.14.1 beta - 17 October 2026
+
+- Added optional local name and email-suggestion sync from TMApps Launcher 1.8.0, at startup and while Mail runs.
+- Account setup offers saved launcher addresses while continuing to require app-specific credentials or provider sign-in.
+- Existing connected sending identities and authentication data are preserved. Disabling sharing removes suggestions without disconnecting accounts.
+- Added profile import, live sync, account setup, and credential separation tests.
+
 ## 0.14.0 beta — 17 October 2026
 
 - Restore the star symbol beside Toggle Star. Add folder filters for unread, read, flagged/starred, important and attachments, plus arrow buttons for newest/oldest order.

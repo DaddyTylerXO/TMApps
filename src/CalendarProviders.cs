@@ -18,7 +18,7 @@ namespace Postbox {
         private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = 16777216 };
         private readonly MailAccount login;
         private readonly bool test;
-        public CalendarProviderClient(MailAccount account, HttpMessageHandler handler = null) { login = account; test = handler != null; client = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(30) }; client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.14.0"); }
+        public CalendarProviderClient(MailAccount account, HttpMessageHandler handler = null) { login = account; test = handler != null; client = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(30) }; client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.14.1"); }
         public void Dispose() { client.Dispose(); }
         public static Uri CheckedEndpoint(string value, string provider) { var uri = SafeWeb.Https(value); bool valid = provider == "Microsoft" ? uri.Host == "graph.microsoft.com" : provider == "Gmail" ? uri.Host == "www.googleapis.com" : uri.Host == "caldav.icloud.com" || uri.Host.EndsWith("-caldav.icloud.com", StringComparison.OrdinalIgnoreCase); if (!valid) throw new ArgumentException("Unexpected calendar server. Credentials were not sent."); return uri; }
         private async Task<string> Request(string method, string url, string body = null, string media = "application/json", string depth = null, bool create = false) {
