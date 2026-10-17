@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.6 beta — 17 October 2026
+
+- Fix a reproduced MSAL json_parse_failed error while parsing valid Microsoft client-info JSON. The packaged JSON encoder version differs from MSAL's requested assembly version; redirect it to the shipped version, together with the async interfaces and task extensions dependencies.
+- Add runtime regressions that exercise MSAL client-info parsing, token-response JSON, account-cache loading and cache roundtrip with synthetic data. The previous configuration reproduces the loader failure; the corrected configuration passes.
+- Keep the safe Outlook diagnostics available. Live Microsoft sign-in and mailbox connection still require an account-holder retry.
+
 ## 0.15.5 beta — 17 October 2026
 
 - Show MSAL/Microsoft error codes and a connection-details button for Outlook failures after browser authentication. Distinguish the browser/token step from session renewal during mailbox connection.

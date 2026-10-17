@@ -7,8 +7,8 @@ using System.Windows.Media.Imaging;
 [assembly: AssemblyTitle("TMA-Mail")]
 [assembly: AssemblyProduct("TMA-Mail")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
-[assembly: AssemblyVersion("0.15.5.0")]
-[assembly: AssemblyFileVersion("0.15.5.0")]
+[assembly: AssemblyVersion("0.15.6.0")]
+[assembly: AssemblyFileVersion("0.15.6.0")]
 namespace Postbox {
     public static class AppBrand {
         public static BitmapSource Logo() { using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("TMA-Mail.ico")) return new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames.Last(); }
