@@ -69,7 +69,7 @@ namespace Postbox {
         public string ReplySignatureId { get; set; }
         public Preferences() {
             CalendarMonday = true;
-            CalendarReminders = true; CalendarReminderPopup = true; CalendarReminderDesktop = true; MailToolbarHeight = 148; FastFunctions = new List<FastFunction>();
+            CalendarReminders = true; CalendarReminderPopup = true; CalendarReminderDesktop = true; MailToolbarHeight = 176; FastFunctions = new List<FastFunction>();
             NotificationAddress = true; NotificationSubject = true; UnreadBadge = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
@@ -81,7 +81,7 @@ namespace Postbox {
             InboxEdge = "Left"; SpotifyPlacement = "Off"; Signatures = new List<MailSignature>(); SignatureTemplates = new List<MailSignature>();
         }
         public void Normalize() {
-            if (Double.IsNaN(MailToolbarHeight) || Double.IsInfinity(MailToolbarHeight)) MailToolbarHeight = 148; MailToolbarHeight = Math.Max(88, Math.Min(300, MailToolbarHeight));
+            if (Double.IsNaN(MailToolbarHeight) || Double.IsInfinity(MailToolbarHeight)) MailToolbarHeight = 176; MailToolbarHeight = Math.Max(128, Math.Min(300, MailToolbarHeight));
             FastFunctions = (FastFunctions ?? new List<FastFunction>()).Where(f => f != null && !String.IsNullOrWhiteSpace(f.Name)).Take(24).ToList();
             DisplayName = String.IsNullOrWhiteSpace(DisplayName) ? "Tyler" : DisplayName.Trim();
             EmailAddress = (EmailAddress ?? "").Trim();

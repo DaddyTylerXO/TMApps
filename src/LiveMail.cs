@@ -94,7 +94,7 @@ namespace Postbox {
                         delegate(SyncProgress progress) {
                             if ((DateTime.UtcNow - lastProgress).TotalMilliseconds < 200) return; lastProgress = DateTime.UtcNow;
                             lock (progressGate) {
-                                latestProgress = account.Email + " · " + progress.Phase + (String.IsNullOrEmpty(progress.Folder) ? "" : " " + progress.Folder) + (progress.Total == 0 ? "…" : " · " + progress.Completed + " / " + progress.Total + " items");
+                                latestProgress = account.Email + " · " + progress.Phase + (String.IsNullOrEmpty(progress.Folder) ? "" : " " + progress.Folder) + (progress.Total <= 0 ? "…" : " · " + progress.ItemsText);
                                 if (progressQueued) return; progressQueued = true;
                             }
                             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
@@ -120,7 +120,7 @@ namespace Postbox {
                     if (activeAccount != null && account.Id == activeAccount.Id) { if (oldFolders != FolderState(account.Folders)) ApplyNavigation(); UpdateCounts(); }
                     var fresh = snapshot.Messages.Where(m => m.Folder == "Inbox" && m.Unread && !oldInbox.Contains(m.Id)).ToList();
                     if (syncedAccounts.Contains(account.Id) && fresh.Count > 0) MailNotification(true, fresh.Count == 1 ? fresh[0].Subject : fresh.Count + " new messages", fresh[0].Address);
-                    syncedAccounts.Add(account.Id); Status(account.Email + " · Up to date · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
+                    syncedAccounts.Add(account.Id); Status(account.Email + " · Up to date · 100% · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
                 } catch (OperationCanceledException) { }
                 catch (Exception error) { mailHealth[account.Id] = false; UpdateConnectionLamp(); Status(account.Email + " · Sync interrupted: " + error.Message.Split('\n')[0] + " · cached mail kept; retrying automatically"); }
                     lock (progressGate) reporting = false;

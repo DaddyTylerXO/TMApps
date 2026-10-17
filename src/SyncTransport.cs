@@ -6,7 +6,15 @@ using MailKit;
 using MailKit.Net.Imap;
 
 namespace Postbox {
-    public sealed class SyncProgress { public string Folder { get; set; } public int Completed { get; set; } public int Total { get; set; } public string Phase { get; set; } }
+    public sealed class SyncProgress {
+        public string Folder { get; set; } public int Completed { get; set; } public int Total { get; set; } public string Phase { get; set; }
+        public string ItemsText { get {
+            if (Total <= 0) return "";
+            int done = Math.Max(0, Math.Min(Completed, Total));
+            int percent = (int)Math.Floor(100.0 * done / Total);
+            return done + " / " + Total + " items · " + percent + "%";
+        } }
+    }
     public sealed class SyncSnapshot { public List<Message> Messages = new List<Message>(); public List<ServerFolder> Folders = new List<ServerFolder>(); }
     public sealed partial class MailTransport {
         public static string FolderKey(string path) { return "Server:" + Uri.EscapeDataString(path); }

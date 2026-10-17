@@ -233,16 +233,16 @@ namespace Postbox {
         }
         private static void FieldLabel(StackPanel panel, string text) { var label = Label(text, 12, "#41516B"); label.FontWeight = FontWeights.SemiBold; label.Margin = new Thickness(0, 16, 0, 7); panel.Children.Add(label); }
         private static TextBox TextField(StackPanel panel, string label, string value, bool multiline) {
-            FieldLabel(panel, label); var input = new TextBox { Text = value, Padding = new Thickness(10), FontSize = 14, BorderBrush = Brush("#DDE4EF"), AcceptsReturn = multiline, TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap };
+            FieldLabel(panel, label); var input = new TextBox { Text = value, MinHeight = 38, Margin = new Thickness(0, 0, 0, 8), Padding = new Thickness(10), FontSize = 14, BorderBrush = Brush("#DDE4EF"), AcceptsReturn = multiline, TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap };
             if (multiline) { input.Height = 140; input.VerticalScrollBarVisibility = ScrollBarVisibility.Auto; }
             panel.Children.Add(input); return input;
         }
         private static CheckBox Toggle(StackPanel panel, string label, bool value) { var toggle = new CheckBox { Content = label, IsChecked = value, Margin = new Thickness(0, 12, 0, 4), FontSize = 13 }; panel.Children.Add(toggle); return toggle; }
         private static ComboBox Choice(StackPanel panel, string label, string value, string[] options) {
-            FieldLabel(panel, label); var choice = new ComboBox { ItemsSource = options, SelectedItem = value, Padding = new Thickness(8), FontSize = 13, MinHeight = 34 }; panel.Children.Add(choice); return choice;
+            FieldLabel(panel, label); var choice = new ComboBox { ItemsSource = options, SelectedItem = value, Padding = new Thickness(8), FontSize = 13, MinHeight = 38, Margin = new Thickness(0, 0, 0, 8) }; panel.Children.Add(choice); return choice;
         }
         private static string Value(ComboBox combo) { return combo.SelectedItem as string; }
-        private static void Tab(TabControl tabs, string title, StackPanel content) { tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(8, 6, 8, 6), Width = 130 }, Content = new ScrollViewer { Background = Theme.B("Surface"), Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
+        private static void Tab(TabControl tabs, string title, StackPanel content) { content.Loaded += delegate { UiPolish.SettingsTree(content); }; tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(8, 6, 8, 6), Width = 130 }, Content = new ScrollViewer { Background = Theme.B("Surface"), Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
 
         private void ShowSettings(string section = "Accounts") {
             reminderOptionGroups.Clear();

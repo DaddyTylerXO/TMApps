@@ -23,20 +23,21 @@ namespace Postbox {
             if (window.TaskbarItemInfo == null) window.TaskbarItemInfo = new TaskbarItemInfo();
             if (count == 0) { window.Icon = AppBrand.Logo(); window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail"; return; }
             string number = count > 99 ? "99+" : count.ToString(CultureInfo.InvariantCulture);
-            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 0, 64, 64)); DrawUnreadCircle(draw, number, 40, 24, 24); }
-            var icon = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32); icon.Render(visual); icon.Freeze(); window.Icon = icon;
+            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 48, 208, 208)); DrawUnreadCircle(draw, number, 256, 0, 42); }
+            var icon = new RenderTargetBitmap(256, 256, 96, 96, PixelFormats.Pbgra32); icon.Render(visual); icon.Freeze(); window.Icon = icon;
             window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
         }
         private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
-            draw.DrawEllipse(new SolidColorBrush(Color.FromRgb(231, 49, 67)), null, new Point(x, y), radius, radius);
+            double width = text.Length > 2 ? 112 : 84; x -= width;
+            draw.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(231, 49, 67)), new Pen(Theme.B("Surface"), 6), new Rect(x + 3, y + 3, width - 6, radius * 2 - 6), radius, radius);
             var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? radius * 0.9 : radius * 1.15, Brushes.White, 1.0);
-            draw.DrawText(label, new Point(x - label.Width / 2, y - label.Height / 2));
+            draw.DrawText(label, new Point(x + width / 2 - label.Width / 2, y + radius - label.Height / 2));
         }
         private void InitializeSuiteUi() {
             managementButton = Action("🔧  Mailbox management", false); managementButton.ToolTip = "Mailbox management"; managementButton.Click += delegate { ShowMailboxManagement(); };
             calendarButton = Action("▦  Calendar", false); calendarButton.ToolTip = "Calendar"; calendarButton.Click += delegate { if (CalendarVisible) ShowMailView(); else ShowCalendarView(); };
             var profileRow = (StackPanel)Find<Button>("AccountTop").Parent;
-            var quickNew = Action("✉⁺", false); quickNew.ToolTip = "New message"; quickNew.FontSize = 23; quickNew.Padding = new Thickness(9, 3, 9, 3); quickNew.Margin = new Thickness(0, 0, 12, 0); quickNew.Click += delegate { Compose(null, ""); }; profileRow.Children.Insert(0, quickNew);
+            var quickNew = Action("New Message", false); UiPolish.Navigation(quickNew, "New Message", "mail", true); quickNew.ToolTip = "New Message"; quickNew.Padding = new Thickness(9, 6, 9, 6); quickNew.Margin = new Thickness(0, 0, 12, 0); quickNew.Click += delegate { Compose(null, ""); }; profileRow.Children.Insert(0, quickNew);
             var toolbar = (Panel)Find<Button>("DeleteButton").Parent;
             var toolbarHost = (DockPanel)toolbar.Parent; var star = Find<Button>("StarButton"); toolbarHost.Children.Remove(star); DockPanel.SetDock(star, Dock.Right); toolbarHost.Children.Insert(0, star);
             foreach (string label in new[] { "↶ Reply", "↶ Reply all", "↪ Forward", "⚑ Follow up", "▦ Categorise", "▧ Print", "⇩ Save .eml", "▦ Apps" }) {
@@ -61,9 +62,10 @@ namespace Postbox {
         private bool CalendarVisible { get { return calendarPage != null && calendarPage.Visibility == Visibility.Visible; } }
         private void UpdateCalendarButtons() {
             bool compact = preferences.NavigationCollapsed; bool calendar = CalendarVisible;
-            Find<Button>("ComposeButton").Content = calendar ? (compact ? "▦⁺" : "▦⁺  Add to Calendar") : (compact ? "✉⁺" : "✉⁺  New message");
+            UiPolish.Navigation(Find<Button>("ComposeButton"), calendar ? "Add to Calendar" : "New Message", calendar ? "calendar" : "mail", compact);
+            if (managementButton != null) UiPolish.Navigation(managementButton, "Mailbox Management", "wrench", compact);
             Find<Button>("ComposeButton").ToolTip = calendar ? "Add a local calendar event" : "New message (Ctrl+N)";
-            if (calendarButton != null) { calendarButton.Content = calendar ? (compact ? "↶✉" : "↶  Return to Mailbox") : (compact ? "▦" : "▦  Calendar"); calendarButton.ToolTip = calendar ? "Return to Mailbox" : "Calendar"; }
+            if (calendarButton != null) { UiPolish.Navigation(calendarButton, calendar ? "Return to Mailbox" : "Calendar", calendar ? "mail" : "calendar", compact); calendarButton.ToolTip = calendar ? "Return to Mailbox" : "Calendar"; }
         }
         private void ShowMailView() { if (calendarPage != null) calendarPage.Visibility = Visibility.Collapsed; if (mailArea != null) mailArea.Visibility = Visibility.Visible; if (window != null) { Find<TextBox>("SearchBox").IsEnabled = true; UpdateCalendarButtons(); } }
     }

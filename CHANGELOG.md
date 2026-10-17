@@ -2,6 +2,20 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.13.1 beta — 17 October 2026
+
+- Show the sync item count with a percentage, for example 600 / 1200 items · 50%, and display 100% when synchronization completes. Keep connecting/discovery indeterminate until an item total is known.
+- Publish the previously local 0.13.0 toolbar, settings, vector icon and unread badge improvements together with this update.
+
+## 0.13.0 beta — 17 October 2026
+
+- Fit mail action rows to the toolbar's dragged height and use horizontal scrolling when the reading pane is narrow. Keep a safe minimum height so buttons remain fully visible.
+- Use matching green bubble buttons for filing, read/unread, replies and other mail actions. Label the star action Toggle Star. Separate Fast Functions with a green line, followed by saved actions and + Create New Button.
+- Use New Message and Mailbox Management captions and scalable vector mail, wrench and calendar icons.
+- Give Settings fields and actions more space, wrap long button captions, replace blue/grey actions with green pills, and arrange calendar actions in spaced rows.
+- Position a high-resolution red unread badge outside the logo's upper-right corner with a contrasting gap and a wider 99+ shape; retain zero/disabled clearing.
+- Add 16 toolbar width/height layout checks and settings spacing/colour integration checks. Tests use synthetic mail and intercepted provider requests.
+
 ## 0.12.0 beta — 17 October 2026
 
 - Enlarge the red unread icon badge and remove the simultaneous Windows overlay drawing; keep 99+ and zero/disabled clearing behavior.

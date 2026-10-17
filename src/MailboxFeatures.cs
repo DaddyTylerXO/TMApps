@@ -93,8 +93,8 @@ namespace Postbox {
             Find<TextBox>("BodyText").Visibility = Visibility.Visible; Find<TextBox>("BodyText").Text = "Use Move to, Archive, Delete, Star, or Mark read to update all selected messages.\n\n" + String.Join("\n", messages.Select(m => "• " + m.Subject));
             richReader.Visibility = Visibility.Collapsed; attachmentReader.Children.Clear();
             Find<Button>("ArchiveButton").IsEnabled = true;
-            Find<Button>("ReadButton").Content = messages.Any(m => m.Unread) ? "● Mark read" : "○ Mark unread";
-            Find<Button>("StarButton").Content = messages.All(m => m.Starred) ? "★" : "☆";
+            Find<Button>("ReadButton").Content = messages.Any(m => m.Unread) ? "Mark Read" : "Mark Unread";
+            Find<Button>("StarButton").Content = "Toggle Star";
             return true;
         }
         private void RenderRichMessage(Message message) {

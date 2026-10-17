@@ -136,9 +136,9 @@ namespace Postbox {
             Find<TextBlock>("AddressText").Text = selected.Address + "\nTo: " + selected.To;
             Find<TextBlock>("DateText").Text = selected.Date.ToString("dddd, dd MMMM yyyy · HH:mm");
             Find<TextBox>("BodyText").Text = selected.Body;
-            Find<Button>("StarButton").Content = selected.StarLabel;
-            Find<Button>("StarButton").Foreground = Brush(selected.Starred ? "#BC9451" : "#8290A7");
-            Find<Button>("ReadButton").Content = selected.Unread ? "●  Mark read" : "○  Mark unread";
+            Find<Button>("StarButton").Content = "Toggle Star";
+            Find<Button>("StarButton").Foreground = Brushes.White;
+            Find<Button>("ReadButton").Content = selected.Unread ? "Mark Read" : "Mark Unread";
             Find<Button>("ReplyButton").Content = selected.Folder == "Drafts" ? "✎   Edit draft" : "↶   Reply";
         }
         private void Status(string text) {
@@ -158,7 +158,8 @@ namespace Postbox {
         }
         private static TextBlock Label(string text, double size, string color) { return new TextBlock { Text = text, FontSize = size, Foreground = Brush(color), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) }; }
         private static Button Action(string text, bool primary) {
-            return new Button { Content = text, Background = Brush(primary ? "#4D83F5" : "#F0F3F8"), Foreground = Brush(primary ? "#FFFFFF" : "#53617A"), BorderThickness = new Thickness(0), Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand };
+            var button = new Button { Content = text, Background = Brush(primary ? "#4D83F5" : "#F0F3F8"), Foreground = Brush(primary ? "#FFFFFF" : "#53617A"), BorderThickness = new Thickness(0), Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand };
+            button.Loaded += delegate { var owner = Window.GetWindow(button); if (owner != null && owner.Title.Contains("Settings")) UiPolish.SettingsButton(button); }; return button;
         }
         private void Compose(Message draft, string mode) {
             var composingAccount = activeAccount;
