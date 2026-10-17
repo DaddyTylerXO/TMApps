@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.0
+
+- Added macOS DMG and Linux AppImage launcher builds for x64 and ARM64, alongside the native Windows installer.
+- Added Windows, Apple/macOS, and Linux OS support icons below each app in List and Grid views. Current app packages remain Windows-only; incompatible installs are disabled on macOS/Linux.
+- Added the native desktop library, profile/settings, tray, verified downloads and platform-specific launcher update checks. macOS updates open a verified DMG for replacement; Linux AppImages can update and restart in place.
+- Added CI tests and source/packaged Electron smoke checks on Intel and ARM runners for both new operating systems.
+- Retained Windows app installation, Mail profile sync, lifecycle prompts, and self-update behavior.
+
 ## 1.8.0
 
 - Added an optional top-right profile avatar and themed editor for a name and multiple email addresses.

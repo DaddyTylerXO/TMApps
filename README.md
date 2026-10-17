@@ -1,8 +1,26 @@
 # TMApps Launcher
 
-A Windows launcher for **TMA-Mail** and **TMA-Agent Office**, installed through a single setup EXE. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
+A launcher for **TMA-Mail** and **TMA-Agent Office**, available on **Windows, macOS, and Linux**. Windows keeps its existing native installer and interface; macOS and Linux use the companion desktop client. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
 
 ![TMApps Launcher library](docs/launcher-preview.png)
+
+## Operating systems and downloads
+
+| Launcher download | Architecture | Install |
+| --- | --- | --- |
+| [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.9.0-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.9.0-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.9.0-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.9.0-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+
+**Launcher support and app support are separate.** The Windows, Apple, and Linux logos under each app show the operating systems with published app builds. Both current app packages (**TMA-Mail and TMA-Agent Office**) are **Windows-only**. The Mac/Linux launchers display the library, profiles, settings, support badges, and release checks, and block incompatible EXE installations. Porting the launcher does not port the Mail or Office applications. Native app installation becomes available when that app has a verified package for the user's OS and CPU architecture.
+
+The Mac/Linux client retains the burnt-orange navigation, List/Grid controls, search, movable navigation, optional local profile, startup preferences, tray support, and themed dialogs. Native app management supports checked tar.gz bundles/AppImages, custom install folders, per-app startup/desktop choices, close/force-close permission, and keep/delete data options. Existing Windows installations and Mail profile sync continue to use the native Windows client.
+
+Native release checks run separately from the app catalog. Linux AppImage updates download and verify the matching architecture, keep a previous-image backup, replace a writable AppImage, and restart. macOS updates download and verify the matching DMG, then open it for the user to quit and replace the app in Applications. Profile/library data stay outside the installed application. macOS builds are ad-hoc signed but are not Developer ID signed or notarized; macOS may require user approval before opening. Linux tray visibility depends on the desktop; close-to-tray is off by default on Linux.
+
+CI builds and checks the launcher on **macOS 15 and Ubuntu 24.04, x64 and ARM64**, including the packaged apps. Linux requires a graphical desktop and the usual Electron system libraries. If an AppImage cannot mount because FUSE is unavailable, its `--appimage-extract-and-run` mode can be used without changing the launcher or catalog.
 
 ## Optional profile and TMA-Mail sync
 
@@ -18,7 +36,7 @@ Shared profile data is stored at `%LOCALAPPDATA%\TMApps\profile.json`, separatel
 
 ![Optional launcher profile](docs/profile-preview.png)
 
-## Download and run
+## Windows installation
 
 Download [**TMApps-Launcher-Setup.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) and run it. Setup installs the launcher for your Windows user, creates a Start menu entry, and adds a normal Windows Apps uninstall entry. No ZIP extraction, administrator access, or developer tools are needed. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.
 
@@ -30,7 +48,7 @@ The rocket tray icon has **Open launcher**, **Check for updates**, and **Quit** 
 
 The launcher uses a white rocket on a rounded burnt-orange (`#CC5500`) tile, embedded as a multi-resolution Windows executable icon and shown in the title bar and launcher header. Rounded controls and panels follow TMA-Mail's dark theme. File Properties lists **DaddyTylerXO** as Company. This metadata is separate from Windows' verified publisher: code signing is deferred, so SmartScreen can still display **Unknown publisher** and an unrecognised-app warning. A trusted signing identity and publisher reputation are needed for that; a self-signed certificate does not solve public distribution trust. See [Microsoft's signing guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
 
-The release is created by the [Publish Windows launcher and app catalog workflow](https://github.com/DaddyTylerXO/TMApps/actions/workflows/publish.yml). Check that workflow for the first build's status if the release is not available yet.
+The release is created by the [Cross-platform launcher and app catalog workflow](https://github.com/DaddyTylerXO/TMApps/actions/workflows/publish.yml). Check that workflow for the first build's status if the release is not available yet.
 
 **Public downloads are available without a GitHub account or token.** Both application packages and the release catalog can be downloaded directly. If you previously connected a GitHub token, choose **Settings → Disconnect GitHub** to use public downloads. Optional token support remains available if private access is needed later; saved tokens are encrypted for your Windows user and removed on disconnect.
 

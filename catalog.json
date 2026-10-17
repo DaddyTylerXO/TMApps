@@ -11,7 +11,10 @@
       "branch": "TMA-Mail",
       "executable": "TMA-Mail.exe",
       "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/3f2510ce13c2884e4ba23b7d42bdaf2e92b374e2/dist/TMA-Mail-0.14.1-beta-windows.zip",
-      "sha256": "cf851a37dcfff9369d6c5a92f40a3b9b3d1cc1a9348e54978a9f566047998119"
+      "sha256": "cf851a37dcfff9369d6c5a92f40a3b9b3d1cc1a9348e54978a9f566047998119",
+      "platforms": [
+        "windows"
+      ]
     },
     {
       "id": "tma-agent-office",
@@ -23,7 +26,10 @@
       "branch": "AI-Agent-Dashboard",
       "executable": "Agent Office.exe",
       "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Agent-Office-0.2.0-windows.zip",
-      "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883"
+      "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883",
+      "platforms": [
+        "windows"
+      ]
     }
   ]
 }

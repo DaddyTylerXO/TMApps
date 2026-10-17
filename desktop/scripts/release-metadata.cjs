@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { version } = require('../package.json');
+const platform = process.platform, arch = process.arch;
+const name = `TMApps-Launcher-${version}-${platform === 'darwin' ? 'mac' : 'linux'}-${arch}.${platform === 'darwin' ? 'dmg' : 'AppImage'}`;
+const file = path.join(__dirname, '../dist', name);
+if (!fs.existsSync(file)) throw new Error(`Native installer missing: ${name}`);
+const sha256 = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+fs.writeFileSync(file + '.sha256', `${sha256}  ${name}\n`);
+fs.writeFileSync(path.join(path.dirname(file), `metadata-${platform}-${arch}.json`), JSON.stringify({ version, platform, arch, filename: name, url: `https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/${name}`, sha256 }, null, 2));

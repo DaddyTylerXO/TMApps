@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.8.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.8.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.9.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.9.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -26,6 +26,10 @@ namespace TMApps {
         public string Glyph { get { return Id == "tma-mail" ? "\uE715" : "\uE902"; } }
         public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : "02 / YOUR AI TEAM"; } }
         public string UpdatedLabel { get { DateTimeOffset date; return DateTimeOffset.TryParse(Info.updatedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out date) ? date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Date not published"; } }
+        bool Supports(string platform) { return Info.platforms==null ? platform=="windows" && Info.Available : Info.platforms.Contains(platform); }
+        public Visibility WindowsSupport { get { return Supports("windows") ? Visibility.Visible : Visibility.Collapsed; } }
+        public Visibility MacSupport { get { return Supports("macos") ? Visibility.Visible : Visibility.Collapsed; } }
+        public Visibility LinuxSupport { get { return Supports("linux") ? Visibility.Visible : Visibility.Collapsed; } }
         public string VersionLabel { get; set; } public string Status { get; set; } public string Detail { get; set; }
         public string Action { get; set; } public bool CanAct { get; set; } public bool Busy; public bool Removing;
         public CancellationTokenSource Cancellation;

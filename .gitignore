@@ -2,3 +2,7 @@ build/
 dist/
 *.user
 *.log
+
+desktop/node_modules/
+desktop/dist/
+desktop/build/

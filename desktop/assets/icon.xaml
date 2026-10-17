@@ -1,0 +1,11 @@
+<Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+ <Border Width="64" Height="64" CornerRadius="14" Background="#CC5500">
+  <Canvas Width="64" Height="64">
+   <Canvas.RenderTransform><RotateTransform Angle="35" CenterX="32" CenterY="32"/></Canvas.RenderTransform>
+   <Path Data="M24,28 L15,39 L15,47 L27,40 Z M40,28 L49,39 L49,47 L37,40 Z" Fill="#FFF1E5"/>
+   <Path Data="M32,8 C23,17 21,28 24,41 L40,41 C43,28 41,17 32,8 Z" Fill="White"/>
+   <Ellipse Width="10" Height="10" Canvas.Left="27" Canvas.Top="21" Fill="#CC5500"/>
+   <Path Data="M28,45 Q32,58 36,45 Q32,48 28,45 Z" Fill="White"/>
+  </Canvas>
+ </Border>
+</Viewbox>

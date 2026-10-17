@@ -27,7 +27,7 @@ namespace TMApps {
         public string id { get; set; } public string name { get; set; } public string category { get; set; }
         public string description { get; set; } public string version { get; set; } public string branch { get; set; }
         public string executable { get; set; } public string downloadUrl { get; set; } public string sha256 { get; set; }
-        public string updatedAt { get; set; }
+        public string updatedAt { get; set; } public string[] platforms { get; set; }
         public bool Available { get { return !String.IsNullOrEmpty(downloadUrl); } }
     }
     public class Installed { public string version { get; set; } public string folder { get; set; } public string executable { get; set; } public string installRoot { get; set; } public bool runAtStartup { get; set; } public bool desktopShortcut { get; set; } }
@@ -79,7 +79,7 @@ namespace TMApps {
             integration=appIntegration ?? new WindowsAppIntegration();
             processes=appProcesses ?? new WindowsAppProcesses(app=>InstallRoot(app,GetInstalled(app)));
             data=appData ?? new WindowsAppData();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.8");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.9");
             try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
         }
         public async Task<LauncherRelease> CheckLauncherUpdate(string currentVersion,CancellationToken token) {
@@ -165,6 +165,7 @@ namespace TMApps {
                 if (a == null || (a.id != "tma-mail" && a.id != "tma-agent-office") || !ids.Add(a.id)) throw new InvalidDataException("Unknown or duplicate application.");
                 bool validBranch=a.id=="tma-mail" ? a.branch=="TMA-Mail" : a.branch=="AI-Agent-Dashboard" || a.branch=="TMA-AgentOffice";
                 if (String.IsNullOrWhiteSpace(a.name) || String.IsNullOrWhiteSpace(a.description) || !Regex.IsMatch(a.version ?? "", @"^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$") || !validBranch || a.executable != (a.id == "tma-mail" ? "TMA-Mail.exe" : "Agent Office.exe")) throw new InvalidDataException("Invalid application metadata.");
+                if(a.platforms!=null && (a.platforms.Distinct().Count()!=a.platforms.Length || a.platforms.Any(platform=>!new[]{"windows","macos","linux"}.Contains(platform)) || (a.Available && !a.platforms.Contains("windows")))) throw new InvalidDataException("Invalid OS support metadata.");
                 if (a.Available && (!TrustedUrl(a.downloadUrl) || !Regex.IsMatch(a.sha256 ?? "", "^[a-fA-F0-9]{64}$"))) throw new InvalidDataException("Invalid download location or checksum.");
             }
             return c;

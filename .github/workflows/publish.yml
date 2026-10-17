@@ -1,9 +1,9 @@
-name: Publish Windows launcher and app catalog
+name: Publish launcher for Windows, macOS and Linux
 on:
   workflow_dispatch:
   push:
     branches: [TMApps-Launcher]
-    paths: ['src/**', 'assets/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
+    paths: ['desktop/**', 'src/**', 'assets/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
 permissions:
   contents: write
 concurrency:
@@ -110,7 +110,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }
           gh release upload tma-apps published/launcher-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Launcher update manifest upload failed' }
-          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe to install the launcher. The optional top-right profile shares your name and email suggestions locally with TMA-Mail 0.14.1 or later; app-specific credentials or provider sign-in remain required in Mail. Check for updates includes the launcher itself, with verified download, in-place update, and restart. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
+          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe for Windows, a mac-x64/mac-arm64 DMG for macOS, or a linux-x64/linux-arm64 AppImage for Linux. Both currently published apps are Windows-only; OS logos under each app show actual published support. macOS builds are ad-hoc signed and not notarized. The optional top-right profile shares your name and email suggestions locally with TMA-Mail 0.14.1 or later; app-specific credentials or provider sign-in remain required in Mail. Check for updates includes the launcher itself, with verified download, in-place update, and restart. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
           if ($LASTEXITCODE -ne 0) { throw 'Release description update failed' }
           $names = gh release view tma-apps --json assets --jq '.assets[].name'
           if ($LASTEXITCODE -ne 0) { throw 'Could not list old launcher assets' }
@@ -120,3 +120,106 @@ jobs:
               if ($LASTEXITCODE -ne 0) { throw 'Could not remove obsolete launcher ZIP' }
             }
           }
+
+  native-launcher:
+    name: Native launcher (${{ matrix.platform }} ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - name: Restore pinned desktop dependencies
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          node node_modules/electron/install.js
+          cp ../catalog.json catalog.json
+          node -e "if(process.arch!=='${{ matrix.arch }}'||process.platform!=='${{ matrix.platform }}')throw Error('Wrong native runner architecture')"
+      - name: Test native backend and UI
+        run: pnpm test
+      - name: Smoke test Electron on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run -a pnpm exec electron . --no-sandbox --smoke "$PWD/build/source-smoke.json"
+      - name: Smoke test Electron on macOS
+        if: matrix.platform == 'darwin'
+        run: pnpm exec electron . --smoke "$PWD/build/source-smoke.json"
+      - name: Package native installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          if [ '${{ matrix.platform }}' = 'darwin' ]; then
+            pnpm exec electron-builder --mac dmg --${{ matrix.arch }} --publish never
+          else
+            pnpm exec electron-builder --linux AppImage --${{ matrix.arch }} --publish never
+          fi
+          node scripts/release-metadata.cjs
+      - name: Verify packaged Linux launcher
+        if: matrix.platform == 'linux'
+        run: |
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a dist/TMApps-Launcher-*-linux-${{ matrix.arch }}.AppImage --no-sandbox --smoke "$PWD/build/packaged-smoke.json"
+      - name: Verify packaged macOS launcher
+        if: matrix.platform == 'darwin'
+        run: |
+          BUNDLE="dist/mac${{ matrix.arch == 'arm64' && '-arm64' || '' }}/TMApps Launcher.app"
+          codesign --verify --deep --strict "$BUNDLE"
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$BUNDLE/Contents/Info.plist")
+          "$BUNDLE/Contents/MacOS/$EXECUTABLE" --smoke "$PWD/build/packaged-smoke.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-native-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+            desktop/dist/*.sha256
+            desktop/dist/metadata-*.json
+            desktop/build/*smoke.json
+            desktop/build/*smoke.json.png
+  publish-native:
+    name: Publish macOS and Linux launcher downloads
+    needs: [publish, native-launcher]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: launcher-native-*
+          path: native-release
+          merge-multiple: true
+      - name: Upload native installers before their update manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'); const path=require('node:path');
+          function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(path.join(dir,e.name)):[path.join(dir,e.name)]);}
+          const all=files('native-release'); const metadata=all.filter(p=>/metadata-.*\.json$/.test(p)).map(p=>JSON.parse(fs.readFileSync(p,'utf8')));
+          if(metadata.length!==4||new Set(metadata.map(m=>m.platform+'-'+m.arch)).size!==4||new Set(metadata.map(m=>m.version)).size!==1)throw Error('Missing native build');
+          const crypto=require('node:crypto'); for(const m of metadata){const file=all.find(p=>path.basename(p)===m.filename);if(!file||crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==m.sha256)throw Error('Native artifact checksum mismatch');}
+          fs.writeFileSync('launcher-platforms.json',JSON.stringify({schemaVersion:1,version:metadata[0].version,updatedAt:new Date().toISOString(),releases:metadata.map(({version,...m})=>m)},null,2));
+          NODE
+          find native-release -type f \( -name '*.dmg' -o -name '*.AppImage' -o -name '*.sha256' \) -print0 | xargs -0 gh release upload tma-apps --clobber
+          gh release upload tma-apps launcher-platforms.json --clobber
+          gh release edit tma-apps --title 'TMApps - Windows, macOS and Linux downloads'
