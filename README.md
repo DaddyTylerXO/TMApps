@@ -6,6 +6,8 @@ A native Windows desktop mail client with forest green navigation, neutral dark/
 
 ## Download and run
 
+Release credential safeguards and required pre-push checks are documented in [SECURITY.md](SECURITY.md).
+
 This build is for Windows. The [macOS and Linux migration plan](PORTABILITY.md) describes the proposed cross-platform edition and the work needed before platform-specific releases can be tested and shipped.
 
 Download [the Windows portable ZIP](dist/TMA-Mail-0.15.8-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.

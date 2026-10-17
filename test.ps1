@@ -1,5 +1,6 @@
 param([string]$OutputDirectory = 'build\v0.15.8')
 $ErrorActionPreference = 'Stop'
+& (Join-Path $PSScriptRoot 'tests\SecretScanTests.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
 New-Item -ItemType Directory -Path $out -Force | Out-Null
