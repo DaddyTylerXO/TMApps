@@ -18,6 +18,8 @@ class CalendarUiTests {
     static void Wait(Task task) { if (!task.IsCompleted) { var frame = new DispatcherFrame(); var dispatcher = Dispatcher.CurrentDispatcher; task.ContinueWith(t => dispatcher.BeginInvoke(new Action(() => frame.Continue = false))); Dispatcher.PushFrame(frame); } task.GetAwaiter().GetResult(); }
     [STAThread] static void Main(string[] args) {
         string directory = args[1]; Directory.CreateDirectory(directory); var empty = new MailStore(Path.Combine(directory, "mailbox.json")); empty.Messages.Clear(); empty.Save();
+        // These harnesses initialize WPF without Application.Run; use its UI context explicitly.
+        System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
         var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown }; Call(app, "Initialize"); var main = (Window)Get(app, "window"); var prefs = (Preferences)Get(app, "preferences"); prefs.CalendarReminders = false; main.Show();
         Wait((Task)Call(app, "EnsureCalendars")); Exception failure = null; bool edited = false; DateTime deadline = DateTime.UtcNow.AddSeconds(15); var frame = new DispatcherFrame(); var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
         timer.Tick += delegate {

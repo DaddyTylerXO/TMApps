@@ -36,6 +36,8 @@ class LiveMailboxTests {
         cache1.Messages.Add(new Message { Id = "one", AccountId = first.Id, Folder = "Inbox", Subject = "First mailbox only", Body = "Synthetic" }); cache1.Save();
         var cache2 = new MailStore(Path.Combine(directory, "mail-" + second.Id + ".protected"), true, false);
         cache2.Messages.Add(new Message { Id = "two", AccountId = second.Id, Folder = customKey, Subject = "Custom folder", Body = "Synthetic" }); cache2.Save();
+        // These harnesses initialize WPF without Application.Run; use its UI context explicitly.
+        System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
         var app = new App(); Call(app, "Initialize"); var window = (Window)Get(app, "window");
         Check(((MailAccount)Get(app, "activeAccount")).Id == second.Id, "Wrong active account on startup");
         Check(Children<Expander>(window).Count(e => e.Header is TextBlock && ((TextBlock)e.Header).Text.Contains("@example.com")) == 2, "Mailbox group headers missing");

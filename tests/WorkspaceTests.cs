@@ -14,6 +14,8 @@ class WorkspaceTests {
     static object Get(object obj, string field) { return obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj); }
     static object Call(object obj, string method, params object[] args) { return obj.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(obj, args); }
     [STAThread] static void Main() {
+        // These harnesses initialize WPF without Application.Run; use its UI context explicitly.
+        System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
         var app = new App(); Call(app, "Initialize");
         var window = (Window)Get(app, "window");
         var preferences = (Preferences)Get(app, "preferences");

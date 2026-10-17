@@ -16,6 +16,8 @@ class ResponsivenessTests {
     static object Call(object value, string method, params object[] args) { return value.GetType().GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(value, args); }
     static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     [STAThread] static int Main(string[] args) {
+        // These harnesses initialize WPF without Application.Run; use its UI context explicitly.
+        System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
         var app = new App(); Call(app, "Initialize"); var window = (Window)Get(app, "window"); window.Title = "TMA-Mail responsiveness verification · synthetic content";
         var root = (Grid)window.Content;
         var vertical = new ScrollBar { Orientation = Orientation.Vertical, Maximum = 100000, ViewportSize = 1, Height = 300, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };

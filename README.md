@@ -2,11 +2,11 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.13.1 beta** adds sync progress percentages and includes the previous toolbar, settings, vector navigation icon and unread badge improvements. The mail toolbar uses uniform green bubble buttons, a separate Fast Functions row, and overflow that fits the available height.
+**Version 0.13.2 beta** keeps the tray icon visible while TMA-Mail is open and adds a forest-green tray menu with rounded green actions. It includes sync progress percentages and the previous toolbar, settings, vector navigation icon and unread badge improvements.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.13.1-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.13.2-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -59,7 +59,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.13.1/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.13.2/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 

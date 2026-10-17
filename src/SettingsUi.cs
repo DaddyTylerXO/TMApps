@@ -22,6 +22,7 @@ namespace Postbox {
         private StackPanel navigationButtons;
         private Button collapseButton, settingsButton;
         private Forms.NotifyIcon tray;
+        private ContextMenu trayMenu;
         private bool exiting;
         private SoundPlayer soundPlayer;
         private readonly List<Window> banners = new List<Window>();
@@ -88,16 +89,18 @@ namespace Postbox {
             collapseButton = Action("☰", false); collapseButton.ToolTip = "Collapse or expand navigation (Ctrl+Shift+B)";
             collapseButton.Click += delegate { var updated = settingsStore.Clone(preferences); updated.NavigationCollapsed = !updated.NavigationCollapsed; settingsStore.Save(updated); preferences = updated; ApplyNavigation(); };
             settingsButton = Action("⚙  Settings", false); settingsButton.ToolTip = "Settings (Ctrl+,)"; settingsButton.Click += delegate { ShowSettings(); };
-            tray = new Forms.NotifyIcon { Text = "TMA-Mail", Icon = AppBrand.TrayIcon(), Visible = false };
-            var menu = new Forms.ContextMenuStrip();
-            menu.Items.Add("Open TMA-Mail", null, delegate { Dispatcher.Invoke(new Action(RestoreWindow)); });
-            menu.Items.Add("Settings", null, delegate { Dispatcher.Invoke(new Action(delegate { RestoreWindow(); ShowSettings(); })); });
-            menu.Items.Add("Exit TMA-Mail", null, delegate { Dispatcher.Invoke(new Action(delegate { exiting = true; window.Close(); })); });
-            tray.ContextMenuStrip = menu; tray.DoubleClick += delegate { Dispatcher.Invoke(new Action(RestoreWindow)); };
+            tray = new Forms.NotifyIcon { Text = "TMA-Mail", Icon = AppBrand.TrayIcon(), Visible = true };
+            trayMenu = UiPolish.TrayMenu();
+            Action<string, Action> trayAction = (caption, run) => { var item = new MenuItem { Header = caption }; item.Click += delegate { trayMenu.IsOpen = false; run(); }; trayMenu.Items.Add(item); };
+            trayAction("Open TMA-Mail", RestoreWindow);
+            trayAction("Settings", delegate { RestoreWindow(); ShowSettings(); });
+            trayAction("Exit TMA-Mail", delegate { exiting = true; window.Close(); });
+            tray.MouseUp += delegate(object sender, Forms.MouseEventArgs e) { if (e.Button == Forms.MouseButtons.Right) Dispatcher.Invoke(new Action(ShowTrayMenu)); };
+            tray.DoubleClick += delegate { Dispatcher.Invoke(new Action(RestoreWindow)); };
             window.Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) {
                 if (preferences.CloseToTray && !exiting) { e.Cancel = true; HideToTray(); Status("Still running in the notification area"); }
             };
-            window.Closed += delegate { if (spotify != null) spotify.Dispose(); tray.Dispose(); if (soundPlayer != null) soundPlayer.Dispose(); foreach (var banner in banners.ToArray()) banner.Close(); };
+            window.Closed += delegate { trayMenu.IsOpen = false; if (spotify != null) spotify.Dispose(); tray.Visible = false; tray.Dispose(); if (soundPlayer != null) soundPlayer.Dispose(); foreach (var banner in banners.ToArray()) banner.Close(); };
             window.Loaded += delegate {
                 if (preferences.StartMaximized) window.WindowState = WindowState.Maximized;
                 if (preferences.StartMinimized && !showAfterWelcome) { window.WindowState = WindowState.Minimized; HideToTray(); }
@@ -192,7 +195,8 @@ namespace Postbox {
         }
         private bool IsOwnMessage(Message message) { return message.Address == "you@postbox.local" || message.Address == "you@tma-mail.local" || (!String.IsNullOrEmpty(preferences.EmailAddress) && String.Equals(message.Address, preferences.EmailAddress, StringComparison.OrdinalIgnoreCase)); }
         private void HideToTray() { tray.Visible = true; window.Hide(); }
-        private void RestoreWindow() { window.Show(); window.WindowState = preferences.StartMaximized ? WindowState.Maximized : WindowState.Normal; tray.Visible = false; window.Activate(); }
+        private void ShowTrayMenu() { trayMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint; trayMenu.IsOpen = true; }
+        private void RestoreWindow() { trayMenu.IsOpen = false; window.Show(); window.WindowState = preferences.StartMaximized ? WindowState.Maximized : WindowState.Normal; tray.Visible = true; window.Activate(); }
         private void PlaySound(string choice, string file, bool sent = false) {
             try {
                 if (soundPlayer != null) { soundPlayer.Stop(); soundPlayer.Dispose(); soundPlayer = null; }

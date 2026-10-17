@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.13.2 beta — 17 October 2026
+
+- Keep the notification-area icon visible while the main window is open, minimized, hidden or restored. Dispose it when the app exits.
+- Replace the Windows tray context menu with a forest-green menu and rounded green Open TMA-Mail, Settings and Exit TMA-Mail actions, including keyboard highlighting.
+- Verify tray icon persistence, menu styling and the Open action with an isolated synthetic workspace.
+
 ## 0.13.1 beta — 17 October 2026
 
 - Show the sync item count with a percentage, for example 600 / 1200 items · 50%, and display 100% when synchronization completes. Keep connecting/discovery indeterminate until an item total is known.
