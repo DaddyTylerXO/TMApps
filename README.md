@@ -26,7 +26,7 @@ CI builds and checks the launcher on **macOS 15 and Ubuntu 24.04, x64 and ARM64*
 
 Click the circular **profile icon at the top right** to save a name and up to 20 email addresses, one per line. The first address is the primary suggestion. This setup is optional; the launcher works without a profile. The avatar shows your initial after saving.
 
-Enable **Sync this profile to TMA-Mail on this PC** to share the name and account-setup suggestions with **TMA-Mail 0.14.1 or later** for the current Windows user. Mail reads changes at startup and within a few seconds while running. Connected mailbox identities and credentials remain separate. This is local sharing, not cloud/device sync or a sign-in service.
+On Windows, enable **Sync this profile to TMA-Mail on this PC** to share the name and account-setup suggestions with **TMA-Mail 0.14.1 or later** for the current Windows user. Mail reads changes at startup and within a few seconds while running. Connected mailbox identities and credentials remain separate. This is local sharing, not cloud/device sync or a sign-in service.
 
 **A saved profile does not connect email accounts.** In TMA-Mail, choose the saved address and enter that provider's app-specific password/key (for example, iCloud) or complete its provider sign-in. The launcher does not ask for or transfer passwords, keys, or authentication tokens. The same explanation appears on the profile options page.
 
@@ -83,7 +83,7 @@ Application-specific setup still applies. TMA-Mail's Microsoft/Google browser si
 
 ## Build and test
 
-No Node.js or separate .NET SDK is needed for the launcher:
+The Windows launcher build needs neither Node.js nor a separate .NET SDK:
 
 ```powershell
 .\build.ps1
@@ -98,9 +98,26 @@ The build uses the Windows .NET Framework C# compiler and WPF, with no external 
 
 The GitHub button uses the official [Octicons GitHub mark](https://github.com/primer/octicons), rendered as a vector inside the same bubble button style as Settings and Check updates. Its MIT license is preserved in `assets/github-mark-LICENSE.txt`.
 
+For the macOS/Linux companion, use Node.js 24 and pnpm 10 on the target OS:
+
+```sh
+cd desktop
+pnpm install --frozen-lockfile --ignore-scripts
+node node_modules/electron/install.js
+cp ../catalog.json catalog.json
+pnpm test
+pnpm exec electron .
+# On macOS: pnpm exec electron-builder --mac dmg --arm64 --publish never
+# On Linux: pnpm exec electron-builder --linux AppImage --x64 --publish never
+```
+
+Use `--x64` or `--arm64` to match the native host. CI performs the source and packaged smoke checks on all four native targets, then publishes the installers before `launcher-platforms.json`. The Windows updater continues using its existing `launcher-update.json` contract.
+
+App OS badges default to Windows for older catalogs. New catalogs can supply `platforms` using `windows`, `macos`, and `linux`. Native installation requires a verified entry in `packages`, keyed by `macos-x64`, `macos-arm64`, `linux-x64`, or `linux-arm64`, with `url`, `sha256`, `format` (`tar.gz` or Linux `appimage`), and a relative `executable` path. Only advertise a platform after its app package has been built, tested, and uploaded; do not add Mac/Linux badges merely because the launcher itself supports them.
+
 ## Publish updates
 
-Push launcher changes to `TMApps-Launcher`, or manually run **Publish Windows launcher and app catalog** from GitHub Actions. Actions must be enabled with the workflow's `contents: write` permission. No external secrets are needed for this public repository. Each run builds the current application branches. To release Mail, commit its newer ZIP and `.sha256` sidecar to `TMA-Mail/dist/`. For Agent Office, update its package version and lockfile on `TMA-AgentOffice`. Then rerun the launcher workflow. Source-branch pushes alone do not trigger the workflow on this branch.
+Push launcher changes to `TMApps-Launcher`, or manually run **Publish launcher for Windows, macOS and Linux** from GitHub Actions. Actions must be enabled with the workflow's `contents: write` permission. No external secrets are needed for this public repository. Each run builds the current application branches. To release Mail, commit its newer ZIP and `.sha256` sidecar to `TMA-Mail/dist/`. For Agent Office, update its package version and lockfile on `TMA-AgentOffice`. Then rerun the launcher workflow. Source-branch pushes alone do not trigger the workflow on this branch.
 
 The catalog requires exactly the two registered app IDs, fixed executable names, semantic versions, HTTPS download URLs within this repository, and SHA-256 checksums. Add another app by extending the catalog validation, UI metadata, and workflow together. Only publish trusted builds: checksums detect damaged/mismatched packages but are not publisher code signatures.
 
