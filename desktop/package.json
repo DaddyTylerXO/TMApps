@@ -12,17 +12,55 @@
     "package": "electron-builder --publish never",
     "release-metadata": "node scripts/release-metadata.cjs"
   },
-  "dependencies": { "tar": "7.5.22" },
-  "devDependencies": { "electron": "44.8.0", "electron-builder": "26.15.3", "jsdom": "30.1.3" },
+  "dependencies": {
+    "tar": "7.5.22"
+  },
+  "devDependencies": {
+    "electron": "44.8.0",
+    "electron-builder": "26.15.3",
+    "jsdom": "30.1.3"
+  },
   "build": {
     "appId": "com.tmapps.launcher",
     "productName": "TMApps Launcher",
-    "executableName": "tmapps-launcher",
-    "files": ["electron/**/*", "ui/**/*", "assets/icon.png", "catalog.json", "package.json"],
-    "directories": { "output": "dist" },
+    "files": [
+      "electron/**/*",
+      "ui/**/*",
+      "assets/icon.png",
+      "catalog.json",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
     "artifactName": "TMApps-Launcher-${version}-${os}-${arch}.${ext}",
-    "mac": { "target": ["dmg"], "category": "public.app-category.utilities", "icon": "assets/icon.png", "identity": "-", "hardenedRuntime": false },
-    "dmg": { "title": "TMApps Launcher", "sign": false },
-    "linux": { "target": ["AppImage"], "category": "Utility", "icon": "assets/icon.png", "executableName": "tmapps-launcher", "maintainer": "DaddyTylerXO", "desktop": { "entry": { "Name": "TMApps Launcher", "Comment": "Install, open, and update your TMApps" } } }
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "TMApps Launcher",
+      "sign": false
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "assets/icon.png",
+      "executableName": "tmapps-launcher",
+      "maintainer": "DaddyTylerXO",
+      "desktop": {
+        "entry": {
+          "Name": "TMApps Launcher",
+          "Comment": "Install, open, and update your TMApps"
+        }
+      }
+    }
   }
 }

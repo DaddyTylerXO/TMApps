@@ -194,7 +194,8 @@ jobs:
           mkdir -p "$MOUNT"
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MOUNT"
           trap 'hdiutil detach "$MOUNT" || true' EXIT
-          BUNDLE="$MOUNT/TMApps Launcher.app"
+          BUNDLE=$(find "$MOUNT" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$BUNDLE/Contents/Info.plist")" = "com.tmapps.launcher"
           codesign --verify --deep --strict "$BUNDLE"
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$BUNDLE/Contents/Info.plist")
           "$BUNDLE/Contents/MacOS/$EXECUTABLE" --smoke "$PWD/build/packaged-smoke.json"
