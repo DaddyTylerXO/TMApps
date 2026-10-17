@@ -49,6 +49,10 @@ Use only installed/desktop client registrations here. Desktop OAuth client value
 
 ### Outlook / Hotmail / Microsoft 365
 
+Official builds from 0.15.4 include TMA-Mail’s public Microsoft Application ID, so choose Outlook and Continue with Outlook. Microsoft asks you to approve mailbox access; connecting calendars requests calendar access separately. Organization policies and publisher verification requirements may require an administrator. No client secret or user tokens are distributed.
+
+For your own fork or registration:
+
 1. Open the [Microsoft Entra admin center](https://entra.microsoft.com/) with an account allowed to register apps. A personal account may first need access to an Entra directory or developer tenant.
 2. Choose **App registrations → New registration**, name it **TMA-Mail**, and select **Accounts in any organizational directory and personal Microsoft accounts**.
 3. Under **Authentication**, add **Mobile and desktop applications** with redirect URI **http://localhost** for system-browser sign-in. This is a desktop/public client, not a web app or SPA. Do not create a client secret.

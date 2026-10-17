@@ -24,7 +24,7 @@ namespace Postbox {
         public static async Task Request(MailSubscription subscription, HttpMessageHandler testHandler = null) {
             if (!subscription.OneClick) throw new InvalidOperationException("This sender requires an unsubscribe page or email.");
             var uri = SafeWeb.Https(subscription.Url); if (testHandler == null) await SafeWeb.ValidateHost(uri);
-            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.15.3"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
+            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.15.4"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
         }
     }
     public sealed partial class MailTransport {

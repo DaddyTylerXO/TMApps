@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.4 beta — 17 October 2026
+
+- Bundle TMA-Mail’s Microsoft public client ID so Outlook setup offers Continue with Outlook and uses the existing MSAL system-browser sign-in flow. Register the desktop localhost redirect and delegated IMAP, SMTP and calendar permissions; users consent to their own account access.
+- Source builds use the tracked public client configuration unless a local provider-settings.json override exists. No Microsoft client secret is required; Gmail remains unconfigured.
+- Verify the release configuration exposes Outlook sign-in without opening a browser or accessing a real mailbox. Live sign-in/consent and organization-specific restrictions remain to be verified by the account holder.
+
 ## 0.15.3 beta — 17 October 2026
 
 - Replace the white provider calendar discovery list with rounded green rows, readable names, checkboxes, and read-only/writable labels.

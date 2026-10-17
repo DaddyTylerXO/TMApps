@@ -75,6 +75,8 @@ class ProviderSetupTests {
         failed.ShowPicker(); Check(!Descendants<TextBox>(failed).Any(), "Back did not clear connection error details"); failed.Close();
         var ready = new AccountSetupWindow(null, config, fake, delegate { }, "Microsoft");
         Check(Descendants<Button>(ready).Any(b => b.Content as string == "Continue with Outlook") && !Descendants<TextBox>(ready).Any(), "Configured Outlook has no simple sign-in action"); ready.Close();
+        var bundled = ProviderConfiguration.Load();
+        if (bundled.Ready("Microsoft")) { var releaseSetup = new AccountSetupWindow(null, bundled, fake, delegate { }, "Microsoft"); Check(Descendants<Button>(releaseSetup).Any(b => b.Content as string == "Continue with Outlook") && !Descendants<TextBlock>(releaseSetup).Any(t => t.Text.Contains("Sign-in isn’t enabled")), "Bundled Outlook configuration did not enable sign-in"); releaseSetup.Close(); }
         Theme.SetMode("Light"); var light = new WelcomeWindow(exploreSettings, new Preferences(), true); light.Measure(new Size(820, 680)); light.Arrange(new Rect(0, 0, 820, 680));
         Check(light.DesiredSize.Width <= 820, "Provider chooser overflows in light mode"); light.Close();
         Console.WriteLine("Passed " + checks + " provider setup checks. No browser authentication or external mailbox operations were performed."); app.Shutdown();

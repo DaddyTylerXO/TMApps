@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.3')
+param([string]$OutputDirectory = 'build\v0.15.4')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -54,6 +54,7 @@ Copy-Item -LiteralPath (Join-Path $root 'src\MainWindow.xaml') -Destination $out
 Copy-Item -LiteralPath (Join-Path $root 'src\TMA-Mail.exe.config') -Destination $out -Force
 foreach ($document in @('SETUP.md','README.md')) { Copy-Item -LiteralPath (Join-Path $root $document) -Destination $out -Force }
 $providerConfig = Join-Path $root 'provider-settings.json'
+if (!(Test-Path $providerConfig)) { $providerConfig = Join-Path $root 'provider-settings.public.json' }
 if (!(Test-Path $providerConfig)) { $providerConfig = Join-Path $root 'provider-settings.example.json' }
 Copy-Item -LiteralPath $providerConfig -Destination (Join-Path $out 'provider-settings.json') -Force
 Copy-Item -LiteralPath (Join-Path $root "assets\Sounds") -Destination $out -Recurse -Force
