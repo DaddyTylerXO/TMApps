@@ -15,56 +15,66 @@ namespace Postbox {
     public partial class App {
         private bool showAfterWelcome;
         private string welcomeProvider;
-        private async void StartDesktop(object sender, StartupEventArgs args) {
-            StartupSplash splash = null;
-            var cancellation = new CancellationTokenSource();
-            bool handoff = false;
+        private async Task<bool> ShowStartupTarget(Window target, bool waitForFrame, CancellationToken cancellation) {
+            var rendered = new TaskCompletionSource<bool>();
+            EventHandler frame = delegate { rendered.TrySetResult(true); };
+            EventHandler closed = delegate { rendered.TrySetResult(false); };
+            RoutedEventHandler loaded = delegate { if (!waitForFrame) rendered.TrySetResult(true); };
+            target.ContentRendered += frame; target.Closed += closed; target.Loaded += loaded;
             try {
-                splash = new StartupSplash(); MainWindow = splash;
-                AppBrand.Apply(splash);
-                splash.Closed += delegate {
-                    if (!handoff) { cancellation.Cancel(); exiting = true; if (window != null) window.Close(); Shutdown(); }
-                };
-                splash.Show();
-                if (args.Args.Contains("--splash-preview")) return;
+                using (cancellation.Register(() => rendered.TrySetCanceled())) {
+                    cancellation.ThrowIfCancellationRequested(); target.Show();
+                    if (!waitForFrame && target.IsLoaded) rendered.TrySetResult(true);
+                    return await rendered.Task;
+                }
+            } finally { target.ContentRendered -= frame; target.Closed -= closed; target.Loaded -= loaded; }
+        }
+        private async void StartDesktop(object sender, StartupEventArgs args) {
+            StartupSplashHost splash = null;
+            var cancellation = new CancellationTokenSource();
+            bool preview = args.Args.Contains("--splash-preview");
+            try {
+                splash = new StartupSplashHost(delegate {
+                    cancellation.Cancel();
+                    Dispatcher.BeginInvoke(new Action(delegate { exiting = true; if (window != null) window.Close(); Shutdown(); }));
+                });
+                await splash.Ready;
+                if (preview) return;
                 var elapsed = Stopwatch.StartNew();
-                await Task.Delay(70, cancellation.Token);
-                splash.SetStage("Preparing your workspace…");
+                splash.SetStage("Loading your mail profile…");
                 Initialize();
                 cancellation.Token.ThrowIfCancellationRequested();
                 bool welcomeNeeded = !preferences.SetupCompleted || args.Args.Contains("--setup");
-                splash.SetStage(welcomeNeeded ? "Getting your welcome screen ready…" : "Your workspace is ready");
+                splash.SetStage(welcomeNeeded ? "Getting your welcome screen ready…" : "Opening your mailbox…");
                 int remaining = 1750 - (int)elapsed.ElapsedMilliseconds;
                 if (remaining > 0) await Task.Delay(remaining, cancellation.Token);
                 cancellation.Token.ThrowIfCancellationRequested();
-                handoff = true;
                 if (welcomeNeeded) {
                     var welcome = new WelcomeWindow(settingsStore, preferences, true);
                     MainWindow = welcome;
-                    // Keep a real message loop during setup without showing the mailbox behind it.
                     var completion = new TaskCompletionSource<bool>();
                     welcome.Closed += delegate { completion.TrySetResult(welcome.Result != null); };
-                    welcome.Show(); splash.Close();
+                    if (!await ShowStartupTarget(welcome, true, cancellation.Token)) { exiting = true; window.Close(); Shutdown(); return; }
+                    splash.Close();
                     bool completed = await completion.Task;
                     if (!completed) { exiting = true; window.Close(); Shutdown(); return; }
                     preferences = welcome.Result; welcomeProvider = welcome.SelectedProvider; showAfterWelcome = true; ApplyPreferences();
-                } else splash.Close();
+                }
                 MainWindow = window; ShutdownMode = ShutdownMode.OnMainWindowClose;
-                window.Show();
+                if (!await ShowStartupTarget(window, !preferences.StartMinimized || showAfterWelcome, cancellation.Token)) { exiting = true; Shutdown(); return; }
+                splash.Close();
                 StartMailConnection();
                 if (!preferences.StartMinimized || showAfterWelcome) window.Activate();
-            } catch (OperationCanceledException) { }
+            } catch (OperationCanceledException) { exiting = true; if (window != null) window.Close(); Shutdown(); }
             catch (Exception ex) {
-                handoff = true; if (splash != null && splash.IsVisible) splash.Close();
+                if (splash != null) splash.Close();
                 exiting = true; if (window != null) window.Close();
                 MessageBox.Show("TMA-Mail could not start.\n\n" + ex.Message, "TMA-Mail", MessageBoxButton.OK, MessageBoxImage.Error); Shutdown(1);
             } finally {
-                // The preview splash keeps this source alive until its Close callback runs.
-                if (!args.Args.Contains("--splash-preview")) cancellation.Dispose();
+                if (!preview) { if (splash != null) splash.Close(); cancellation.Dispose(); }
             }
         }
     }
-
     public class MailTree : Canvas {
         private readonly List<Action> stop = new List<Action>();
         public MailTree(bool animated) {
@@ -105,7 +115,7 @@ namespace Postbox {
     public class StartupSplash : Window {
         private readonly TextBlock status;
         public StartupSplash() {
-            Title = "TMA-Mail · Starting"; Width = 590; Height = 395; WindowStartupLocation = WindowStartupLocation.CenterScreen; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = true; Background = Brushes.Transparent; FontFamily = new FontFamily("Segoe UI");
+            Cursor = Cursors.Arrow; Title = "TMA-Mail · Starting"; Width = 590; Height = 395; WindowStartupLocation = WindowStartupLocation.CenterScreen; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = true; Background = Brushes.Transparent; FontFamily = new FontFamily("Segoe UI");
             var card = new Border { CornerRadius = new CornerRadius(22), BorderThickness = new Thickness(1), BorderBrush = MailTree.ColorBrush("#2B4636"), Background = new LinearGradientBrush((Color)ColorConverter.ConvertFromString("#10281B"), (Color)ColorConverter.ConvertFromString("#141B17"), 90), Padding = new Thickness(26, 20, 26, 22) }; Content = card;
             var root = new Grid(); card.Child = root; root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var heading = new DockPanel(); root.Children.Add(heading);

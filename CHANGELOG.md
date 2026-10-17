@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.1 beta — 17 October 2026
+
+- Render the branded loading screen before loading the local mail profile and constructing the workspace. Give the loading screen its own STA dispatcher so its animation, progress text and Cancel control stay responsive while the main UI is busy.
+- Keep the screen visible until the mailbox or welcome window has rendered. Preserve start-minimized behavior without waiting for a hidden window to draw.
+- Add tests that block the main thread while checking splash responsiveness, plus cancellation, rendered handoff and complete offline normal/minimized/welcome startup checks. Existing Launcher profile integration is preserved.
+
 ## 0.15.0 beta — 17 October 2026
 
 - Keep the application logo at full size and use a separate native Windows taskbar overlay for unread counts, capped at 99+. Add the badge toggle to Appearance and mirror it with Notifications.

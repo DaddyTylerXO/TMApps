@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.0')
+param([string]$OutputDirectory = 'build\v0.15.1')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -105,3 +105,17 @@ Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join
 $suiteProfileFixture=Join-Path $out ('test-data\suite-profile-'+[guid]::NewGuid().ToString('N'))
 & (Join-Path $out 'LauncherProfileTests.exe') --data-dir $suiteProfileFixture --launcher-profile (Join-Path $suiteProfileFixture 'suite-profile.json') --offline-preview
 if($LASTEXITCODE -ne 0) { throw 'Launcher profile sync checks failed.' }
+
+$startupArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'StartupTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach($reference in @('System.dll','System.Core.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $startupArguments += '/reference:' + (Join-Path $framework $reference) }
+$startupArguments += Join-Path $PSScriptRoot 'tests\StartupTests.cs'
+& (Join-Path $framework 'csc.exe') @startupArguments
+if($LASTEXITCODE -ne 0) { throw 'Startup test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'StartupTests.exe.config') -Force
+& (Join-Path $out 'StartupTests.exe') --data-dir (Join-Path $out ('test-data\startup-' + [guid]::NewGuid().ToString())) --offline-preview
+if($LASTEXITCODE -ne 0) { throw 'Startup loading screen checks failed.' }
+& (Join-Path $out 'StartupTests.exe') --data-dir (Join-Path $out ('test-data\full-startup-' + [guid]::NewGuid().ToString())) --offline-preview --full-startup
+if($LASTEXITCODE -ne 0) { throw 'Full startup handoff checks failed.' }
+& (Join-Path $out 'StartupTests.exe') --data-dir (Join-Path $out ('test-data\minimized-startup-' + [guid]::NewGuid().ToString())) --offline-preview --full-startup --start-minimized-test
+if($LASTEXITCODE -ne 0) { throw 'Start-minimized handoff checks failed.' }& (Join-Path $out 'StartupTests.exe') --data-dir (Join-Path $out ('test-data\welcome-startup-' + [guid]::NewGuid().ToString())) --offline-preview --full-startup --welcome-startup-test
+if($LASTEXITCODE -ne 0) { throw 'Welcome startup handoff checks failed.' }

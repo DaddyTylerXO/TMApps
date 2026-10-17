@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.0')
+param([string]$OutputDirectory = 'build\v0.15.1')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -42,6 +42,7 @@ $arguments += (Join-Path $root 'src\SignatureEditor.cs')
 $arguments += (Join-Path $root 'src\WorkspaceFeatures.cs')
 $arguments += (Join-Path $root 'src\Spotify.cs')
 $arguments += (Join-Path $root 'src\Startup.cs')
+$arguments += (Join-Path $root 'src\StartupSplashHost.cs')
 foreach ($assemblyName in @('System.Runtime', 'System.Threading.Tasks', 'System.Runtime.InteropServices.WindowsRuntime')) {
     $assemblyPath = Get-ChildItem (Join-Path (Join-Path $env:WINDIR 'Microsoft.NET\assembly\GAC_MSIL') $assemblyName) -Recurse -Filter ($assemblyName + '.dll') | Select-Object -First 1 -ExpandProperty FullName
     $arguments += '/reference:' + $assemblyPath

@@ -2,13 +2,13 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.15.0 beta** keeps the logo full-sized with a separate unread taskbar badge, adds its Appearance toggle, and reorganizes Mailbox Management into Subscriptions and Analytics pages. Analytics scans manually and supports selecting, moving and deleting matching email groups.
+**Version 0.15.1 beta** shows a responsive branded loading screen while the local mail profile and workspace load, then hands off after the mailbox or welcome screen has rendered. It preserves the full-size logo, unread badge controls, Mailbox Management pages and Launcher profile integration.
 
 ## Download and run
 
 This build is for Windows. The [macOS and Linux migration plan](PORTABILITY.md) describes the proposed cross-platform edition and the work needed before platform-specific releases can be tested and shipped.
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.15.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.15.1-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -61,7 +61,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.0/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.1/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 
