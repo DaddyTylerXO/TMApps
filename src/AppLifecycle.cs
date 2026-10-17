@@ -19,9 +19,14 @@ namespace TMApps {
         public static bool BelongsTo(string executable,string directory) {
             return Path.GetFullPath(executable).StartsWith(InstallationPaths.Normalize(directory)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase);
         }
+        static string Executable(Process process) {
+            // .NET Framework can return an empty ProcessModule while a process exits.
+            try { var module=process.MainModule; return module==null ? null : module.FileName; }
+            catch(NullReferenceException) { return null; }
+        }
         public bool IsRunning(AppInfo app) {
             foreach(var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(app.executable))) {
-                using(process) { try { if(BelongsTo(process.MainModule.FileName,root(app))) return true; } catch(InvalidOperationException) { } catch(System.ComponentModel.Win32Exception) { return true; } }
+                using(process) { try { string executable=Executable(process); if(executable!=null && BelongsTo(executable,root(app))) return true; } catch(InvalidOperationException) { } catch(System.ComponentModel.Win32Exception) { return true; } }
             }
             return false;
         }
@@ -34,8 +39,8 @@ namespace TMApps {
             var found=new List<Identity>();
             foreach(var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(app.executable))) {
                 using(process) { try {
-                    string executable=process.MainModule.FileName;
-                    if(BelongsTo(executable,root(app))) found.Add(new Identity { Id=process.Id,Started=process.StartTime,Executable=executable });
+                    string executable=Executable(process);
+                    if(executable!=null && BelongsTo(executable,root(app))) found.Add(new Identity { Id=process.Id,Started=process.StartTime,Executable=executable });
                 } catch(InvalidOperationException) { } catch(System.ComponentModel.Win32Exception) { } }
             }
             return found;
@@ -46,7 +51,7 @@ namespace TMApps {
                 token.ThrowIfCancellationRequested();
                 try { using(var process=Process.GetProcessById(match.Id)) {
                     // Recheck identity and path before every signal, including forced exit.
-                    if(process.StartTime!=match.Started || !String.Equals(process.MainModule.FileName,match.Executable,StringComparison.OrdinalIgnoreCase) || !BelongsTo(match.Executable,root(app))) continue;
+                    if(process.StartTime!=match.Started || !String.Equals(Executable(process),match.Executable,StringComparison.OrdinalIgnoreCase) || !BelongsTo(match.Executable,root(app))) continue;
                     if(force) process.Kill(); else process.CloseMainWindow();
                 } } catch(ArgumentException) { } catch(InvalidOperationException) { } catch(System.ComponentModel.Win32Exception) { }
             }

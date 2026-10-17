@@ -79,8 +79,34 @@ namespace TMApps {
             integration=appIntegration ?? new WindowsAppIntegration();
             processes=appProcesses ?? new WindowsAppProcesses(app=>InstallRoot(app,GetInstalled(app)));
             data=appData ?? new WindowsAppData();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.6");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.7");
             try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
+        }
+        public async Task<LauncherRelease> CheckLauncherUpdate(string currentVersion,CancellationToken token) {
+            var release=LauncherUpdates.Parse(await ReadText(await Download(LauncherUpdates.ManifestUrl+"?check="+DateTime.UtcNow.Ticks,token),token));
+            return IsNewer(release.version,currentVersion) ? release : null;
+        }
+        public async Task<string> DownloadLauncherUpdate(LauncherRelease release,IProgress<string> progress,CancellationToken token) {
+            release=LauncherUpdates.Parse(Json.Serialize(release));
+            string directory=Path.Combine(Root,"updates"); Directory.CreateDirectory(directory);
+            string installer=Path.Combine(directory,"TMApps-Launcher-Setup-"+release.version+"-"+Guid.NewGuid().ToString("N")+".exe");
+            bool verified=false;
+            try {
+                using(var response=await Download(release.downloadUrl,token)) {
+                    response.EnsureSuccessStatusCode();
+                    using(var input=await response.Content.ReadAsStreamAsync()) using(var output=File.Create(installer)) {
+                        byte[] buffer=new byte[81920]; int n; long total=0;
+                        while((n=await input.ReadAsync(buffer,0,buffer.Length,token))>0) {
+                            total+=n; if(total>32L*1024*1024) throw new InvalidDataException("Launcher installer is too large.");
+                            await output.WriteAsync(buffer,0,n,token); progress.Report("Downloading launcher update: "+(total/1024)+" KB");
+                        }
+                    }
+                }
+                token.ThrowIfCancellationRequested(); VerifyHash(installer,release.sha256);
+                var info=FileVersionInfo.GetVersionInfo(installer);
+                if(info.ProductName!="TMApps Launcher Setup" || info.CompanyName!="DaddyTylerXO" || info.FileVersion!=release.version+".0") throw new InvalidDataException("The installer version does not match the launcher update.");
+                verified=true; return installer;
+            } finally { if(!verified && File.Exists(installer)) File.Delete(installer); }
         }
         public void SaveToken(string token) {
             token = (token ?? "").Trim();

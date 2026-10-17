@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.6.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.6.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.7.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.7.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -38,7 +38,7 @@ namespace TMApps {
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
         EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
         Func<AppInfo,AppInstallOptions> chooseInstallLocation;
-        string filter = "all"; bool listView = true; bool refreshing; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
+        string filter = "all"; bool listView = true; bool refreshing; bool selfUpdating; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
             if (args.Length == 2 && args[0] == "--verify-package") {
@@ -108,6 +108,7 @@ namespace TMApps {
         }
         void Restore() { window.Show(); window.WindowState = WindowState.Normal; window.Activate(); }
         bool ConfirmExit() {
+            if(selfUpdating) { ThemedDialogs.Info(window,"Launcher update in progress","Wait for the launcher update, or cancel it in the update window."); return false; }
             if(apps.Any(a=>a.Removing)) { ThemedDialogs.Info(window,"Uninstall in progress","Please wait until the application has been removed before quitting."); return false; }
             return !apps.Any(a=>a.Busy) || ThemedDialogs.Confirm(window,"Quit TMApps Launcher","An installation is in progress. Cancel it and quit?","Cancel install and quit");
         }
@@ -178,15 +179,45 @@ namespace TMApps {
             }
         }
         async void RefreshCatalog() {
-            if (refreshing || apps.Any(a => a.Busy)) return;
-            refreshing = true; Render(); Find<Button>("RefreshButton").IsEnabled = false; Notice("Checking for new releases…");
+            if (refreshing || selfUpdating || apps.Any(a => a.Busy)) return;
+            refreshing = true; Render(); Find<Button>("RefreshButton").IsEnabled = false; Notice("Checking applications and launcher for updates...");
+            string appNotice;
             try {
-                var catalog = await service.Refresh(lifetime.Token);
-                foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
-                Render(); Notice(service.LastRefreshNotice+" Last checked "+DateTime.Now.ToString("HH:mm")+".");
-            } catch (OperationCanceledException) { if (!lifetime.IsCancellationRequested) Notice("The release check timed out. Your saved library is still available. Try again shortly."); }
-            catch (Exception) { Notice("Could not reach the release catalog. Check your connection and try again. Your saved library is still available."); }
-            finally { refreshing = false; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy); }
+                try {
+                    var catalog = await service.Refresh(lifetime.Token);
+                    foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
+                    appNotice=service.LastRefreshNotice;
+                } catch(Exception) { appNotice="Application update check could not complete. Your saved library is still available."; }
+                try {
+                    var update=await service.CheckLauncherUpdate(LauncherUpdates.CurrentVersion,lifetime.Token);
+                    Notice(appNotice+" "+(update==null ? "Launcher is up to date." : "Launcher v"+update.version+" is available.")+" Last checked "+DateTime.Now.ToString("HH:mm")+".");
+                    if(update!=null && ThemedDialogs.Confirm(window,"Update TMApps Launcher?","Launcher v"+update.version+" is available. Download, update, and restart now? Your install location, settings, and applications will be kept.","Update and restart")) UpdateLauncher(update);
+                } catch(OperationCanceledException) { if(!lifetime.IsCancellationRequested) Notice(appNotice+" Launcher update check timed out."); }
+                catch(Exception) { Notice(appNotice+" Launcher update check could not complete. Try again shortly."); }
+            } finally { if(!quitting) { refreshing = false; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy); } }
+        }
+        void UpdateLauncher(LauncherRelease release) {
+            string directory=DesktopIntegration.RegisteredInstallDirectory;
+            if(!LauncherUpdates.IsInstalledCopy(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,directory)) {
+                ThemedDialogs.Info(window,"Launcher installation required","Run the launcher from its installed Start menu or desktop shortcut to update it in place. A portable copy must first be installed using Setup."); return;
+            }
+            using(var cancellation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token)) {
+                selfUpdating=true; bool finished=false;
+                var dialog=new ThemedDialog(window,"Updating TMApps Launcher","Downloading and verifying v"+release.version+". The launcher will reopen after the update.");
+                var status=new TextBlock { Text="Preparing download...",TextWrapping=TextWrapping.Wrap }; dialog.Body.Children.Add(status);
+                var cancel=dialog.AddAction("Cancel",false,()=>cancellation.Cancel(),"CancelAction");
+                dialog.Closing+=(sender,e)=>{ if(!finished) { e.Cancel=true; cancellation.Cancel(); } };
+                dialog.Loaded+=async (sender,e)=> {
+                    try {
+                        string installer=await service.DownloadLauncherUpdate(release,new Progress<string>(text=>status.Text=text),cancellation.Token);
+                        cancellation.Token.ThrowIfCancellationRequested(); cancel.IsEnabled=false; status.Text="Starting verified updater. Waiting for Windows and setup...";
+                        await LauncherUpdates.StartInstaller(installer,directory,cancellation.Token);
+                        finished=true; dialog.Close(); quitting=true; Shutdown();
+                    } catch(OperationCanceledException) { finished=true; dialog.Close(); Notice("Launcher update cancelled. Your current version is unchanged."); }
+                    catch(Exception ex) { finished=true; dialog.Close(); ThemedDialogs.Info(window,"Launcher update could not complete",ex.Message); Notice("Launcher update failed. Your current version is still available."); }
+                };
+                try { dialog.ShowDialog(); } finally { selfUpdating=false; }
+            }
         }
         async void Install(AppView app) {
             AppInstallOptions options=null;
@@ -234,6 +265,7 @@ namespace TMApps {
             return null;
         }
         void HandleButton(object sender, RoutedEventArgs e) {
+            if(selfUpdating) return;
             // Source can be retargeted to ItemsControl across a DataTemplate boundary.
             var b = ResolveButton(e.OriginalSource); if (b == null) return;
             e.Handled=true;
@@ -266,10 +298,10 @@ namespace TMApps {
             menu.Resources = window.Resources;
             Action<string, Action, bool> add = (title, action, enabled) => { var item = new MenuItem { Header = title, IsEnabled = enabled }; item.Click += (s, e) => { try { action(); } catch (Exception ex) { Notice(ex.Message); } }; menu.Items.Add(item); };
             var installed = service.GetInstalled(app.Info);
-            add("Open application", () => service.Open(app.Info), installed != null && !app.Busy);
+            add("Open application", () => service.Open(app.Info), installed != null && !app.Busy && !refreshing);
             add("View source on GitHub ↗", () => Browse("https://github.com/DaddyTylerXO/TMApps/tree/" + (app.Id=="tma-agent-office" ? "TMA-AgentOffice" : app.Info.branch)), true);
-            add("Open installation folder", () => { if (installed != null) System.Diagnostics.Process.Start("explorer.exe", service.InstalledFolder(app.Info, installed)); }, installed != null && !app.Busy);
-            add("Uninstall…", () => Uninstall(app), installed != null && !app.Busy);
+            add("Open installation folder", () => { if (installed != null) System.Diagnostics.Process.Start("explorer.exe", service.InstalledFolder(app.Info, installed)); }, installed != null && !app.Busy && !refreshing);
+            add("Uninstall…", () => Uninstall(app), installed != null && !app.Busy && !refreshing);
             target.ContextMenu = menu; menu.PlacementTarget=target; menu.IsOpen = true;
         }
         Task<bool> CloseSelectedApp(AppView app,string operation) {

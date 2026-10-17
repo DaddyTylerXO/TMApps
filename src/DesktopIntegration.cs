@@ -72,7 +72,7 @@ namespace TMApps {
             string exe = Path.Combine(directory,"TMApps-Launcher.exe");
             CreateShortcut(Path.Combine(StartMenuDirectory,"TMApps Launcher.lnk"),exe);
             using(var key=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\TMAppsLauncher")) {
-                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.6.0"); key.SetValue("Publisher","DaddyTylerXO");
+                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.7.0"); key.SetValue("Publisher","DaddyTylerXO");
                 key.SetValue("InstallLocation",directory); key.SetValue("DisplayIcon",exe);
                 key.SetValue("UninstallString","\""+Path.Combine(directory,"Uninstall.exe")+"\" --uninstall");
                 key.SetValue("NoModify",1); key.SetValue("NoRepair",1);

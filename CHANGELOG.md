@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.0
+
+- Check for updates now includes the launcher itself, independently of the application catalog.
+- Added verified versioned installer downloads and a themed Update and restart flow that preserves install location, profile, app state, and startup/desktop choices.
+- The launcher exits only after the updater acknowledges readiness; setup waits for the old process to exit before atomic replacement and reopening.
+- Release workflow publishes a launcher update manifest after the versioned installer asset.
+- Added launcher discovery, download validation, cancellation, authenticated access, handoff, and in-place replacement checks.
+- Fixed a .NET Framework process inspection race when a background app exits during a close check.
+
 ## 1.6.0
 
 - Update and uninstall ask permission to close the selected running app, including tray processes. Apps that resist graceful close require a second explicit force-close confirmation.

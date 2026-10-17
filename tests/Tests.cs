@@ -17,14 +17,28 @@ namespace TMApps {
     public class Tests {
         class PackageHandler : HttpMessageHandler {
             public byte[] Bytes;
-            public bool UsedAuth; public string LastUrl;
+            public bool UsedAuth; public string LastUrl; public Catalog UpdateCatalog; public LauncherRelease Launcher; public int LauncherChecks;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) {
                 token.ThrowIfCancellationRequested();
                 LastUrl = request.RequestUri.AbsoluteUri;
+                if(request.RequestUri.AbsolutePath.EndsWith("/catalog.json") && UpdateCatalog!=null) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(UpdateCatalog)) });
+                if(request.RequestUri.AbsolutePath.EndsWith("/launcher-update.json")) { LauncherChecks++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Launcher)) }); }
+
                 UsedAuth = request.Headers.Authorization != null;
                 if (request.RequestUri.AbsolutePath.EndsWith("/releases/tags/tma-apps"))
                     return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"assets\":[{\"name\":\"fixture.zip\",\"id\":123}]}") });
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Bytes) });
+            }
+        }
+        class LauncherUpdateHandler : HttpMessageHandler {
+            public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
+                token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.7.0.exe\",\"id\":11}]}") });
+                bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
+                if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
+                Downloads++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new ByteArrayContent(Installer) });
             }
         }
         class QuietProgress : IProgress<string> { public void Report(string value) {} }
@@ -75,6 +89,17 @@ namespace TMApps {
         static void Reject(Action action, string label) { try { action(); } catch { count++; Console.WriteLine("PASS " + label); return; } throw new Exception("Expected rejection: " + label); }
         static void Zip(string path, string entry, string contents) { using(var zip = ZipFile.Open(path, ZipArchiveMode.Create)) using(var writer = new StreamWriter(zip.CreateEntry(entry).Open())) writer.Write(contents); }
         [STAThread] public static int Main(string[] args) {
+            if(args.Length==2 && args[0]=="--handoff-fixture") {
+                LauncherUpdates.StartInstaller(Path.Combine(args[1],"FixtureSetup.exe"),args[1],CancellationToken.None).GetAwaiter().GetResult(); return 0;
+            }
+            if(args.Length==4 && args[0]=="--update") {
+                string fixtureRoot=AppDomain.CurrentDomain.BaseDirectory;
+                using(var parent=LauncherUpdates.ValidateParent(Int32.Parse(args[1]),Int64.Parse(args[2]),Path.Combine(fixtureRoot,"TMApps-Launcher.exe"))) {
+                    using(var ready=EventWaitHandle.OpenExisting("Local\\TMApps-Launcher-Update-"+args[3])) ready.Set();
+                    if(parent!=null && !parent.WaitForExit(10000)) return 1;
+                }
+                File.WriteAllText(Path.Combine(fixtureRoot,"handoff-report.txt"),"OK: updater acknowledged readiness before launcher exit"); return 0;
+            }
             if(args.Length==1 && args[0]=="--process-fixture") { Thread.Sleep(30000); return 0; }
             string root = Path.Combine(args[0], "build", "test-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
             try {
@@ -270,6 +295,52 @@ namespace TMApps {
                 string installerRoot=Path.Combine(root,"installer");
                 var installStart=new System.Diagnostics.ProcessStartInfo(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"),"--verify-install \""+installerRoot+"\"") { UseShellExecute=false,CreateNoWindow=true };
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
+                byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
+                string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
+                var release=new LauncherRelease { schemaVersion=1,version="1.7.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.7.0.exe",sha256=setupHash };
+                var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
+                using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.7.0","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.7.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("1.8.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.7.0.0","Launcher installer download verifies checksum and embedded product version");
+                    File.Delete(downloaded);
+                    launcherHandler.Installer=new byte[]{1,2,3};
+                    Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
+                    Check(Directory.GetFiles(Path.Combine(updater.Root,"updates")).Length==0,"Rejected launcher download is cleaned up");
+                    using(var sha=SHA256.Create()) release.sha256=BitConverter.ToString(sha.ComputeHash(launcherHandler.Installer)).Replace("-","").ToLowerInvariant();
+                    Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Correctly hashed non-installer payload is rejected by product metadata validation");
+                    release.sha256=setupHash; launcherHandler.Installer=installerBytes;
+                    using(var updateCancellation=new CancellationTokenSource()) { updateCancellation.Cancel(); Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),updateCancellation.Token).GetAwaiter().GetResult(),"Cancelled launcher download never starts setup"); }
+                    launcherHandler.FailManifest=true;
+                    Reject(()=>updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult(),"Failed launcher checks report failure instead of claiming up to date");
+                    launcherHandler.FailManifest=false; updater.SaveToken(new string('a',25));
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult()!=null,"Authenticated launcher manifest uses GitHub release assets API");
+                    downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
+                    Check(File.Exists(downloaded),"Authenticated launcher installer uses release assets API");
+                }
+                var invalid=LauncherService.Json.Deserialize<LauncherRelease>(LauncherService.Json.Serialize(release)); invalid.downloadUrl="https://example.com/setup.exe";
+                Reject(()=>LauncherUpdates.Parse(LauncherService.Json.Serialize(invalid)),"Launcher updates reject external download hosts");
+                invalid.downloadUrl=release.downloadUrl+"?redirect=1";
+                Reject(()=>LauncherUpdates.Parse(LauncherService.Json.Serialize(invalid)),"Launcher updates require the exact versioned installer asset");
+                invalid.downloadUrl=release.downloadUrl; invalid.sha256="missing";
+                Reject(()=>LauncherUpdates.Parse(LauncherService.Json.Serialize(invalid)),"Launcher update manifest requires a SHA-256 checksum");
+                using(var own=System.Diagnostics.Process.GetCurrentProcess()) {
+                    using(var validated=LauncherUpdates.ValidateParent(own.Id,own.StartTime.ToUniversalTime().Ticks,own.MainModule.FileName)) Check(validated.Id==own.Id,"Update handoff verifies the exact running parent process");
+                    Reject(()=>LauncherUpdates.ValidateParent(own.Id,own.StartTime.ToUniversalTime().Ticks+1,own.MainModule.FileName),"Update handoff rejects a reused process identity");
+                    Reject(()=>LauncherUpdates.ValidateParent(own.Id,own.StartTime.ToUniversalTime().Ticks,Path.Combine(root,"wrong.exe")),"Update handoff rejects another executable");
+                }
+                Check(!LauncherUpdates.IsInstalledCopy(Path.Combine(root,"portable.exe"),root),"Portable copies cannot overwrite an unrelated registered launcher");
+                string handoffRoot=Path.Combine(root,"handoff"); InstallationPaths.Prepare(handoffRoot,"launcher",false);
+                File.Copy(System.Reflection.Assembly.GetExecutingAssembly().Location,Path.Combine(handoffRoot,"TMApps-Launcher.exe"));
+                File.Copy(System.Reflection.Assembly.GetExecutingAssembly().Location,Path.Combine(handoffRoot,"FixtureSetup.exe"));
+                Check(LauncherUpdates.IsInstalledCopy(Path.Combine(handoffRoot,"TMApps-Launcher.exe"),handoffRoot),"Owned installed launcher path qualifies for in-place update");
+                using(var parentFixture=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(handoffRoot,"TMApps-Launcher.exe"),"--handoff-fixture \""+handoffRoot+"\"") { UseShellExecute=false,CreateNoWindow=true })) {
+                    if(!parentFixture.WaitForExit(15000)) { parentFixture.Kill(); throw new Exception("Updater handoff timed out"); }
+                    Check(parentFixture.ExitCode==0,"Real launcher-to-installer handoff waits for updater readiness");
+                    var end=DateTime.UtcNow.AddSeconds(10); while(!File.Exists(Path.Combine(handoffRoot,"handoff-report.txt")) && DateTime.UtcNow<end) Thread.Sleep(50);
+                    Check(File.Exists(Path.Combine(handoffRoot,"handoff-report.txt")),"Updater waits for parent launcher exit before applying changes");
+                }
                 var application = new LauncherApplication();
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
                 string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
@@ -279,7 +350,8 @@ namespace TMApps {
                 int locationPrompts=0;
                 string chosenAppFolder=Path.Combine(root,"Chosen Application Folder");
                 var uiIntegration=new RecordingIntegration();
-                var window=application.Initialize(uiRoot,new PackageHandler { Bytes=handler.Bytes },false,app=>{ locationPrompts++; return locationPrompts==1 ? null : new AppInstallOptions { directory=chosenAppFolder,runAtStartup=true,desktopShortcut=true }; },uiIntegration);
+                var uiHandler=new PackageHandler { Bytes=handler.Bytes,UpdateCatalog=uiCatalog,Launcher=new LauncherRelease { schemaVersion=1,version="9.0.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-9.0.0.exe",sha256=setupHash } };
+                var window=application.Initialize(uiRoot,uiHandler,false,app=>{ locationPrompts++; return locationPrompts==1 ? null : new AppInstallOptions { directory=chosenAppFolder,runAtStartup=true,desktopShortcut=true }; },uiIntegration);
                 using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
                     var decoder = BitmapDecoder.Create(icon, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                     Check(decoder.Frames.Count == 7, "Embedded rocket icon has seven Windows display sizes");
@@ -344,6 +416,15 @@ namespace TMApps {
                     dialog.Close();
                 }));
                 Check(application.PromptInstallLocation(uiCatalog.apps[0])==null,"Themed install cancellation starts no operation");
+                bool launcherPromptSeen=false;
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
+                    var popup=application.Windows.OfType<ThemedDialog>().Single(); launcherPromptSeen=popup.Title=="Update TMApps Launcher?";
+                    popup.Actions.Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }));
+                var checkUpdates=(Button)window.FindName("RefreshButton"); checkUpdates.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,checkUpdates));
+                PumpUntil(()=>uiHandler.LauncherChecks>0 && checkUpdates.IsEnabled);
+                Check(launcherPromptSeen,"Real Check for updates button offers a newer launcher in a themed popup");
+                Check(!Directory.Exists(Path.Combine(uiRoot,"updates")),"Declining launcher update performs no installer download");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }
