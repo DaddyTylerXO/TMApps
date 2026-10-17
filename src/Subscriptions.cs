@@ -24,7 +24,7 @@ namespace Postbox {
         public static async Task Request(MailSubscription subscription, HttpMessageHandler testHandler = null) {
             if (!subscription.OneClick) throw new InvalidOperationException("This sender requires an unsubscribe page or email.");
             var uri = SafeWeb.Https(subscription.Url); if (testHandler == null) await SafeWeb.ValidateHost(uri);
-            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.13.2"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
+            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.14.0"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
         }
     }
     public sealed partial class MailTransport {
@@ -51,6 +51,7 @@ namespace Postbox {
             var account = activeAccount; var dialog = Dialog("Mailbox management · TMA-Mail", 880, 710);
             var layout = new DockPanel { Margin = new Thickness(24) }; dialog.Content = layout;
             var heading = new StackPanel(); DockPanel.SetDock(heading, Dock.Top); layout.Children.Add(heading); heading.Children.Add(Label("Mail subscriptions", 24, "Text")); heading.Children.Add(Label(account == null ? "Connect a mailbox in Settings → Accounts first." : account.Email, 14, "Muted")); heading.Children.Add(Label("Subscriptions are discovered from List-Unsubscribe headers in received mail, not a provider-wide subscription register. Review the sender and destination before requesting removal. Some lists require a browser or email step.", 12, "Muted"));
+            var analytics = Action("Mail Analytics", true); analytics.Click += delegate { ShowMailAnalytics(); }; heading.Children.Add(analytics);
             var controls = new WrapPanel(); heading.Children.Add(controls); var scan = Action("Scan mailbox", true); var all = Action("Select all", false); var bulk = Action("Unsubscribe selected", false); controls.Children.Add(scan); controls.Children.Add(all); controls.Children.Add(bulk);
             var status = Label("", 12, "Muted"); heading.Children.Add(status);
             var scanProgress = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Foreground = Brush("#3A8C5E"), Background = Brush("#143B29"), BorderThickness = new Thickness(0), Margin = new Thickness(0, 5, 0, 14), Visibility = Visibility.Collapsed };

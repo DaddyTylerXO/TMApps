@@ -33,7 +33,7 @@ namespace Postbox {
             folder = preferences.StartupFolder;
             Theme.SetMode(preferences.AppearanceMode); Theme.Install(window);
             InitializeWorkspace();
-            InitializeMailboxFeatures(); InitializeHtmlReader(); InitializeSuiteUi();
+            InitializeMailboxFeatures(); InitializeHtmlReader(); InitializeSuiteUi(); InitializeInboxTools();
             foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {
                 Find<Button>(name + "Nav").Click += delegate(object sender, RoutedEventArgs e) {
                     ShowMailView(); folder = (string)((Button)sender).Tag;
@@ -96,7 +96,7 @@ namespace Postbox {
         private void Refresh(string keepId) {
             refreshing = true;
             try {
-                var messages = store.Query(folder, Find<TextBox>("SearchBox").Text, unreadOnly).ToList();
+                var messages = FilterInbox(store.Query(folder, Find<TextBox>("SearchBox").Text, unreadOnly), preferencesInboxFilter, oldestFirst).ToList();
                 var list = Find<ListBox>("MessageList");
                 var keepSelection = keepId == null ? new string[0] : list.SelectedItems.Cast<Message>().Select(m => m.Id).ToArray();
                 list.ItemsSource = messages;
@@ -136,7 +136,7 @@ namespace Postbox {
             Find<TextBlock>("AddressText").Text = selected.Address + "\nTo: " + selected.To;
             Find<TextBlock>("DateText").Text = selected.Date.ToString("dddd, dd MMMM yyyy · HH:mm");
             Find<TextBox>("BodyText").Text = selected.Body;
-            Find<Button>("StarButton").Content = "Toggle Star";
+            Find<Button>("StarButton").Content = "☆ Toggle Star";
             Find<Button>("StarButton").Foreground = Brushes.White;
             Find<Button>("ReadButton").Content = selected.Unread ? "Mark Read" : "Mark Unread";
             Find<Button>("ReplyButton").Content = selected.Folder == "Drafts" ? "✎   Edit draft" : "↶   Reply";
@@ -158,7 +158,7 @@ namespace Postbox {
         }
         private static TextBlock Label(string text, double size, string color) { return new TextBlock { Text = text, FontSize = size, Foreground = Brush(color), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) }; }
         private static Button Action(string text, bool primary) {
-            var button = new Button { Content = text, Background = Brush(primary ? "#4D83F5" : "#F0F3F8"), Foreground = Brush(primary ? "#FFFFFF" : "#53617A"), BorderThickness = new Thickness(0), Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand };
+            var button = new Button { Content = text, Background = Brush(primary ? "SidebarAccent" : "SidebarSelected"), Foreground = Brush("#FFFFFF"), BorderThickness = new Thickness(0), Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand };
             button.Loaded += delegate { var owner = Window.GetWindow(button); if (owner != null && owner.Title.Contains("Settings")) UiPolish.SettingsButton(button); }; return button;
         }
         private void Compose(Message draft, string mode) {

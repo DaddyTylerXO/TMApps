@@ -15,9 +15,10 @@ namespace Postbox {
         private void InitializeExtendedMailUi(Panel toolbar, DockPanel host) {
             var border = (Border)host.Parent; border.Child = null;
             mailToolbarContainer = new Grid { Height = preferences.MailToolbarHeight }; mailToolbarContainer.RowDefinitions.Add(new RowDefinition()); mailToolbarContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(7) }); border.Child = mailToolbarContainer;
-            host.Children.Remove(toolbar); var star = Find<Button>("StarButton"); host.Children.Remove(star); toolbar.Children.Add(star); star.Content = "Toggle Star"; star.ToolTip = "Toggle Star";
+            host.Children.Remove(toolbar); var star = Find<Button>("StarButton"); host.Children.Remove(star); toolbar.Children.Add(star); star.Content = "☆ Toggle Star"; star.ToolTip = "Toggle Star";
             foreach (var other in toolbar.Children.Cast<UIElement>().Where(c => !(c is Button)).ToList()) toolbar.Children.Remove(other);
             var wrap = (WrapPanel)toolbar; wrap.ItemHeight = 40; wrap.Margin = new Thickness(0); wrap.HorizontalAlignment = HorizontalAlignment.Left; wrap.VerticalAlignment = VerticalAlignment.Top; foreach (var button in wrap.Children.OfType<Button>()) UiPolish.MailAction(button);
+            InitializeToolbarEditing(wrap);
             var content = new StackPanel { Margin = new Thickness(8, 6, 8, 6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top }; content.Children.Add(wrap);
             content.Children.Add(new Border { Height = 1, Background = Theme.B("SidebarAccent"), Margin = new Thickness(0, 4, 0, 4), HorizontalAlignment = HorizontalAlignment.Stretch });
             var fastRow = new StackPanel { Orientation = Orientation.Horizontal, Height = 40 }; fastRow.Children.Add(new TextBlock { Text = "Fast Functions:", FontSize = 12, Foreground = Theme.B("Text"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) }); fastFunctionButtons = new WrapPanel { ItemHeight = 40 }; fastRow.Children.Add(fastFunctionButtons); content.Children.Add(fastRow); RenderFastFunctions();
@@ -56,17 +57,10 @@ namespace Postbox {
         private void RenderFastFunctions() {
             if (fastFunctionButtons == null) return; fastFunctionButtons.Children.Clear();
             foreach (var entry in preferences.FastFunctions.Where(f => String.IsNullOrEmpty(f.AccountId) || activeAccount != null && f.AccountId == activeAccount.Id)) {
-                var function = entry; var button = Action(function.Name, false); button.Click += delegate { if (SelectedMessages().Count == 0) return; if (function.Action == "Move to folder") MoveSelected(function.Destination); else if (function.Action == "Mark read" || function.Action == "Mark unread") { foreach (var m in SelectedMessages()) { SetUnreadLocal(m, function.Action == "Mark unread"); SaveServerFlags(m); } SaveMailboxInBackground(store); Refresh(selected == null ? null : selected.Id); } else if (function.Action == "Star / unstar") ToggleSelectedStars(); else RunMailboxAction(function.Action, button); };
-                var menu = new ContextMenu(); var remove = new MenuItem { Header = "Remove Fast Function" }; remove.Click += delegate { preferences.FastFunctions.Remove(function); settingsStore.Save(preferences); RenderFastFunctions(); }; menu.Items.Add(remove); button.ContextMenu = menu; UiPolish.MailAction(button); fastFunctionButtons.Children.Add(button);
+                var function = entry; var button = Action(function.Name, false); button.Tag = function; button.Click += async delegate { if (!toolbarEditing) await RunFastFunction(function, button); };
+                EnableToolbarDrag(button, fastFunctionButtons); var menu = new ContextMenu(); var edit = new MenuItem { Header = "Edit Fast Function" }; edit.Click += delegate { ShowFastFunctionEditor(function); }; menu.Items.Add(edit); var remove = new MenuItem { Header = "Remove Fast Function" }; remove.Click += delegate { preferences.FastFunctions.Remove(function); settingsStore.Save(preferences); RenderFastFunctions(); }; menu.Items.Add(remove); button.ContextMenu = menu; UiPolish.MailAction(button); fastFunctionButtons.Children.Add(button);
             }
             var create = Action("+ Create New Button", false); UiPolish.MailAction(create); create.Click += delegate { ShowCreateFastFunction(); }; fastFunctionButtons.Children.Add(create);
-        }
-        private void ShowCreateFastFunction() {
-            var dialog = Dialog("Create Fast Function · TMA-Mail", 480, 440); var panel = new StackPanel { Margin = new Thickness(24) }; dialog.Content = panel;
-            var name = TextField(panel, "Button name", "", false); var action = Choice(panel, "Action", "Move to folder", new[] { "Move to folder", "Mark read", "Mark unread", "Star / unstar", "⚑ Follow up", "↶ Reply", "↶ Reply all", "↪ Forward", "▦ Categorise" });
-            var destinations = MoveDestinations().ToList(); FieldLabel(panel, "Folder (for Move to folder)"); var folderChoice = new ComboBox { ItemsSource = destinations.Select(d => new FolderChoice { Key = d, Name = FolderDisplayName(d) }).ToList(), SelectedIndex = 0 }; panel.Children.Add(folderChoice);
-            var status = Label("Fast Functions save immediately. Right-click a button to remove it.", 12, "Muted"); panel.Children.Add(status); var save = Action("Create button", true); panel.Children.Add(save);
-            save.Click += delegate { if (String.IsNullOrWhiteSpace(name.Text) || preferences.FastFunctions.Count >= 24) { status.Text = "Enter a name; a maximum of 24 buttons is supported."; return; } preferences.FastFunctions.Add(new FastFunction { Name = name.Text.Trim(), Action = Value(action), Destination = ((FolderChoice)folderChoice.SelectedItem).Key, AccountId = activeAccount == null ? null : activeAccount.Id }); settingsStore.Save(preferences); RenderFastFunctions(); dialog.Close(); }; dialog.ShowDialog();
         }
         private class FolderChoice { public string Key; public string Name; public override string ToString() { return Name; } }
         private void OpenMessageWindow(Message message, MailAccount account, MailStore mailbox) {

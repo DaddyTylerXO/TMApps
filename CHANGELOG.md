@@ -2,6 +2,16 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.14.0 beta — 17 October 2026
+
+- Restore the star symbol beside Toggle Star. Add folder filters for unread, read, flagged/starred, important and attachments, plus arrow buttons for newest/oldest order.
+- Add a grey Edit Bar action. While editing, drag a mail action onto another to swap positions. Save the toolbar order and support swapping saved Fast Function buttons in their row.
+- Add editable Fast Functions with up to 12 ordered actions, conditional folder/category/recipient fields, sender or custom reply targets, and preset forward recipients. Replies/forwards open a composer for review. Closing an unchanged composer stops later actions. Server moves stop the chain if the destination copy cannot be uniquely resolved after sync.
+- Apply green accents, text, button defaults, dropdown items and context-menu highlighting throughout the application. Email HTML retains its original colours.
+- Add Widgets below Appearance. Move music position settings there and offer Spotify, YouTube Music, Apple Music and Amazon Music. Automatic detection matches Windows app identities; browser/PWA or unrecognised players can use an explicitly selected Windows media source. Playback availability depends on the chosen app exposing a media session; a shared browser source can follow another tab.
+- Add Mail Analytics to Mailbox Management: top ten Inbox subjects and sender addresses by quantity. Connected accounts scan full Inbox envelopes in read-only batches; sample accounts use local mail. Group subjects ignoring case/extra spaces, retaining reply/forward prefixes. Flag, category and importance changes remain local metadata except starred/read IMAP flags.
+- Add synthetic integration checks for filters/order, analytics grouping, toolbar persistence, conditional Fast Function fields, recipient presets, ordered actions, composer cancellation and Widgets settings. No live email sends, analytics scans or provider playback controls are exercised by the tests.
+
 ## 0.13.2 beta — 17 October 2026
 
 - Keep the notification-area icon visible while the main window is open, minimized, hidden or restored. Dispose it when the app exits.

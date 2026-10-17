@@ -18,6 +18,7 @@ namespace Postbox {
         public bool CanPrevious { get; set; }
     }
     public class SpotifyClient {
+        public string Provider = "Spotify", SourceId = "";
         private GlobalSystemMediaTransportControlsSessionManager manager;
         private GlobalSystemMediaTransportControlsSession session;
         private static async Task<T> Wait<T>(IAsyncOperation<T> operation) {
@@ -27,15 +28,21 @@ namespace Postbox {
             } finally { operation.Close(); }
         }
         public static bool IsSpotify(string applicationId) { return !String.IsNullOrEmpty(applicationId) && applicationId.IndexOf("spotify", StringComparison.OrdinalIgnoreCase) >= 0; }
+        public static bool IsProvider(string provider, string applicationId) {
+            if (String.IsNullOrEmpty(applicationId) || provider == "None") return false;
+            string id = new string(applicationId.Where(Char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+            string name = new string((provider ?? "Spotify").Where(Char.IsLetterOrDigit).ToArray()).ToLowerInvariant(); return id.Contains(name);
+        }
+        public static async Task<string[]> AvailableSessions() { var manager = await Wait(GlobalSystemMediaTransportControlsSessionManager.RequestAsync()); return manager.GetSessions().Select(s => s.SourceAppUserModelId).Distinct().OrderBy(s => s).ToArray(); }
         public async Task<SpotifySnapshot> Read() {
             if (manager == null) manager = await Wait(GlobalSystemMediaTransportControlsSessionManager.RequestAsync());
-            session = manager.GetSessions().FirstOrDefault(s => IsSpotify(s.SourceAppUserModelId));
-            if (session == null) return new SpotifySnapshot { Title = "Spotify is not playing", Artist = "Open Spotify on this PC to see your music" };
+            session = manager.GetSessions().FirstOrDefault(s => String.IsNullOrEmpty(SourceId) ? IsProvider(Provider, s.SourceAppUserModelId) : s.SourceAppUserModelId == SourceId);
+            if (session == null) return new SpotifySnapshot { Title = Provider + " is not playing", Artist = "Start playback or select a Windows media session in Widgets" };
             var media = await Wait(session.TryGetMediaPropertiesAsync()); var playback = session.GetPlaybackInfo(); var controls = playback.Controls;
-            return new SpotifySnapshot { Title = String.IsNullOrEmpty(media.Title) ? "Spotify" : media.Title, Artist = media.Artist, Available = true, Playing = playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing, CanToggle = controls.IsPlayPauseToggleEnabled, CanNext = controls.IsNextEnabled, CanPrevious = controls.IsPreviousEnabled };
+            return new SpotifySnapshot { Title = String.IsNullOrEmpty(media.Title) ? Provider : media.Title, Artist = media.Artist, Available = true, Playing = playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing, CanToggle = controls.IsPlayPauseToggleEnabled, CanNext = controls.IsNextEnabled, CanPrevious = controls.IsPreviousEnabled };
         }
         public async Task<bool> Control(string action) {
-            var current = session; if (current == null || !IsSpotify(current.SourceAppUserModelId)) return false;
+            var current = session; if (current == null || !(String.IsNullOrEmpty(SourceId) ? IsProvider(Provider, current.SourceAppUserModelId) : current.SourceAppUserModelId == SourceId)) return false;
             if (action == "toggle") return await Wait(current.TryTogglePlayPauseAsync());
             if (action == "next") return await Wait(current.TrySkipNextAsync());
             if (action == "previous") return await Wait(current.TrySkipPreviousAsync());
@@ -49,7 +56,8 @@ namespace Postbox {
         private readonly TextBlock title, artist;
         private readonly Button play, next, previous;
         private Grid headerLayout;
-        private bool busy, disposed, active;
+        private bool busy, disposed, active; private int revision;
+        public void SetProvider(string provider, string sourceId) { if (client.Provider == provider && client.SourceId == sourceId) return; client.Provider = provider; client.SourceId = sourceId; revision++; ((TextBlock)details.Children[0]).Text = provider.ToUpperInvariant(); title.Text = "Checking " + provider + "…"; artist.Text = ""; SetControls(false, false, false); }
         public SpotifyWidget() {
             Background = Theme.B("Surface"); CornerRadius = new CornerRadius(14); Padding = new Thickness(14, 10, 14, 10); Margin = new Thickness(12, 8, 12, 8);
             layout = new StackPanel { Orientation = Orientation.Horizontal }; Child = layout;
@@ -68,7 +76,7 @@ namespace Postbox {
             var button = new Button { Content = text, ToolTip = hint, Padding = new Thickness(10, 7, 10, 7), Margin = new Thickness(2), IsEnabled = false };
             button.Click += async delegate {
                 if (busy || !active || disposed) return; busy = true; SetControls(false, false, false);
-                try { if (!await client.Control(action)) artist.Text = "Spotify did not accept this playback action"; }
+                try { if (!await client.Control(action)) artist.Text = client.Provider + " did not accept this playback action"; }
                 catch (Exception ex) { artist.Text = "Playback control unavailable"; ToolTip = ex.Message; }
                 finally { busy = false; }
                 if (active && !disposed) await Refresh();
@@ -77,11 +85,11 @@ namespace Postbox {
         private void SetControls(bool toggle, bool skipNext, bool skipPrevious) { play.IsEnabled = toggle; next.IsEnabled = skipNext; previous.IsEnabled = skipPrevious; }
         private async Task Refresh() {
             if (busy || !active || disposed) return; busy = true;
-            try {
-                var state = await client.Read(); if (!active || disposed) return;
+            int generation = revision; try {
+                var state = await client.Read(); if (!active || disposed || generation != revision) return;
                 title.Text = state.Title; title.ToolTip = state.Title; artist.Text = state.Artist; artist.ToolTip = state.Artist;
-                play.Content = state.Playing ? "Ⅱ" : "▶"; SetControls(state.Available && state.CanToggle, state.Available && state.CanNext, state.Available && state.CanPrevious); timer.Interval = TimeSpan.FromSeconds(3); ToolTip = "Controls the Spotify desktop media session on this PC";
-            } catch (Exception ex) { if (active && !disposed) { title.Text = "Spotify controls unavailable"; artist.Text = "Windows could not access a Spotify media session"; ToolTip = ex.Message; SetControls(false, false, false); timer.Interval = TimeSpan.FromSeconds(15); } }
+                play.Content = state.Playing ? "Ⅱ" : "▶"; SetControls(state.Available && state.CanToggle, state.Available && state.CanNext, state.Available && state.CanPrevious); timer.Interval = TimeSpan.FromSeconds(3); ToolTip = "Controls the selected Windows media session on this PC";
+            } catch (Exception ex) { if (active && !disposed) { title.Text = client.Provider + " controls unavailable"; artist.Text = "Windows could not access the selected media session"; ToolTip = ex.Message; SetControls(false, false, false); timer.Interval = TimeSpan.FromSeconds(15); } }
             finally { busy = false; }
         }
         public void Dispose() { Stop(); disposed = true; }

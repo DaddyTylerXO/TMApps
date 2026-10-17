@@ -57,8 +57,9 @@ namespace Postbox {
             if (centerHost == null || navigationFooter == null) return;
             if (spotify != null) { Detach(spotify); spotify.Stop(); }
             headerSearch.Width = 440;
-            if (preferences.SpotifyPlacement == "Off") return;
+            if (preferences.SpotifyPlacement == "Off" || preferences.MusicProvider == "None") return;
             if (spotify == null) spotify = new SpotifyWidget();
+            spotify.SetProvider(preferences.MusicProvider, preferences.MusicSessionId);
             spotify.SetSidebar(preferences.SpotifyPlacement == "Sidebar");
             if (preferences.SpotifyPlacement == "Sidebar") {
                 if (preferences.NavigationCollapsed) { spotify.ToolTip = "Expand the navigation ribbon to see Spotify"; return; }

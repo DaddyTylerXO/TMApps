@@ -66,6 +66,7 @@ namespace Postbox {
         private Button dictateButton;
         public event Action<bool, string> Saved;
         public string RecipientAddresses { get { return String.Join(", ", new[] { to.Text, cc.Text, bcc.Text }.Where(v => !String.IsNullOrWhiteSpace(v))); } }
+        public void SetFastRecipients(string recipients) { to.Text = String.Join("; ", RichMail.Recipients(recipients)); cc.Clear(); bcc.Clear(); baseline = Snapshot(); }
         public ComposerWindow(Preferences prefs, MailStore mailbox, Message existing, string mode, Message original) {
             preferences = prefs; store = mailbox; draft = existing;
             Title = existing == null ? "New message · TMA-Mail" : "Edit draft · TMA-Mail";

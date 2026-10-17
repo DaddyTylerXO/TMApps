@@ -276,8 +276,6 @@ namespace Postbox {
             var mode = Choice(appearance, "Colour mode", preferences.AppearanceMode, new[] { "Dark", "Light" });
             var edge = Choice(appearance, "Navigation position", preferences.NavigationEdge, new[] { "Left", "Top", "Right", "Bottom" });
             var inboxEdge = Choice(appearance, "Inbox / message list position", preferences.InboxEdge, new[] { "Left", "Top", "Right", "Bottom" });
-            var spotifyPlacement = Choice(appearance, "Spotify player position", preferences.SpotifyPlacement, new[] { "Off", "Top", "Bottom", "Sidebar" });
-            appearance.Children.Add(Label("Uses the Spotify desktop session on this PC. Playback controls depend on what Spotify makes available to Windows. Expand a compact ribbon to see a sidebar player.", 11, "#8793A7"));
             var collapsed = Toggle(appearance, "Use a compact icon ribbon", preferences.NavigationCollapsed);
             appearance.Children.Add(Label("Use the ☰ button to collapse or expand the ribbon at any time. Hover an icon to see its folder name.", 12, "#8793A7"));
             var textSize = Choice(appearance, "Message and composing text size", preferences.TextSize.ToString(), new[] { "12", "13", "14", "15", "16", "18", "20" });
@@ -286,6 +284,16 @@ namespace Postbox {
             foreach (string mailFolder in folders) favouriteChecks[mailFolder] = Toggle(appearance, mailFolder, preferences.FavouriteFolders.Contains(mailFolder));
             appearance.Children.Add(Label("Favourites appear in their own navigation tab. Right-click any folder to pin or unpin it.", 11, "#8793A7"));
             Tab(tabs, "Appearance", appearance);
+            var widgets = SettingsSection("Widgets", "Choose the music player shown in your workspace. Playback controls use the media sessions that apps expose to Windows.");
+            var musicProvider = Choice(widgets, "Music provider", preferences.MusicProvider, new[] { "None", "Spotify", "YouTube Music", "Apple Music", "Amazon Music" });
+            var musicOptions = new StackPanel(); widgets.Children.Add(musicOptions);
+            var spotifyPlacement = Choice(musicOptions, "Music player position", preferences.SpotifyPlacement, new[] { "Off", "Top", "Bottom", "Sidebar" });
+            var musicSession = Choice(musicOptions, "Windows media session", String.IsNullOrEmpty(preferences.MusicSessionId) ? "Automatic" : preferences.MusicSessionId, new[] { "Automatic", preferences.MusicSessionId }.Where(v => !String.IsNullOrEmpty(v)).Distinct().ToArray());
+            musicOptions.Children.Add(Label("Automatic matches the selected provider's app identity. For a browser player or an unrecognised app, start playback, refresh sessions, then select its source. A shared browser source may follow another playing tab. Controls are available only while that app exposes a Windows media session.", 12, "Muted"));
+            var refreshSessions = Action("Refresh media sessions", false); musicOptions.Children.Add(refreshSessions); var musicStatus = Label("", 12, "Muted"); musicOptions.Children.Add(musicStatus);
+            refreshSessions.Click += async delegate { refreshSessions.IsEnabled = false; try { var sessions = await SpotifyClient.AvailableSessions(); string selected = Value(musicSession) ?? "Automatic"; musicSession.ItemsSource = new[] { "Automatic", selected }.Concat(sessions).Distinct().ToArray(); musicSession.SelectedItem = selected; musicStatus.Text = sessions.Length + " Windows media sessions found."; } catch (Exception ex) { musicStatus.Text = "Media sessions unavailable: " + ex.Message; } finally { refreshSessions.IsEnabled = true; } };
+            Action showMusicOptions = delegate { musicOptions.Visibility = Value(musicProvider) == "None" ? Visibility.Collapsed : Visibility.Visible; }; musicProvider.SelectionChanged += delegate { showMusicOptions(); }; showMusicOptions();
+            Tab(tabs, "Widgets", widgets);
             var startup = SettingsSection("Start your day", "Choose how TMA-Mail opens and behaves in the notification area.");
             var login = Toggle(startup, "Launch TMA-Mail when I sign in to Windows", preferences.LaunchWithWindows);
             var minimized = Toggle(startup, "Start minimized in the notification area", preferences.StartMinimized);
@@ -332,7 +340,7 @@ namespace Postbox {
             Func<Preferences> readControls = delegate {
                 var updated = settingsStore.Clone(editing);
                 updated.ProfilePhoto = photoEditor.Data; updated.DisplayName = name.Text; updated.EmailAddress = email.Text.Trim(); signatureProfile.ReadInto(updated); updated.SignatureOnNew = signNew.IsChecked == true; updated.SignatureOnReplies = signReply.IsChecked == true;
-                updated.CalendarMonday = Value(weekStart) == "Monday"; updated.AutoMarkRead = autoRead.IsChecked == true; updated.AutoLoadImages = autoImages.IsChecked == true; updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
+                updated.CalendarMonday = Value(weekStart) == "Monday"; updated.AutoMarkRead = autoRead.IsChecked == true; updated.AutoLoadImages = autoImages.IsChecked == true; updated.AppearanceMode = Value(mode); updated.InboxEdge = Value(inboxEdge); updated.SpotifyPlacement = Value(spotifyPlacement); updated.MusicProvider = Value(musicProvider); updated.MusicSessionId = Value(musicSession) == "Automatic" ? "" : Value(musicSession); updated.FavouriteFolders = favouriteChecks.Where(entry => entry.Value.IsChecked == true).Select(entry => entry.Key).Concat(preferences.FavouriteFolders.Where(f => f.StartsWith("Server:"))).Distinct().ToList();
                 updated.ComposeFont = Value(composeFont); updated.ComposeFontSize = Int32.Parse(Value(composeSize));
                 updated.NavigationEdge = Value(edge); updated.NavigationCollapsed = collapsed.IsChecked == true; updated.TextSize = Int32.Parse(Value(textSize));
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);
@@ -364,7 +372,7 @@ namespace Postbox {
                     preferences = updated; calendarSyncCommitted = updated.CalendarProviderSync; committed = true; ApplyPreferences(); dialog.Close(); Status("Settings saved · startup choices apply on next launch");
                 } catch (Exception ex) { status.Text = "Could not save: " + ex.Message; status.Foreground = Brush("#BC4343"); }
             };
-            tabs.SelectedIndex = section == "Accounts" ? 0 : section == "Calendar" ? 6 : section == "Plugins" ? 7 : section == "App Info" ? 8 : 1; if (section == "Name") dialog.Loaded += delegate { name.Focus(); name.SelectAll(); };
+            string targetSection = section == "Plugins" ? "Add-ins / plug-ins" : section == "Name" ? "Profile & signature" : section; tabs.SelectedItem = tabs.Items.Cast<TabItem>().FirstOrDefault(t => ((TextBlock)t.Header).Text == targetSection) ?? (TabItem)tabs.Items[1]; if (section == "Name") dialog.Loaded += delegate { name.Focus(); name.SelectAll(); };
             dialog.ShowDialog();
         }
         private static bool ValidWave(string file) {

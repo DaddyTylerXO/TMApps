@@ -82,9 +82,9 @@ class SuiteFeaturesTests {
             actionContainer.Width = width; prefs.MailToolbarHeight = height; Call(app, "ApplyPreferences"); Layout(window); Layout(window);
             var actionContent = (StackPanel)compactToolbar.Content; var actions = (WrapPanel)actionContent.Children[0];
             Check(actionContent.DesiredSize.Height <= compactToolbar.ViewportHeight + 1, "Toolbar clips at " + width + "x" + height + ": content=" + actionContent.DesiredSize.Height + " viewport=" + compactToolbar.ViewportHeight);
-            Check(actions.Children.OfType<Button>().All(b => b.Height == 32 && b.Background.ToString() == Theme.B("SidebarAccent").ToString()), "Toolbar action sizes/colours differ");
+            Check(actions.Children.OfType<Button>().All(b => b.Height == 32 && (b.Content.ToString() == "Edit Bar" || b.Background.ToString() == Theme.B("SidebarAccent").ToString())), "Toolbar action sizes/colours differ");
         }
-        Check(((Button)window.FindName("StarButton")).Content.ToString() == "Toggle Star", "Star action has no readable label");
+        Check(((Button)window.FindName("StarButton")).Content.ToString() == "☆ Toggle Star", "Star action has no readable label");
         Check(((Button)Get(app, "managementButton")).Content.ToString() == "Mailbox Management", "Management caption is not title case");
         actionContainer.Width = Double.NaN; prefs.MailToolbarHeight = 176; Call(app, "ApplyPreferences"); Layout(window);
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown; window.Show(); message.HtmlBody = "<p>Synthetic pop-out body</p>"; Call(app, "OpenMessageWindow", message, liveAccount, mailbox); var popped = app.Windows.Cast<Window>().First(w => w != window && w.Title.Contains(message.Subject)); Check(popped.Owner == window && popped.Content is DockPanel, "Message did not open in a separate owned window"); var popBody = (StackPanel)((DockPanel)popped.Content).Children.OfType<ScrollViewer>().Single().Content; Check(popBody.Children.OfType<HtmlMessageView>().Single().Visibility == Visibility.Visible, "Pop-out HTML reader remained collapsed"); popped.Close();

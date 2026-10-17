@@ -94,7 +94,7 @@ namespace Postbox {
             richReader.Visibility = Visibility.Collapsed; attachmentReader.Children.Clear();
             Find<Button>("ArchiveButton").IsEnabled = true;
             Find<Button>("ReadButton").Content = messages.Any(m => m.Unread) ? "Mark Read" : "Mark Unread";
-            Find<Button>("StarButton").Content = "Toggle Star";
+            Find<Button>("StarButton").Content = "☆ Toggle Star";
             return true;
         }
         private void RenderRichMessage(Message message) {

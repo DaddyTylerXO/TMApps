@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.13.2')
+param([string]$OutputDirectory = 'build\v0.14.0')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -87,3 +87,12 @@ if($LASTEXITCODE -ne 0) { throw 'Calendar UI test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'CalendarUiTests.exe.config') -Force
 & (Join-Path $out 'CalendarUiTests.exe') --data-dir (Join-Path $out ('test-data\calendar-ui-' + [guid]::NewGuid().ToString())) --offline-preview
 if($LASTEXITCODE -ne 0) { throw 'Calendar UI tests failed.' }
+
+$mailToolsArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'MailToolsTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach($reference in @('System.dll','System.Core.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $mailToolsArguments += '/reference:' + (Join-Path $framework $reference) }
+$mailToolsArguments += Join-Path $PSScriptRoot 'tests\MailToolsTests.cs'
+& (Join-Path $framework 'csc.exe') @mailToolsArguments
+if($LASTEXITCODE -ne 0) { throw 'Mail tools test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'MailToolsTests.exe.config') -Force
+& (Join-Path $out 'MailToolsTests.exe') --data-dir (Join-Path $out ('test-data\mail-tools-' + [guid]::NewGuid().ToString())) --offline-preview
+if($LASTEXITCODE -ne 0) { throw 'Mail tools integration tests failed.' }

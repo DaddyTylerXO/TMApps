@@ -7,7 +7,12 @@ using System.Web.Script.Serialization;
 using System.Net.Mail;
 
 namespace Postbox {
-    public class FastFunction { public string Name { get; set; } public string Action { get; set; } public string Destination { get; set; } public string AccountId { get; set; } }
+    public class FastAction { public string Action { get; set; } public string Destination { get; set; } public string Recipients { get; set; } public string Category { get; set; } }
+    public class FastFunction {
+        public string Name { get; set; } public string Action { get; set; } public string Destination { get; set; } public string AccountId { get; set; }
+        public List<FastAction> Actions { get; set; }
+        public List<FastAction> Steps() { return Actions != null && Actions.Count > 0 ? Actions : new List<FastAction> { new FastAction { Action = Action, Destination = Destination } }; }
+    }
     public class MailSignature {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -47,6 +52,9 @@ namespace Postbox {
         public bool CalendarProviderSync { get; set; }
         public double MailToolbarHeight { get; set; }
         public List<FastFunction> FastFunctions { get; set; }
+        public List<string> MailToolbarOrder { get; set; }
+        public string MusicProvider { get; set; }
+        public string MusicSessionId { get; set; }
         public string ReceiveSound { get; set; }
         public string SendSound { get; set; }
         public string ReceiveWavePath { get; set; }
@@ -78,11 +86,14 @@ namespace Postbox {
             ReceiveSound = "Cozy"; SendSound = "Cozy"; ReceiveWavePath = ""; SendWavePath = "";
             SpellCheckEnabled = true; SpellLanguage = "en-GB"; NavigationEdge = "Left"; TextSize = 14;
             AppearanceMode = "Dark"; FavouriteFolders = new List<string> { "Inbox", "Sent" }; ComposeFont = "Segoe UI"; ComposeFontSize = 14;
-            InboxEdge = "Left"; SpotifyPlacement = "Off"; Signatures = new List<MailSignature>(); SignatureTemplates = new List<MailSignature>();
+            InboxEdge = "Left"; SpotifyPlacement = "Off"; MusicProvider = "Spotify"; MusicSessionId = ""; MailToolbarOrder = new List<string>(); Signatures = new List<MailSignature>(); SignatureTemplates = new List<MailSignature>();
         }
         public void Normalize() {
             if (Double.IsNaN(MailToolbarHeight) || Double.IsInfinity(MailToolbarHeight)) MailToolbarHeight = 176; MailToolbarHeight = Math.Max(128, Math.Min(300, MailToolbarHeight));
             FastFunctions = (FastFunctions ?? new List<FastFunction>()).Where(f => f != null && !String.IsNullOrWhiteSpace(f.Name)).Take(24).ToList();
+            MailToolbarOrder = (MailToolbarOrder ?? new List<string>()).Where(s => !String.IsNullOrWhiteSpace(s)).Distinct().Take(32).ToList();
+            if (!new[] { "None", "Spotify", "YouTube Music", "Apple Music", "Amazon Music" }.Contains(MusicProvider)) MusicProvider = "Spotify";
+            MusicSessionId = MusicSessionId ?? "";
             DisplayName = String.IsNullOrWhiteSpace(DisplayName) ? "Tyler" : DisplayName.Trim();
             EmailAddress = (EmailAddress ?? "").Trim();
             Signature = Signature ?? "";

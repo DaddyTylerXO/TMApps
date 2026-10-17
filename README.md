@@ -2,11 +2,11 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.13.2 beta** keeps the tray icon visible while TMA-Mail is open and adds a forest-green tray menu with rounded green actions. It includes sync progress percentages and the previous toolbar, settings, vector navigation icon and unread badge improvements.
+**Version 0.14.0 beta** adds inbox filters and sorting, drag-to-swap toolbar editing, multi-action Fast Functions with recipient presets, music Widgets settings, full-Inbox mail analytics, and green controls across menus.
 
 ## Download and run
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.13.2-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.14.0-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -29,14 +29,14 @@ Choose a provider or **Explore for now** with sample mail. You can add an accoun
 
 ## Your workspace
 
-- Three-pane mailbox, search, unread filtering, Ctrl/Shift multi-selection, favourites, and bulk actions.
+- Three-pane mailbox, search, unread/read/flagged/important/attachment filters, newest/oldest sorting, Ctrl/Shift multi-selection, favourites, and bulk actions.
 - Live footer progress identifies the mailbox, folder, and item count. A neon green indicator means the active mail server is connected and Windows reports a network; red means disconnected, reconnecting, or waiting for confirmation.
 - Mailbox Management scans all selectable server folders for List-Unsubscribe headers, with checkboxes and bulk unsubscribe requests where senders advertise one-click support. Other senders need a browser/email step. Scanning is read-only, cancellable by closing the dialog, and runs on its own connection. A discovered list does not prove the subscription is still active.
 - Notifications use green branded cards with optional address/subject details, silent None, and an optional red unread inbox badge on the running app/taskbar icon (99+ cap). Desktop shortcuts keep the static logo.
 - Add to Calendar supports named calendar selection, all-day dates, reminders, and counted recurrence including custom intervals such as every four days. The calendar header switches calendars and creates custom local calendars. Return to Mailbox restores email navigation.
 - **Settings → Calendar** connects Outlook/Google through separate calendar OAuth consent and iCloud through CalDAV with an app-specific password. Provider sync starts disabled and must be enabled and saved. Connected calendars refresh about every two minutes and when opening another month; newly created events upload to the selected writable calendar. Pending events remain protected locally after failures. Local calendars can queue copies to a connected provider or export .ics. Existing provider-event editing/deletion and meeting invitations/responses are not implemented. Provider connections are covered by intercepted transport tests; live provider round trips are unverified.
 - In-app and desktop calendar reminders are enabled by default while TMA-Mail runs. Calendar and Notifications settings share the same controls. The reminder window supports Dismiss, Dismiss all, and Snooze; state survives restarts. Closing the app stops reminder delivery. Imports of .ics files, public HTTPS/webcal export URLs and cached mail invitations remain read-only snapshots.
-- Double-click received mail for a separate TMA-Mail reading window with green action buttons. Right-click mail for copy, print, reply, reply all, forward, flags, categories and filing. Drag the mail toolbar's lower green edge to change height; overflow can scroll horizontally. Fast Functions creates named action buttons, including account-specific move destinations; right-click a Fast Function to remove it.
+- Double-click received mail for a separate TMA-Mail reading window with green action buttons. Right-click mail for copy, print, reply, reply all, forward, flags, categories and filing. Drag the mail toolbar's lower green edge to change height; overflow can scroll horizontally. Edit Bar enables drag-to-swap action ordering. Fast Functions can combine up to 12 actions with recipient/folder/category settings; right-click a button to edit or remove it. Replies and forwards open a composer for review.
 - **Settings → Add-ins / plug-ins** installs TMA-Mail JSON web-tool launchers, with enable/disable and removal. Outlook Office.js/COM/VSTO add-ins are not supported; see [PLUGINS.md](PLUGINS.md).
 - **Settings → App Info** shows the installed version and checks the GitHub branch update manifest on demand. Downloads open in the browser; the app does not install updates automatically.
 - Bottom-left Settings opens Accounts first. The profile bubble offers name/signature editing, a local profile photo, and account settings.
@@ -46,7 +46,7 @@ Choose a provider or **Explore for now** with sample mail. You can add an accoun
 - Imported folders match the sidebar typography. Right-click to mark the entire server folder read, edit its icon/text colour, pin it, or delete it. Deletion requires confirmation, is permanent, and is unavailable for provider system folders or folders with children.
 - Live settings preview: Save keeps changes and Cancel restores the previous settings.
 - Startup folder, maximize/minimize, optional Windows sign-in startup, and close-to-tray.
-- Seven original soft sound choices for each direction (14 WAV files), with Cozy defaults, silent None, and custom WAV support. Old Windows Notification/Chime/Exclamation selections migrate to Cozy. Incoming/outgoing notification banners and an optional Spotify desktop media widget include placement and playback controls.
+- Seven original soft sound choices for each direction (14 WAV files), with Cozy defaults, silent None, and custom WAV support. Old Windows Notification/Chime/Exclamation selections migrate to Cozy. Incoming/outgoing notification banners and an optional music widget include placement and playback controls in Settings → Widgets (Spotify, YouTube Music, Apple Music or Amazon Music).
 - Matching green-envelope Windows executable/title-bar/tray icon and animated tree/envelope splash.
 
 Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B collapse navigation, Delete move to Trash, Ctrl+Z undo local moves outside text fields. In composing, Ctrl+S saves a draft and Ctrl+Enter sends through a connected account.
@@ -59,7 +59,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.13.2/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.14.0/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 
@@ -72,6 +72,6 @@ Optional `test-tls.ps1` verifies Apple IMAP/SMTP TLS connectivity using the prod
 
 Default data folder: `%LOCALAPPDATA%\TMA-Mail`. Account secrets/MSAL cache are protected in `account.protected`; connected mail uses per-account protected caches. Imported calendars, discovered subscriptions, and plug-in catalogs also use DPAPI-protected files. Settings/signature templates and the older sample mailbox remain unencrypted local JSON. DPAPI files are tied to your Windows user. Disconnect removes saved account credentials and retains the encrypted cache; revoke provider consent through your provider account settings when required.
 
-Multiple saved accounts are supported, with one selected mailbox at a time. Background sync runs while the app is open; it is not a Windows service. Full-history sync and a signed installer remain outstanding. Composing saves local drafts; editing a server draft makes a local copy. Deleted or renamed server folders disappear from navigation on the next successful discovery, but older encrypted cache entries may remain on disk. Profile names, signatures, and photos are shared across the workspace. Desktop banners appear while the app runs and are not persistent Windows Notification Center entries. Spotify controls need an active desktop media session. SMTP acceptance does not guarantee final delivery; if sending is interrupted, check Sent/the recipient before retrying.
+Multiple saved accounts are supported, with one selected mailbox at a time. Background sync runs while the app is open; it is not a Windows service. Full-history sync and a signed installer remain outstanding. Composing saves local drafts; editing a server draft makes a local copy. Deleted or renamed server folders disappear from navigation on the next successful discovery, but older encrypted cache entries may remain on disk. Profile names, signatures, and photos are shared across the workspace. Desktop banners appear while the app runs and are not persistent Windows Notification Center entries. Music controls need an active Windows media session; unrecognised/browser players require choosing their source in Widgets. Shared browser sources can follow another tab. SMTP acceptance does not guarantee final delivery; if sending is interrupted, check Sent/the recipient before retrying.
 
 Close older versions before opening this build: the saved account file migrates to a multi-account catalog. Do not run older builds against the migrated profile. `--data-dir <path>` selects an isolated test profile, `--setup` reopens the provider chooser, and `--splash-preview` displays the animated splash only.

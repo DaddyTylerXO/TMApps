@@ -18,6 +18,21 @@ namespace Postbox {
     public sealed class SyncSnapshot { public List<Message> Messages = new List<Message>(); public List<ServerFolder> Folders = new List<ServerFolder>(); }
     public sealed partial class MailTransport {
         public static string FolderKey(string path) { return "Server:" + Uri.EscapeDataString(path); }
+        public List<Message> InboxAnalytics(Action<int, int> progress, CancellationToken cancellation) {
+            var messages = new List<Message>();
+            using (var client = Connect(cancellation)) {
+                var inbox = client.Inbox; inbox.Open(FolderAccess.ReadOnly, cancellation); int total = inbox.Count;
+                for (int start = 0; start < total; start += 250) {
+                    cancellation.ThrowIfCancellationRequested();
+                    foreach (var summary in inbox.Fetch(start, Math.Min(start + 249, total - 1), MessageSummaryItems.Envelope, cancellation)) {
+                        var sender = summary.Envelope == null ? null : summary.Envelope.From.Mailboxes.FirstOrDefault();
+                        messages.Add(new Message { Folder = "Inbox", Subject = summary.Envelope == null ? "(No subject)" : summary.Envelope.Subject, Address = sender == null ? "" : sender.Address });
+                    }
+                    if (progress != null) progress(Math.Min(start + 250, total), total);
+                }
+                inbox.Close(false, cancellation); client.Disconnect(true, cancellation);
+            } return messages;
+        }
         public SyncSnapshot Synchronize(List<Message> cached, Action<SyncProgress> progress, Action<List<ServerFolder>> discovered, Action<ServerFolder, List<Message>> folderComplete, CancellationToken cancellation) {
             var snapshot = new SyncSnapshot();
             var cacheIndex = cached.Where(m => m.RemoteUid != 0 && m.ContentVersion >= 2 && !String.IsNullOrEmpty(m.RemoteFolder)).GroupBy(m => m.RemoteFolder).ToDictionary(g => g.Key, g => g.GroupBy(m => m.RemoteUid).ToDictionary(u => u.Key, u => u.First()));
