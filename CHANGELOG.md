@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- Update and uninstall ask permission to close the selected running app, including tray processes. Apps that resist graceful close require a second explicit force-close confirmation.
+- Uninstall defaults to keeping local data, with an explicit permanent-delete choice for the selected app standard profile; external work folders and custom profiles remain untouched.
+- Shared orange/grey dialogs with rounded controls now cover app installation, uninstall, close permission, and launcher uninstall.
+- Added real windowless-process scoping checks and data-retention/deletion regression tests.
+
 ## 1.5.0
 
 - Added per-app Windows startup and desktop icon options to the install dialog; updates retain and retarget them, and uninstall removes the managed integrations.

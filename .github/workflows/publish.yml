@@ -104,7 +104,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Package upload failed; catalog was not published' }
           gh release upload tma-apps published/catalog.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }
-          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe to install the launcher. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Mail updates are checked directly against its branch manifest as well as this catalog, including 0.10.0-beta. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
+          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe to install the launcher. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
           if ($LASTEXITCODE -ne 0) { throw 'Release description update failed' }
           $names = gh release view tma-apps --json assets --jq '.assets[].name'
           if ($LASTEXITCODE -ne 0) { throw 'Could not list old launcher assets' }

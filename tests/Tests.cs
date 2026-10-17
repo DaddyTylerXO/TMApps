@@ -33,6 +33,13 @@ namespace TMApps {
             public void Apply(AppInfo app,Installed previous,Installed current,string previousExecutable,string executable) { Current=current; Executable=executable; }
             public void Remove(AppInfo app,Installed installed,string executable) { Removed++; }
         }
+        class FakeProcesses : IAppProcessController {
+            public bool Running,Foreign,Graceful=true,Forced=true; public int CloseCalls,ForceCalls;
+            public bool IsRunning(AppInfo app) { return Running; }
+            public bool IsDataInUse(AppInfo app) { return Running || Foreign; }
+            public Task<bool> RequestClose(AppInfo app,CancellationToken token) { token.ThrowIfCancellationRequested(); CloseCalls++; if(Graceful) Running=false; return Task.FromResult(!Running); }
+            public Task<bool> ForceClose(AppInfo app,CancellationToken token) { token.ThrowIfCancellationRequested(); ForceCalls++; if(Forced) Running=false; return Task.FromResult(!Running); }
+        }
         class CatalogHandler : HttpMessageHandler {
             public string Shared; public bool FailShared,FailBranch,MissingHash; public string ManifestUrl="https://github.com/DaddyTylerXO/TMApps/raw/refs/heads/TMA-Mail/dist/TMA-Mail-0.10.0-beta-windows.zip";
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
@@ -57,11 +64,18 @@ namespace TMApps {
             }
             if(!ready()) throw new Exception("UI operation timed out");
         }
+        static void SaveDialog(ThemedDialog dialog,string file) {
+            dialog.UpdateLayout(); var content=(FrameworkElement)dialog.Content;
+            var bitmap=new RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth),(int)Math.Ceiling(content.ActualHeight),96,96,PixelFormats.Pbgra32); bitmap.Render(content);
+            var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using(var output=File.Create(file)) encoder.Save(output);
+        }
         static int count;
         static void Check(bool condition, string label) { if (!condition) throw new Exception(label); count++; Console.WriteLine("PASS " + label); }
         static void Reject(Action action, string label) { try { action(); } catch { count++; Console.WriteLine("PASS " + label); return; } throw new Exception("Expected rejection: " + label); }
         static void Zip(string path, string entry, string contents) { using(var zip = ZipFile.Open(path, ZipArchiveMode.Create)) using(var writer = new StreamWriter(zip.CreateEntry(entry).Open())) writer.Write(contents); }
         [STAThread] public static int Main(string[] args) {
+            if(args.Length==1 && args[0]=="--process-fixture") { Thread.Sleep(30000); return 0; }
             string root = Path.Combine(args[0], "build", "test-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
             try {
                 var catalog = LauncherService.ParseCatalog(File.ReadAllText(Path.Combine(args[0], "catalog.json")));
@@ -186,6 +200,63 @@ namespace TMApps {
                     custom.Uninstall(selected); Check(File.Exists(Path.Combine(other,"keep.txt")) && custom.GetInstalled(selected)==null,"Custom-path uninstall preserves unrelated folders and clears installation state");
                     Check(integration.Removed==1,"App uninstall removes its startup and desktop integration");
                 }
+                var processFixture=new FakeProcesses();
+                var localData=new WindowsAppData(Path.Combine(root,"Local"),Path.Combine(root,"Roaming"));
+                var lifecycleApp=LauncherService.ParseCatalog(original).apps[0];
+                using(var sha=SHA256.Create()) lifecycleApp.sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
+                using(var lifecycle=new LauncherService(Path.Combine(root,"lifecycle"),new PackageHandler { Bytes=handler.Bytes },new RecordingIntegration(),processFixture,localData)) {
+                    int prompts=0;
+                    Check(lifecycle.EnsureClosed(lifecycleApp,force=>{ prompts++; return true; },CancellationToken.None).Result && prompts==0,"Closed apps need no close permission");
+                    processFixture.Running=true;
+                    Check(!lifecycle.EnsureClosed(lifecycleApp,force=>false,CancellationToken.None).Result && processFixture.CloseCalls==0,"Declining close leaves running app untouched");
+                    Reject(()=>lifecycle.Install(lifecycleApp,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Install engine refuses a still-running app");
+                    Check(lifecycle.EnsureClosed(lifecycleApp,force=>true,CancellationToken.None).Result && processFixture.CloseCalls==1 && processFixture.ForceCalls==0,"Approved graceful close needs no forced exit");
+                    processFixture.Running=true; processFixture.Graceful=false;
+                    Check(!lifecycle.EnsureClosed(lifecycleApp,force=>!force,CancellationToken.None).Result && processFixture.Running && processFixture.ForceCalls==0,"Tray app that ignores close is never killed without separate consent");
+                    prompts=0;
+                    Check(lifecycle.EnsureClosed(lifecycleApp,force=>{ prompts++; return true; },CancellationToken.None).Result && prompts==2 && processFixture.ForceCalls==1,"Tray app exits after both close and force-close permissions");
+                    processFixture.Running=true; processFixture.Forced=false;
+                    Reject(()=>lifecycle.EnsureClosed(lifecycleApp,force=>true,CancellationToken.None).GetAwaiter().GetResult(),"Failed forced close blocks the operation");
+                    processFixture.Running=false;
+                    string profile=localData.Locations(lifecycleApp)[0]; Directory.CreateDirectory(profile); File.WriteAllText(Path.Combine(profile,"accounts.txt"),"fixture");
+                    lifecycle.Install(lifecycleApp,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
+                    processFixture.Running=true;
+                    Reject(()=>lifecycle.Uninstall(lifecycleApp,true),"Uninstall engine refuses a running app before touching data");
+                    processFixture.Running=false;
+                    lifecycle.Uninstall(lifecycleApp);
+                    Check(File.Exists(Path.Combine(profile,"accounts.txt")),"Default uninstall retains app accounts and local profile");
+                    lifecycle.Install(lifecycleApp,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
+                    processFixture.Foreign=true;
+                    Reject(()=>lifecycle.Uninstall(lifecycleApp,true),"Other running app copies block shared profile deletion");
+                    Check(lifecycle.GetInstalled(lifecycleApp)!=null && File.Exists(Path.Combine(profile,"accounts.txt")),"Blocked data deletion preserves installed app and data");
+                    processFixture.Foreign=false;
+                    string external=Path.Combine(root,"external-work"); Directory.CreateDirectory(external); File.WriteAllText(Path.Combine(external,"keep.txt"),"keep");
+                    lifecycle.Uninstall(lifecycleApp,true);
+                    Check(!Directory.Exists(profile) && lifecycle.GetInstalled(lifecycleApp)==null && File.Exists(Path.Combine(external,"keep.txt")),"Explicit delete removes only selected standard profile and binaries");
+                    lifecycle.Install(lifecycleApp,new QuietProgress(),CancellationToken.None,profile).GetAwaiter().GetResult();
+                    Reject(()=>lifecycle.Uninstall(lifecycleApp,true),"Overlapping installation and profile folders cannot delete installation state unexpectedly");
+                    lifecycle.Uninstall(lifecycleApp);
+                    var office=LauncherService.ParseCatalog(original).apps[1];
+                    foreach(string folder in localData.Locations(office)) { Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder,"project.txt"),"fixture"); }
+                    localData.Delete(office);
+                    Check(localData.Locations(office).All(folder=>!Directory.Exists(folder)),"Agent Office profile-contained projects are removed only by explicit delete");
+                    Reject(()=>localData.Delete(new AppInfo { id="unknown" }),"Unknown app IDs cannot select data deletion paths");
+                    Check(WindowsAppProcesses.BelongsTo(Path.Combine(root,"managed","version","app.exe"),Path.Combine(root,"managed")) && !WindowsAppProcesses.BelongsTo(Path.Combine(root,"managed-other","app.exe"),Path.Combine(root,"managed")),"Close signals are scoped to the selected managed installation");
+                }
+                string managedProcessRoot=Path.Combine(root,"process-managed"),foreignProcessRoot=Path.Combine(root,"process-foreign");
+                Directory.CreateDirectory(managedProcessRoot); Directory.CreateDirectory(foreignProcessRoot);
+                string fixtureName="TMAppsFixture"+Guid.NewGuid().ToString("N").Substring(0,8)+".exe";
+                string self=System.Reflection.Assembly.GetExecutingAssembly().Location;
+                File.Copy(self,Path.Combine(managedProcessRoot,fixtureName)); File.Copy(self,Path.Combine(foreignProcessRoot,fixtureName));
+                using(var managed=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(managedProcessRoot,fixtureName),"--process-fixture") { UseShellExecute=false,CreateNoWindow=true }))
+                using(var foreign=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(foreignProcessRoot,fixtureName),"--process-fixture") { UseShellExecute=false,CreateNoWindow=true })) {
+                    try {
+                        var controller=new WindowsAppProcesses(app=>managedProcessRoot); var fixtureApp=new AppInfo { executable=fixtureName };
+                        Check(controller.IsRunning(fixtureApp),"Real windowless process is detected, including tray-style background activity");
+                        Check(!controller.RequestClose(fixtureApp,CancellationToken.None).GetAwaiter().GetResult(),"Graceful close cannot silently force a background process");
+                        Check(controller.ForceClose(fixtureApp,CancellationToken.None).GetAwaiter().GetResult() && !foreign.HasExited,"Forced close terminates only the managed copy and preserves same-name external process");
+                    } finally { if(!managed.HasExited) managed.Kill(); if(!foreign.HasExited) foreign.Kill(); managed.WaitForExit(); foreign.WaitForExit(); }
+                }
                 string exe = Path.Combine(standalone,"TMApps-Launcher.exe"); File.Copy(Path.Combine(args[0],"build","TMApps-Launcher.exe"),exe);
                 string report = Path.Combine(standalone,"verification.txt");
                 var start = new System.Diagnostics.ProcessStartInfo(exe, "--verify-package \"" + report + "\"") { WorkingDirectory = standalone, UseShellExecute = false, CreateNoWindow = true };
@@ -257,6 +328,22 @@ namespace TMApps {
                 LauncherApplication.ApplyView(window,"Grid");
                 content.Measure(new Size(1000,640)); content.Arrange(new Rect(0,0,1000,640)); content.UpdateLayout();
                 Check(cards.ActualWidth>0 && cards.Items.Count==2,"Grid template loads at minimum supported width");
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
+                    var dialog=application.Windows.OfType<ThemedDialog>().Single();
+                    SaveDialog(dialog,Path.Combine(args[0],"build","uninstall-preview.png"));
+                    Check(dialog.Body.Children.OfType<RadioButton>().First().IsChecked==true,"Themed uninstall defaults to keeping local data");
+                    dialog.Body.Children.OfType<RadioButton>().Last().IsChecked=true;
+                    dialog.Actions.Children.OfType<Button>().Last().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }));
+                var uninstallChoice=ThemedDialogs.Uninstall(window,uiCatalog.apps[0],new[]{"Fixture profile"});
+                Check(uninstallChoice!=null && uninstallChoice.deleteLocalData,"Themed uninstall returns explicit delete selection");
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
+                    var dialog=application.Windows.OfType<ThemedDialog>().Single();
+                    SaveDialog(dialog,Path.Combine(args[0],"build","install-preview.png"));
+                    Check(((Border)dialog.Content).CornerRadius.TopLeft==20 && dialog.Actions.Children.OfType<Button>().All(b=>b.Template!=null),"Orange-grey modal renders rounded shell and bubble button templates");
+                    dialog.Close();
+                }));
+                Check(application.PromptInstallLocation(uiCatalog.apps[0])==null,"Themed install cancellation starts no operation");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -65,17 +65,21 @@ namespace TMApps {
         public readonly string Root;
         readonly HttpClient http;
         readonly IAppIntegration integration;
+        readonly IAppProcessController processes;
+        readonly IAppDataStore data;
         public string LastIntegrationWarning { get; private set; }
         public string LastRefreshNotice { get; private set; }
         string githubToken;
         public bool HasToken { get { return !String.IsNullOrEmpty(githubToken); } }
         public static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
-        public LauncherService(string root, HttpMessageHandler handler = null, IAppIntegration appIntegration = null) {
+        public LauncherService(string root, HttpMessageHandler handler = null, IAppIntegration appIntegration = null, IAppProcessController appProcesses = null, IAppDataStore appData = null) {
             Root = Path.GetFullPath(root); Directory.CreateDirectory(Root);
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             http = handler == null ? new HttpClient() : new HttpClient(handler); http.Timeout = TimeSpan.FromMinutes(30);
             integration=appIntegration ?? new WindowsAppIntegration();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.5");
+            processes=appProcesses ?? new WindowsAppProcesses(app=>InstallRoot(app,GetInstalled(app)));
+            data=appData ?? new WindowsAppData();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.6");
             try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
         }
         public void SaveToken(string token) {
@@ -231,12 +235,15 @@ namespace TMApps {
             } catch { return null; }
         }
         public string InstalledFolder(AppInfo app, Installed installed) { return Path.Combine(InstallRoot(app,installed), installed.folder); }
-        public bool IsRunning(AppInfo app) {
-            string prefix = InstallRoot(app,GetInstalled(app)) + Path.DirectorySeparatorChar;
-            foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(app.executable))) {
-                using (process) { try { if (process.MainModule.FileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true; } catch { return true; } }
-            }
-            return false;
+        public bool IsRunning(AppInfo app) { return processes.IsRunning(app); }
+        public string[] DataLocations(AppInfo app) { return data.Locations(app); }
+        public async Task<bool> EnsureClosed(AppInfo app, Func<bool,bool> confirm, CancellationToken token) {
+            if(!IsRunning(app)) return true;
+            if(!confirm(false)) return false;
+            if(await processes.RequestClose(app,token)) return true;
+            if(!confirm(true)) return false;
+            if(await processes.ForceClose(app,token)) return true;
+            throw new IOException("The app could not be closed. Close it manually, including its tray icon, and retry.");
         }
         public void Open(AppInfo app) {
             var installed = GetInstalled(app); if (installed == null) throw new IOException("This app is no longer installed. Install it again.");
@@ -305,9 +312,16 @@ namespace TMApps {
                 if (!committed && Directory.Exists(stage)) Directory.Delete(stage, true);
             }
         }
-        public void Uninstall(AppInfo app) {
+        public void Uninstall(AppInfo app, bool deleteLocalData = false) {
             if (IsRunning(app)) throw new IOException("Close " + app.name + " before uninstalling it.");
             var installed=GetInstalled(app); if(installed==null) return;
+            if(deleteLocalData) {
+                if(processes.IsDataInUse(app)) throw new IOException("Another copy of "+app.name+" is running. Close all copies, including tray icons, before deleting local data.");
+                string installation=InstallRoot(app,installed);
+                if(data.Locations(app).Any(folder=>InstallationPaths.Same(folder,installation) || WindowsAppProcesses.BelongsTo(installation,folder) || WindowsAppProcesses.BelongsTo(folder,installation)))
+                    throw new IOException("The installation and data folders overlap. Keep local data during uninstall, then review that folder manually.");
+                data.Delete(app);
+            }
             // Delete only the recorded version folder, never the user-selected parent or unrelated files.
             string executable=Path.Combine(InstalledFolder(app,installed),app.executable);
             Directory.Delete(InstalledFolder(app,installed),true);

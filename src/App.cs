@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -27,9 +27,9 @@ namespace TMApps {
         public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : "02 / YOUR AI TEAM"; } }
         public string UpdatedLabel { get { DateTimeOffset date; return DateTimeOffset.TryParse(Info.updatedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out date) ? date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Date not published"; } }
         public string VersionLabel { get; set; } public string Status { get; set; } public string Detail { get; set; }
-        public string Action { get; set; } public bool CanAct { get; set; } public bool Busy;
+        public string Action { get; set; } public bool CanAct { get; set; } public bool Busy; public bool Removing;
         public CancellationTokenSource Cancellation;
-        public Visibility CancelVisibility { get { return Busy ? Visibility.Visible : Visibility.Collapsed; } }
+        public Visibility CancelVisibility { get { return Busy && !Removing ? Visibility.Visible : Visibility.Collapsed; } }
         public event PropertyChangedEventHandler PropertyChanged;
         public void Changed() { if (PropertyChanged != null) PropertyChanged(this, new PropertyChangedEventArgs(null)); }
     }
@@ -107,7 +107,10 @@ namespace TMApps {
             tray.ContextMenuStrip = menu; tray.DoubleClick += (s,e) => Dispatcher.BeginInvoke(new Action(Restore));
         }
         void Restore() { window.Show(); window.WindowState = WindowState.Normal; window.Activate(); }
-        bool ConfirmExit() { return !apps.Any(a => a.Busy) || MessageBox.Show(window,"An installation is in progress. Cancel it and quit?","Quit TMApps Launcher",MessageBoxButton.YesNo) == MessageBoxResult.Yes; }
+        bool ConfirmExit() {
+            if(apps.Any(a=>a.Removing)) { ThemedDialogs.Info(window,"Uninstall in progress","Please wait until the application has been removed before quitting."); return false; }
+            return !apps.Any(a=>a.Busy) || ThemedDialogs.Confirm(window,"Quit TMApps Launcher","An installation is in progress. Cancel it and quit?","Cancel install and quit");
+        }
         protected override void OnExit(ExitEventArgs e) {
             lifetime.Cancel(); if (apps != null) foreach(var a in apps) if(a.Cancellation != null) a.Cancellation.Cancel();
             if(showRegistration != null) showRegistration.Unregister(null); if(showEvent != null) showEvent.Dispose();
@@ -195,17 +198,16 @@ namespace TMApps {
             app.Busy = true; app.CanAct = false; app.Action = "Please wait…"; app.Status = "INSTALLING"; app.Cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             Render(); Find<Button>("RefreshButton").IsEnabled = false;
             try {
+                if(!await CloseSelectedApp(app, service.GetInstalled(app.Info)==null ? "installing" : "updating")) { app.Detail="Update cancelled."; return; }
                 await service.Install(app.Info, new Progress<string>(value => { app.Detail = value; app.Changed(); }), app.Cancellation.Token,destination,options);
                 app.Detail = "Installed v" + app.Info.version; Notice(service.LastIntegrationWarning ?? (app.Name+" is ready. Select Open app to launch it."));
             } catch (OperationCanceledException) { app.Detail = "Installation cancelled. Your previous version is unchanged."; }
             catch (Exception ex) { app.Detail = "Installation failed. See the message above, then retry."; Notice(app.Name + ": " + ex.Message); }
             finally { app.Busy = false; app.Cancellation.Dispose(); app.Cancellation = null; Render(); Find<Button>("RefreshButton").IsEnabled = !apps.Any(a => a.Busy) && !refreshing; }
         }
-        AppInstallOptions PromptInstallLocation(AppInfo app) {
-            var dialog=new Window { Owner=window,Title="Install "+app.name,Width=620,Height=410,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
-            var panel=new StackPanel { Margin=new Thickness(24) }; dialog.Content=panel;
-            panel.Children.Add(new TextBlock { Text="Install "+app.name,FontSize=23,Margin=new Thickness(0,0,0,12) });
-            panel.Children.Add(new TextBlock { Text="Choose an empty application folder. Future updates will use this location.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,Margin=new Thickness(0,0,0,15) });
+        internal AppInstallOptions PromptInstallLocation(AppInfo app) {
+            var dialog=new ThemedDialog(window,"Install "+app.name,"Choose an empty application folder. Future updates will use this location.");
+            var panel=dialog.Body;
             var line=new DockPanel(); panel.Children.Add(line);
             var location=new TextBox { Text=service.DefaultAppInstallDirectory(app),MinHeight=40 };
             var browse=new Button { Content="Browse…",Margin=new Thickness(8,0,0,0) }; DockPanel.SetDock(browse,Dock.Right); line.Children.Add(browse); line.Children.Add(location);
@@ -217,10 +219,9 @@ namespace TMApps {
             var startup=new CheckBox { Content="Open app on Windows start-up",Foreground=window.Foreground,Margin=new Thickness(0,15,0,7) }; panel.Children.Add(startup);
             var desktop=new CheckBox { Content="Create desktop icon",IsChecked=true,Foreground=window.Foreground,Margin=new Thickness(0,4,0,0) }; panel.Children.Add(desktop);
             var error=new TextBlock { Foreground=Brushes.LightSalmon,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,10,0,0),MinHeight=35 }; panel.Children.Add(error);
-            var actions=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,12,0,0) }; panel.Children.Add(actions);
             AppInstallOptions selected=null;
-            var cancel=new Button { Content="Cancel",Margin=new Thickness(0,0,8,0),IsCancel=true }; cancel.Click+=(s,e)=>dialog.Close(); actions.Children.Add(cancel);
-            var install=new Button { Content="Install",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500"),IsDefault=true }; install.Click+=(s,e)=> { try { selected=new AppInstallOptions { directory=service.ValidateInstallDirectory(app,location.Text),runAtStartup=startup.IsChecked==true,desktopShortcut=desktop.IsChecked==true }; dialog.Close(); } catch(Exception ex) { error.Text=ex.Message; } }; actions.Children.Add(install);
+            dialog.AddAction("Cancel",false,()=>dialog.Close(),"CancelAction").IsCancel=true;
+            dialog.AddAction("Install",true,()=> { try { selected=new AppInstallOptions { directory=service.ValidateInstallDirectory(app,location.Text),runAtStartup=startup.IsChecked==true,desktopShortcut=desktop.IsChecked==true }; dialog.DialogResult=true; } catch(Exception ex) { error.Text=ex.Message; } },"ConfirmAction").IsDefault=true;
             dialog.ShowDialog(); return selected;
         }
         internal static Button ResolveButton(object source) {
@@ -268,12 +269,29 @@ namespace TMApps {
             add("Open application", () => service.Open(app.Info), installed != null && !app.Busy);
             add("View source on GitHub ↗", () => Browse("https://github.com/DaddyTylerXO/TMApps/tree/" + (app.Id=="tma-agent-office" ? "TMA-AgentOffice" : app.Info.branch)), true);
             add("Open installation folder", () => { if (installed != null) System.Diagnostics.Process.Start("explorer.exe", service.InstalledFolder(app.Info, installed)); }, installed != null && !app.Busy);
-            add("Uninstall…", () => {
-                if (MessageBox.Show(window, "Remove " + app.Name + " from this launcher?\n\nYour application accounts, settings, and workspace data will be kept.", "Uninstall application", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes) {
-                    service.Uninstall(app.Info); app.Detail = null; Render(); Notice(service.LastIntegrationWarning ?? (app.Name+" was uninstalled. Application data was kept."));
-                }
-            }, installed != null && !app.Busy);
+            add("Uninstall…", () => Uninstall(app), installed != null && !app.Busy);
             target.ContextMenu = menu; menu.PlacementTarget=target; menu.IsOpen = true;
+        }
+        Task<bool> CloseSelectedApp(AppView app,string operation) {
+            return service.EnsureClosed(app.Info,force=>ThemedDialogs.Confirm(window,
+                force ? "Force close "+app.Name+"?" : "Close "+app.Name+"?",
+                force ? "The app is still running, possibly in the tray. Force closing may lose unsaved work. Allow the launcher to force close it before "+operation+"?" : app.Name+" is running, including possibly in the tray. Save your work first. Allow the launcher to close it before "+operation+"?",
+                force ? "Force close" : "Close app"),app.Cancellation.Token);
+        }
+        async void Uninstall(AppView app) {
+            if(app.Busy) return;
+            var options=ThemedDialogs.Uninstall(window,app.Info,service.DataLocations(app.Info));
+            if(options==null) return;
+            app.Busy=true; app.Removing=true; app.CanAct=false; app.Action="Please wait"; app.Status="UNINSTALLING"; app.Cancellation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); Render();
+            try {
+                if(!await CloseSelectedApp(app,"uninstalling")) { Notice("Uninstall cancelled."); return; }
+                app.Cancellation.Token.ThrowIfCancellationRequested();
+                await Task.Run(()=>service.Uninstall(app.Info,options.deleteLocalData));
+                app.Detail=null;
+                Notice(service.LastIntegrationWarning ?? (app.Name+" was uninstalled. Local data was "+(options.deleteLocalData ? "deleted." : "kept.")));
+            } catch(OperationCanceledException) { Notice("Uninstall cancelled."); }
+            catch(Exception ex) { ThemedDialogs.Info(window,"Could not uninstall "+app.Name,ex.Message); Notice(ex.Message); }
+            finally { app.Busy=false; app.Removing=false; app.Cancellation.Dispose(); app.Cancellation=null; Render(); }
         }
         void Settings() {
             var original=LauncherService.Json.Deserialize<Preferences>(LauncherService.Json.Serialize(preferences));
