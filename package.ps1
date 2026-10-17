@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.2')
+param([string]$OutputDirectory = 'build\v0.15.3')
 $ErrorActionPreference = 'Stop'
 $out = Join-Path $PSScriptRoot $OutputDirectory
 $stage = Join-Path $PSScriptRoot ('build\package-' + [guid]::NewGuid().ToString('N'))
@@ -9,7 +9,7 @@ foreach ($file in @('README.md','SETUP.md','CHANGELOG.md','THIRD_PARTY.md')) { C
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $out 'Sounds') -Destination $stage -Recurse
 foreach ($file in @('PLUGINS.md','PORTABILITY.md','example.tmaplugin.json','update.json')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $stage }
-$archive = Join-Path $out 'TMA-Mail-0.15.2-beta-windows.zip'
+$archive = Join-Path $out 'TMA-Mail-0.15.3-beta-windows.zip'
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
 $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -LiteralPath ($archive + '.sha256') -Value ($hash + '  ' + [IO.Path]::GetFileName($archive)) -Encoding ascii

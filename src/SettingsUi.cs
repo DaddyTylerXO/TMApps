@@ -349,7 +349,7 @@ namespace Postbox {
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);
                 updated.NotifyReceived = received.IsChecked == true; updated.NotifySent = sent.IsChecked == true; updated.ReceiveSound = Value(receiveSound); updated.SendSound = Value(sendSound); updated.ReceiveWavePath = receivePath.Text; updated.SendWavePath = sendPath.Text;
                 updated.NotificationAddress = notifyAddress.IsChecked == true; updated.NotificationSubject = notifySubject.IsChecked == true; updated.UnreadBadge = unreadBadge.IsChecked == true;
-                if (reminderOptionGroups.Count > 0) { updated.CalendarReminders = reminderOptionGroups[0][0].IsChecked == true; updated.CalendarReminderPopup = reminderOptionGroups[0][1].IsChecked == true; updated.CalendarReminderDesktop = reminderOptionGroups[0][2].IsChecked == true; } if (calendarSyncToggle != null) updated.CalendarProviderSync = calendarSyncToggle.IsChecked == true;
+                if (reminderOptionGroups.Count > 0) { updated.CalendarReminders = reminderOptionGroups[0][0].IsChecked == true; updated.CalendarReminderPopup = reminderOptionGroups[0][1].IsChecked == true; updated.CalendarReminderDesktop = reminderOptionGroups[0][2].IsChecked == true; } if (calendarSoundChoice != null) { updated.CalendarReminderSound = Value(calendarSoundChoice); updated.CalendarReminderWavePath = calendarSoundPath.Text; } if (calendarSyncToggle != null) updated.CalendarProviderSync = calendarSyncToggle.IsChecked == true;
                 updated.SpellCheckEnabled = spell.IsChecked == true; updated.SpellLanguage = Value(language); updated.Normalize();
                 editing.DisplayName = updated.DisplayName; editing.ComposeFont = updated.ComposeFont; editing.ComposeFontSize = updated.ComposeFontSize; editing.SpellCheckEnabled = updated.SpellCheckEnabled; editing.SpellLanguage = updated.SpellLanguage;
                 return updated;
@@ -367,7 +367,7 @@ namespace Postbox {
             save.Click += delegate {
                 var updated = readControls();
                 if (!String.IsNullOrWhiteSpace(updated.EmailAddress)) { try { updated.EmailAddress = WelcomeFlow.ValidateEmail(updated.EmailAddress); } catch (FormatException) { status.Text = "Enter a valid email address, or leave it empty for demo mode."; status.Foreground = Brush("#BC4343"); return; } }
-                if ((updated.ReceiveSound == "Custom WAV" && !ValidWave(updated.ReceiveWavePath)) || (updated.SendSound == "Custom WAV" && !ValidWave(updated.SendWavePath))) { status.Text = "Select an existing, playable WAV file for each custom sound."; status.Foreground = Brush("#BC4343"); return; }
+                if ((updated.ReceiveSound == "Custom WAV" && !ValidWave(updated.ReceiveWavePath)) || (updated.SendSound == "Custom WAV" && !ValidWave(updated.SendWavePath)) || (updated.CalendarReminderSound == "Custom WAV" && !ValidWave(updated.CalendarReminderWavePath))) { status.Text = "Select an existing, playable WAV file for each custom sound."; status.Foreground = Brush("#BC4343"); return; }
                 bool startupChanged = updated.LaunchWithWindows != previewSession.Original.LaunchWithWindows;
                 try {
                     if (startupChanged || updated.LaunchWithWindows) SetWindowsStartup(updated.LaunchWithWindows);

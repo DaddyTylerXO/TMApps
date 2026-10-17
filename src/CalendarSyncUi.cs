@@ -40,18 +40,42 @@ namespace Postbox {
             root.Children.Add(Label("Connect a provider calendar", 23, "Text")); root.Children.Add(Label("Outlook/Google ask for calendar consent in your browser. iCloud uses an app-specific password. Connections are saved encrypted for your Windows user. Newly created events upload only when Calendar sync is enabled.", 12, "Muted"));
             var provider = Choice(root, "Provider", activeAccount == null || !new[] { "Microsoft", "Gmail", "iCloud" }.Contains(activeAccount.Provider) ? "iCloud" : activeAccount.Provider, new[] { "Microsoft", "Gmail", "iCloud" });
             var email = TextField(root, "iCloud email address", activeAccount != null && activeAccount.Provider == "iCloud" ? activeAccount.Email : "", false); FieldLabel(root, "iCloud app-specific password (leave blank to use this mailbox's saved app password)"); var password = new PasswordBox { Padding = new Thickness(10), Margin = new Thickness(0, 4, 0, 12) }; root.Children.Add(password);
-            var status = Label("", 12, "Muted"); root.Children.Add(status); var discover = Action("Sign in and list calendars", true); root.Children.Add(discover); var choices = new ListBox { MaxHeight = 180, Margin = new Thickness(0, 12, 0, 12) }; root.Children.Add(choices); var add = Action("Add selected calendar", true); add.IsEnabled = false; root.Children.Add(add);
-            var cancellation = new CancellationTokenSource(); dialog.Closed += delegate { cancellation.Cancel(); }; Action showFields = delegate { bool apple = Value(provider) == "iCloud"; email.IsEnabled = password.IsEnabled = apple; choices.ItemsSource = null; add.IsEnabled = false; }; provider.SelectionChanged += delegate { showFields(); }; showFields();
+            var status = Label("", 12, "Muted"); root.Children.Add(status); var discover = Action("Sign in and list calendars", true); root.Children.Add(discover);
+            root.Children.Add(Label("Choose calendars to add", 14, "Text"));
+            var choices = UiPolish.CalendarChoices(); choices.Margin = new Thickness(0, 8, 0, 12); root.Children.Add(choices);
+            var selectionActions = new WrapPanel(); root.Children.Add(selectionActions); var selectAll = Action("Select all", false); var clear = Action("Clear selection", false); selectionActions.Children.Add(selectAll); selectionActions.Children.Add(clear);
+            var selectedCount = Label("No calendars selected", 12, "Muted"); root.Children.Add(selectedCount);
+            var add = Action("Add selected calendars", true); var addAll = Action("Add all calendars", false); root.Children.Add(add); root.Children.Add(addAll);
+            bool busy = false; Action updateSelection = delegate { int count = choices.SelectedItems.Count; selectedCount.Text = count + " of " + choices.Items.Count + " calendars selected"; add.IsEnabled = !busy && count > 0; addAll.IsEnabled = selectAll.IsEnabled = clear.IsEnabled = !busy && choices.Items.Count > 0; };
+            choices.SelectionChanged += delegate { updateSelection(); }; selectAll.Click += delegate { choices.SelectAll(); }; clear.Click += delegate { choices.UnselectAll(); };
+            var cancellation = new CancellationTokenSource(); dialog.Closed += delegate { cancellation.Cancel(); }; Action showFields = delegate { bool apple = Value(provider) == "iCloud"; email.IsEnabled = password.IsEnabled = apple; choices.ItemsSource = null; updateSelection(); }; provider.SelectionChanged += delegate { showFields(); }; showFields();
             discover.Click += async delegate {
-                if (offlinePreview) { status.Text = "Provider connections are disabled in the offline preview."; return; } discover.IsEnabled = false; add.IsEnabled = false;
+                if (offlinePreview) { status.Text = "Provider connections are disabled in the offline preview."; return; } busy = true; discover.IsEnabled = provider.IsEnabled = choices.IsEnabled = false; choices.ItemsSource = null; updateSelection();
                 try {
                     var login = new MailAccount { Id = Guid.NewGuid().ToString("N"), Provider = Value(provider) };
                     if (login.Provider == "iCloud") { login.Email = WelcomeFlow.ValidateEmail(email.Text); login.Password = password.Password; if (String.IsNullOrEmpty(login.Password)) { var saved = mailAccounts.FirstOrDefault(a => a.Provider == "iCloud" && String.Equals(a.Email, login.Email, StringComparison.OrdinalIgnoreCase)); if (saved != null) login.Password = saved.Password; } if (String.IsNullOrEmpty(login.Password)) throw new ArgumentException("Enter an iCloud app-specific password."); }
                     else await ProviderLogin.SignIn(login, ProviderConfiguration.Load(), cancellation.Token, true);
-                    using (var client = new CalendarProviderClient(login)) { var found = await client.Discover(); cancellation.Token.ThrowIfCancellationRequested(); choices.ItemsSource = found; choices.SelectedIndex = 0; add.IsEnabled = found.Count > 0; status.Text = found.Count + " calendars found. Select one to add; read-only calendars can be viewed but cannot receive new events."; }
-                } catch (OperationCanceledException) { } catch (Exception ex) { status.Text = "Calendar connection failed: " + ex.Message; } finally { discover.IsEnabled = true; }
+                    using (var client = calendarClientFactory(login)) { var found = await client.Discover(); cancellation.Token.ThrowIfCancellationRequested(); choices.ItemsSource = found; status.Text = found.Count + " calendars found. Select any number or add all; read-only calendars can be viewed but cannot receive new events."; }
+                } catch (OperationCanceledException) { } catch (Exception ex) { status.Text = "Calendar connection failed: " + ex.Message; } finally { busy = false; discover.IsEnabled = provider.IsEnabled = choices.IsEnabled = true; updateSelection(); }
             };
-            add.Click += async delegate { var source = choices.SelectedItem as CalendarSource; if (source == null) return; add.IsEnabled = false; await calendarGate.WaitAsync(); bool added = false; try { await EnsureCalendars(); var existing = calendarSources.FirstOrDefault(c => c.Provider == source.Provider && c.Email == source.Email && c.RemoteId == source.RemoteId); if (existing != null) { existing.Login = source.Login; existing.Writable = source.Writable; existing.Name = source.Name; existing.RemoteUrl = source.RemoteUrl; selectedCalendarId = existing.Id; source = existing; } else { calendarSources.Add(source); added = true; selectedCalendarId = source.Id; } await SaveCalendars(); dialog.Close(); RenderCalendarMonth(); } catch (Exception ex) { if (added) calendarSources.Remove(source); status.Text = ex.Message; } finally { calendarGate.Release(); add.IsEnabled = true; } await SynchronizeCalendar(source, true); };
+            Func<List<CalendarSource>, Task> addCalendars = async selected => {
+                if (busy || selected.Count == 0) return; busy = true; discover.IsEnabled = provider.IsEnabled = choices.IsEnabled = false; updateSelection();
+                var connected = new List<CalendarSource>(); await calendarGate.WaitAsync(); List<CalendarSource> previous = null;
+                try {
+                    await EnsureCalendars(); previous = calendarSources.ToList();
+                    foreach (var source in selected) {
+                        var existing = calendarSources.FirstOrDefault(c => c.Provider == source.Provider && String.Equals(c.Email, source.Email, StringComparison.OrdinalIgnoreCase) && c.RemoteId == source.RemoteId);
+                        if (existing != null) { source.Id = existing.Id; source.Ics = existing.Ics; source.Pending = existing.Pending; source.UploadedIds = existing.UploadedIds; calendarSources[calendarSources.IndexOf(existing)] = source; }
+                        else calendarSources.Add(source);
+                        connected.Add(source);
+                    }
+                    await SaveCalendars(); selectedCalendarId = connected.Count > 1 ? "__all" : connected[0].Id; dialog.Close(); RenderCalendarMonth();
+                } catch (Exception ex) { if (previous != null) calendarSources = previous; status.Text = "Calendars could not be added: " + ex.Message; connected.Clear(); }
+                finally { calendarGate.Release(); busy = false; discover.IsEnabled = provider.IsEnabled = choices.IsEnabled = true; updateSelection(); }
+                foreach (var source in connected) await SynchronizeCalendar(source, true);
+            };
+            add.Click += async delegate { await addCalendars(choices.SelectedItems.Cast<CalendarSource>().ToList()); };
+            addAll.Click += async delegate { await addCalendars(choices.Items.Cast<CalendarSource>().ToList()); };
             dialog.ShowDialog();
         }
     }

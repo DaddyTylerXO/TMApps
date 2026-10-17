@@ -2,6 +2,15 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.3 beta — 17 October 2026
+
+- Replace the white provider calendar discovery list with rounded green rows, readable names, checkboxes, and read-only/writable labels.
+- Add selection counts, Select all, Clear selection, Add selected calendars, and Add all calendars. Connect and download multiple calendars together, then show All Calendars.
+- Reconnecting known calendars preserves their cached events, pending uploads and uploaded-event identities. Save the group together and restore the previous list on save failure.
+- Theme the reminder list and actions in green. Apply Dismiss/Snooze/Dismiss all immediately with selection-aware buttons, saved state, error rollback and visible confirmation.
+- Add a Calendar reminder sound setting with seven cozy choices, None, Custom WAV and preview. Sound once per due reminder batch and again after snoozing; keep mail sound choices independent. Desktop calendar reminders use the existing branded mail banner and are disabled by default for new settings.
+- Extend synthetic UI tests for green list rows, multiple selection, adding all calendars, deduplication, read-only access, queued-event preservation and downloads without provider writes.
+
 ## 0.15.2 beta — 17 October 2026
 
 - Add All Calendars to the calendar list, combining events from every calendar while keeping event creation targeted to a writable calendar. Sync downloads all connected calendars in the combined view.

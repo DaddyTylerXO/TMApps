@@ -51,6 +51,8 @@ namespace Postbox {
         public bool CalendarReminders { get; set; }
         public bool CalendarReminderPopup { get; set; }
         public bool CalendarReminderDesktop { get; set; }
+        public string CalendarReminderSound { get; set; }
+        public string CalendarReminderWavePath { get; set; }
         public bool CalendarProviderSync { get; set; }
         public double MailToolbarHeight { get; set; }
         public List<FastFunction> FastFunctions { get; set; }
@@ -79,7 +81,7 @@ namespace Postbox {
         public string ReplySignatureId { get; set; }
         public Preferences() {
             CalendarMonday = true;
-            CalendarReminders = true; CalendarReminderPopup = true; CalendarReminderDesktop = true; MailToolbarHeight = 176; FastFunctions = new List<FastFunction>();
+            CalendarReminderSound = "Cozy"; CalendarReminderWavePath = ""; CalendarReminders = true; CalendarReminderPopup = true; CalendarReminderDesktop = false; MailToolbarHeight = 176; FastFunctions = new List<FastFunction>();
             NotificationAddress = true; NotificationSubject = true; UnreadBadge = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
@@ -117,6 +119,8 @@ namespace Postbox {
             if (!new[] { "Left", "Top", "Right", "Bottom" }.Contains(NavigationEdge)) NavigationEdge = "Left";
             if (!new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive" }.Contains(StartupFolder)) StartupFolder = "Inbox";
             if (!new[] { "en-GB", "en-US", "fr-FR", "de-DE", "es-ES" }.Contains(SpellLanguage)) SpellLanguage = "en-GB";
+            if (!SoundCatalog.Choices.Contains(CalendarReminderSound)) CalendarReminderSound = "Cozy";
+            CalendarReminderWavePath = CalendarReminderWavePath ?? "";
             if (!SoundCatalog.Choices.Contains(ReceiveSound)) ReceiveSound = "Cozy";
             if (new[] { "Notification", "Chime", "Exclamation" }.Contains(SendSound)) SendSound = "Cozy";
             if (!SoundCatalog.Choices.Contains(SendSound)) SendSound = "None";
