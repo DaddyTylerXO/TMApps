@@ -9,11 +9,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Postbox {
-    public sealed class MailAnalyticRow { public string Name { get; set; } public int Count { get; set; } }
+    public sealed class MailAnalyticRow { public string Name { get; set; } public string Key { get; set; } public int Count { get; set; } }
     public static class MailAnalytics {
         public static List<MailAnalyticRow> Top(IEnumerable<Message> messages, bool senders) {
             return messages.Where(m => m.Folder == "Inbox").GroupBy(m => senders ? (m.Address ?? "").Trim() : Regex.Replace((m.Subject ?? "(No subject)").Trim(), @"\s+", " "), StringComparer.OrdinalIgnoreCase)
-                .Select(g => new MailAnalyticRow { Name = String.IsNullOrWhiteSpace(g.Key) ? (senders ? "Unknown sender" : "(No subject)") : g.Key, Count = g.Count() })
+                .Select(g => new MailAnalyticRow { Key = g.Key, Name = String.IsNullOrWhiteSpace(g.Key) ? (senders ? "Unknown sender" : "(No subject)") : g.Key, Count = g.Count() })
                 .OrderByDescending(r => r.Count).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase).Take(10).ToList();
         }
     }
@@ -162,23 +162,6 @@ namespace Postbox {
                     if (existing == null) preferences.FastFunctions.Add(function); settingsStore.Save(preferences); RenderFastFunctions(); dialog.Close();
                 } catch (Exception ex) { status.Text = ex.Message; }
             }; dialog.ShowDialog();
-        }
-        private void ShowMailAnalytics() {
-            var account = activeAccount; var dialog = Dialog("Mail Analytics · TMA-Mail", 860, 730); var panel = new StackPanel { Margin = new Thickness(24) }; dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            var cancellation = new System.Threading.CancellationTokenSource(); dialog.Closed += delegate { cancellation.Cancel(); };
-            panel.Children.Add(Label("Mail Analytics", 24, "Text")); panel.Children.Add(Label(account == null ? "Sample mailbox" : account.Email, 14, "Muted"));
-            var status = Label("Preparing inbox analytics…", 12, "Muted"); panel.Children.Add(status); var results = new StackPanel(); panel.Children.Add(results); var refresh = Action("Refresh Analytics", true); panel.Children.Add(refresh);
-            Func<Task> render = async delegate {
-                refresh.IsEnabled = false; try {
-                    status.Text = account == null ? "Reading sample Inbox…" : "Scanning Inbox headers…";
-                    var snapshot = account == null ? store.Messages.Where(m => m.Folder == "Inbox").Select(m => new Message { Folder = "Inbox", Subject = m.Subject, Address = m.Address }).ToList() : await Task.Run(() => new MailTransport(account, accountStore).InboxAnalytics((done, total) => Dispatcher.BeginInvoke(new Action(delegate { if (!cancellation.IsCancellationRequested) status.Text = "Scanning Inbox headers · " + done + " / " + total; })), cancellation.Token));
-                    if (cancellation.IsCancellationRequested) return;
-                    var groups = await Task.Run(() => new[] { MailAnalytics.Top(snapshot, false), MailAnalytics.Top(snapshot, true) });
-                    results.Children.Clear(); for (int section = 0; section < 2; section++) { results.Children.Add(Label(section == 0 ? "Top 10 repeated subjects" : "Top 10 sender email addresses", 18, "Text")); foreach (var row in groups[section]) { var line = new DockPanel { Margin = new Thickness(0, 4, 0, 10) }; var count = Label(row.Count.ToString(), 14, "SidebarAccent"); count.FontWeight = FontWeights.Bold; count.Width = 65; DockPanel.SetDock(count, Dock.Right); line.Children.Add(count); line.Children.Add(Label(row.Name, 13, "Text")); results.Children.Add(line); } }
-                    status.Text = "Based on " + snapshot.Count + " " + (account == null ? "sample" : "server") + " Inbox emails. Subjects are grouped ignoring case and extra spaces; reply/forward prefixes stay distinct.";
-                } catch (OperationCanceledException) { } catch (Exception ex) { status.Text = "Analytics unavailable: " + ex.Message; } finally { refresh.IsEnabled = true; }
-            };
-            refresh.Click += async delegate { await render(); }; dialog.Loaded += async delegate { await render(); }; dialog.ShowDialog();
         }
     }
 }

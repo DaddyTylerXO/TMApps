@@ -24,9 +24,9 @@ namespace Postbox {
                 var inbox = client.Inbox; inbox.Open(FolderAccess.ReadOnly, cancellation); int total = inbox.Count;
                 for (int start = 0; start < total; start += 250) {
                     cancellation.ThrowIfCancellationRequested();
-                    foreach (var summary in inbox.Fetch(start, Math.Min(start + 249, total - 1), MessageSummaryItems.Envelope, cancellation)) {
+                    foreach (var summary in inbox.Fetch(start, Math.Min(start + 249, total - 1), MessageSummaryItems.Envelope | MessageSummaryItems.UniqueId, cancellation)) {
                         var sender = summary.Envelope == null ? null : summary.Envelope.From.Mailboxes.FirstOrDefault();
-                        messages.Add(new Message { Folder = "Inbox", Subject = summary.Envelope == null ? "(No subject)" : summary.Envelope.Subject, Address = sender == null ? "" : sender.Address });
+                        messages.Add(new Message { Id = account.Id + ":" + inbox.FullName + ":" + inbox.UidValidity + ":" + summary.UniqueId.Id, AccountId = account.Id, RemoteUid = summary.UniqueId.Id, RemoteFolder = inbox.FullName, UidValidity = inbox.UidValidity, Folder = "Inbox", Subject = summary.Envelope == null ? "(No subject)" : summary.Envelope.Subject, Address = sender == null ? "" : sender.Address });
                     }
                     if (progress != null) progress(Math.Min(start + 250, total), total);
                 }

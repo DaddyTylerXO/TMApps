@@ -62,7 +62,7 @@ class SuiteFeaturesTests {
         list.SelectedItem = null; list.SelectedItem = message; Check(message.Unread && liveAccount.Folders[0].Unread == 20, "Opening mail marked it read by default");
         prefs.AutoMarkRead = true; list.SelectedItem = null; list.SelectedItem = message; Check(!message.Unread && liveAccount.Folders[0].Unread == 19 && ((Button)window.FindName("InboxNav")).Content.ToString().Contains("19"), "Auto read did not update live unread count");
         Call(app, "ToggleSelectedRead"); Check(message.Unread && liveAccount.Folders[0].Unread == 20, "Mark unread did not update live count");
-        Check(window.TaskbarItemInfo.Overlay == null && window.TaskbarItemInfo.Description.Contains("20 unread"), "Unread icon did not reflect mailbox count");
+        Check(window.TaskbarItemInfo.Overlay != null && window.TaskbarItemInfo.Description.Contains("20 unread") && window.Icon is System.Windows.Media.Imaging.BitmapFrame, "Unread icon did not reflect mailbox count");
         liveAccount.Folders[0].Unread = 120; Call(app, "UpdateNavigationLabels"); Check(window.TaskbarItemInfo.Description.Contains("120 unread") && (int)Get(app, "lastUnreadBadge") == 120, "Large unread count missing");
         prefs.UnreadBadge = false; Call(app, "ApplyPreferences"); Check(window.TaskbarItemInfo.Overlay == null, "Disabling badge kept taskbar overlay"); prefs.UnreadBadge = true;
         liveAccount.Folders[0].Unread = 0; Call(app, "UpdateNavigationLabels"); Check(window.TaskbarItemInfo.Overlay == null, "Zero unread count kept badge");

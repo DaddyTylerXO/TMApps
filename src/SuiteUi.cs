@@ -21,16 +21,17 @@ namespace Postbox {
             int count = !preferences.UnreadBadge ? 0 : mailAccounts != null && mailAccounts.Count > 0 ? mailAccounts.Sum(a => a.Folders == null ? 0 : a.Folders.Where(f => f.LocalName == "Inbox").Select(f => Math.Max(0, f.Unread)).DefaultIfEmpty(0).Max()) : store == null ? 0 : store.Messages.Count(m => m.Folder == "Inbox" && m.Unread);
             if (count == lastUnreadBadge) return; lastUnreadBadge = count;
             if (window.TaskbarItemInfo == null) window.TaskbarItemInfo = new TaskbarItemInfo();
+            window.Icon = AppBrand.Logo();
             if (count == 0) { window.Icon = AppBrand.Logo(); window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail"; return; }
             string number = count > 99 ? "99+" : count.ToString(CultureInfo.InvariantCulture);
-            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 48, 208, 208)); DrawUnreadCircle(draw, number, 256, 0, 42); }
-            var icon = new RenderTargetBitmap(256, 256, 96, 96, PixelFormats.Pbgra32); icon.Render(visual); icon.Freeze(); window.Icon = icon;
-            window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
+            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { DrawUnreadCircle(draw, number, 64, 0, 32); }
+            var badge = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32); badge.Render(visual); badge.Freeze();
+            window.TaskbarItemInfo.Overlay = badge; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
         }
         private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
-            double width = text.Length > 2 ? 112 : 84; x -= width;
-            draw.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(231, 49, 67)), new Pen(Theme.B("Surface"), 6), new Rect(x + 3, y + 3, width - 6, radius * 2 - 6), radius, radius);
-            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? radius * 0.9 : radius * 1.15, Brushes.White, 1.0);
+            double width = 64; x -= width;
+            draw.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(231, 49, 67)), new Pen(Theme.B("Surface"), 3), new Rect(x + 2, y + 2, width - 4, radius * 2 - 4), radius, radius);
+            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? 26 : text.Length > 1 ? 34 : 40, Brushes.White, 1.0);
             draw.DrawText(label, new Point(x + width / 2 - label.Width / 2, y + radius - label.Height / 2));
         }
         private void InitializeSuiteUi() {

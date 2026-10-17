@@ -271,6 +271,7 @@ namespace Postbox {
             var signReply = Toggle(profile, "Add signature to replies and forwards", preferences.SignatureOnReplies);
             profile.Children.Add(Label("Existing drafts keep their content. Your signature is inserted above quoted messages.", 11, "#8793A7")); Tab(tabs, "Profile & signature", profile);
             var appearance = SettingsSection("Your workspace", "Preview changes immediately. Save keeps them; Cancel restores your previous settings.");
+            var appearanceBadge = Toggle(appearance, "Show unread notification badge on the taskbar", preferences.UnreadBadge);
             var autoRead = Toggle(appearance, "Automatically mark messages as read when I open them", preferences.AutoMarkRead);
             var autoImages = Toggle(appearance, "Load email pictures automatically", preferences.AutoLoadImages);
             appearance.Children.Add(Label("External pictures contact the image server. Turn this off to load them only when you choose Load images.", 11, "Muted"));
@@ -308,6 +309,7 @@ namespace Postbox {
             var notifyAddress = Toggle(notifications, "Show sender / recipient address in banners", preferences.NotificationAddress);
             var notifySubject = Toggle(notifications, "Show email subject in banners", preferences.NotificationSubject);
             var unreadBadge = Toggle(notifications, "Show unread inbox count on the running app icon (all mailboxes)", preferences.UnreadBadge);
+            bool syncingBadge = false; RoutedEventHandler mirrorBadge = delegate(object sender, RoutedEventArgs e) { if (syncingBadge) return; syncingBadge = true; try { if (sender == appearanceBadge) unreadBadge.IsChecked = appearanceBadge.IsChecked; else appearanceBadge.IsChecked = unreadBadge.IsChecked; } finally { syncingBadge = false; } }; appearanceBadge.Checked += mirrorBadge; appearanceBadge.Unchecked += mirrorBadge; unreadBadge.Checked += mirrorBadge; unreadBadge.Unchecked += mirrorBadge;
             AddReminderOptions(notifications);
             notifications.Children.Add(Label("The badge appears on the Windows taskbar/app icon, capped at 99+. Desktop shortcuts keep the standard logo.", 11, "Muted"));
             string[] sounds = SoundCatalog.Choices;

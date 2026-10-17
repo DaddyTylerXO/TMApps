@@ -2,6 +2,14 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.0 beta — 17 October 2026
+
+- Keep the application logo at full size and use a separate native Windows taskbar overlay for unread counts, capped at 99+. Add the badge toggle to Appearance and mirror it with Notifications.
+- Open Mailbox Management on an overview with Mailbox Subscriptions and Mailbox Analytics choices. Switch pages within the same window; show subscription scan/select/unsubscribe controls only on its page. Analytics scanning starts only after Scan Mailbox is chosen.
+- Put analytics section titles on green rounded backgrounds. Select all matches by subject or sender, move/delete a result's complete group, or combine selections across groups. Review counts and destinations before applying changes; Delete moves to Trash. Full server Inbox header scans retain UIDs/UIDVALIDITY so actions cover uncached emails as well.
+- Include a macOS/Linux migration plan, source audit and acceptance gates in PORTABILITY.md. This release remains Windows-only.
+- Extend synthetic checks for the management overview, same-window page changes, manual scanning, green headings, group-action controls, and mirrored badge settings/full-size icon preservation. Live server bulk operations and platform ports are not exercised by these tests.
+
 ## 0.14.1 beta - 17 October 2026
 
 - Added optional local name and email-suggestion sync from TMApps Launcher 1.8.0, at startup and while Mail runs.
