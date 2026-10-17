@@ -162,13 +162,24 @@ namespace Postbox {
             ClearConnectionDetails();
             cancellation = new CancellationTokenSource(); cancellation.CancelAfter(TimeSpan.FromMinutes(5));
             status.Text = "Finish signing in, then we’ll connect your mailbox…";
-            try { var value = await prepare(cancellation.Token); cancellation.Token.ThrowIfCancellationRequested(); value.Validate(); status.Text = "Connecting your mailbox…"; await connect(value, cancellation.Token); Connected = true; busy = false; Close(); }
+            bool authenticated = false;
+            try { var value = await prepare(cancellation.Token); cancellation.Token.ThrowIfCancellationRequested(); value.Validate(); authenticated = true; status.Text = "Connecting your mailbox…"; await connect(value, cancellation.Token); Connected = true; busy = false; Close(); }
             catch (OperationCanceledException) { status.Text = "Sign-in cancelled. You can try again whenever you’re ready."; }
-            catch (Microsoft.Identity.Client.MsalException) { status.Text = "Outlook couldn’t finish signing in. Try again, or check the provider setup guide."; }
+            catch (Microsoft.Identity.Client.MsalException ex) { MicrosoftConnectionError(ex, authenticated); }
             catch (MailKit.Security.SslHandshakeException ex) { ConnectionError("We couldn’t establish a secure connection. Check Windows date/time and your network, then try again. Connection details are available below.", ex); }
             catch (MailKit.Security.AuthenticationException ex) { ConnectionError("Your email provider couldn’t verify the sign-in. Check the email address and app-specific password, or sign in again.", ex); }
             catch (Exception ex) { string reason = ex.Message.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Please try again."; if (reason.Length > 180) reason = reason.Substring(0, 180) + "…"; ConnectionError("We couldn’t connect: " + reason, ex); }
             finally { busy = false; cancellation.Dispose(); cancellation = null; form.IsEnabled = true; back.IsEnabled = true; if (closeAfterCancel && !Connected) Close(); }
+        }
+        private void MicrosoftConnectionError(Microsoft.Identity.Client.MsalException error, bool authenticated) {
+            // Keep identifiers useful for support without exposing token responses, callback URLs or credentials.
+            string code = new string((error.ErrorCode ?? "unknown").Where(c => Char.IsLetterOrDigit(c) || c == '_' || c == '-').Take(100).ToArray());
+            string aad = System.Text.RegularExpressions.Regex.Match(error.Message ?? "", @"AADSTS[0-9]+").Value;
+            string stage = authenticated ? "renewing the Outlook session while connecting the mailbox" : "finishing Microsoft browser authentication";
+            string hint = aad == "AADSTS7000218" ? "Microsoft treated the request as a confidential client. Check the app's mobile/desktop platform and public-client configuration; do not add a client secret to this desktop app." : aad == "AADSTS50011" ? "Microsoft rejected the reply address. Check that the registered mobile/desktop redirect is http://localhost." : code == "access_denied" || aad == "AADSTS65001" ? "Microsoft did not grant the requested access. Check the consent result and any organization approval requirements." : "The browser completion page confirms the callback arrived; Microsoft token validation or mailbox connection may still fail. Report the codes below so the cause can be identified.";
+            var service = error as Microsoft.Identity.Client.MsalServiceException;
+            string details = "Stage: " + stage + "\nMSAL error: " + code + (aad == "" ? "" : "\nMicrosoft error: " + aad) + (service == null ? "" : "\nHTTP status: " + service.StatusCode) + (String.IsNullOrEmpty(error.CorrelationId) ? "" : "\nCorrelation ID: " + error.CorrelationId) + "\n" + hint;
+            ConnectionError("Outlook sign-in failed (" + (aad == "" ? code : aad) + "). Open connection details below.", new InvalidOperationException(details));
         }
         private void ClearConnectionDetails() { detailsButton.Visibility = Visibility.Collapsed; detailsButton.Content = "Show connection details"; connectionDetails.Visibility = Visibility.Collapsed; connectionDetails.Text = ""; }
         private void ConnectionError(string message, Exception error) {

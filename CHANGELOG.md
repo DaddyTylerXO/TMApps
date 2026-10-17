@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.5 beta — 17 October 2026
+
+- Show MSAL/Microsoft error codes and a connection-details button for Outlook failures after browser authentication. Distinguish the browser/token step from session renewal during mailbox connection.
+- Include only diagnostic identifiers, stage, HTTP status and targeted hints; omit raw Microsoft messages, token responses and callback URLs. Keep failed setup open for review/retry without adding an incomplete account.
+- Add a synthetic post-authentication failure regression that verifies actionable error codes and excludes fake token/callback values. The reported live failure still requires its actual error code for a confirmed fix.
+
 ## 0.15.4 beta — 17 October 2026
 
 - Bundle TMA-Mail’s Microsoft public client ID so Outlook setup offers Continue with Outlook and uses the existing MSAL system-browser sign-in flow. Register the desktop localhost redirect and delegated IMAP, SMTP and calendar permissions; users consent to their own account access.

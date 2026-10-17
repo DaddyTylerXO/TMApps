@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.4')
+param([string]$OutputDirectory = 'build\v0.15.5')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -36,6 +36,7 @@ Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join
 if ($LASTEXITCODE -ne 0) { throw 'Connection checks failed.' }
 $providerArguments = @('/nologo', '/target:exe', ('/out:' + (Join-Path $out 'ProviderSetupTests.exe')), ('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
 $providerArguments += '/reference:' + (Join-Path $out 'MailKit.dll')
+$providerArguments += '/reference:' + (Join-Path $out 'Microsoft.Identity.Client.dll')
 foreach ($reference in @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')) { $providerArguments += '/reference:' + (Join-Path $framework $reference) }
 $providerArguments += Join-Path $PSScriptRoot 'tests\ProviderSetupTests.cs'
 & (Join-Path $framework 'csc.exe') @providerArguments

@@ -73,6 +73,14 @@ class ProviderSetupTests {
         Descendants<Button>(failed).Single(b => b.Content as string == "Show connection details").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(Descendants<TextBox>(failed).Any(t => Name(t) == "Technical connection details" && t.IsReadOnly && t.Height == 140 && t.Text.Length > 1200), "Optional connection details were not bounded and readable");
         failed.ShowPicker(); Check(!Descendants<TextBox>(failed).Any(), "Back did not clear connection error details"); failed.Close();
+        var oauthFailure = new AccountSetupWindow(null, config, delegate(MailAccount value, CancellationToken token) { throw new Microsoft.Identity.Client.MsalServiceException("invalid_client", "AADSTS7000218: rejected. access_token=synthetic-private-token&code=synthetic-private-code"); }, delegate { }, "Microsoft");
+        var oauthAccount = ProviderChoices.Account("Microsoft"); oauthAccount.Email = "synthetic@hotmail.com"; oauthAccount.AuthMethod = "OAuth";
+        var runConnection = typeof(AccountSetupWindow).GetMethod("RunConnection", BindingFlags.NonPublic | BindingFlags.Instance);
+        ((Task)runConnection.Invoke(oauthFailure, new object[] { new Func<CancellationToken, Task<MailAccount>>(token => Task.FromResult(oauthAccount)) })).GetAwaiter().GetResult();
+        Check(!oauthFailure.Connected && Descendants<TextBlock>(oauthFailure).Any(t => t.Text.Contains("AADSTS7000218")), "Microsoft token failure still hidden behind generic sign-in message");
+        Descendants<Button>(oauthFailure).Single(b => b.Content as string == "Show connection details").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        string oauthDetails = Descendants<TextBox>(oauthFailure).Single(t => Name(t) == "Technical connection details").Text;
+        Check(oauthDetails.Contains("invalid_client") && oauthDetails.Contains("while connecting") && !oauthDetails.Contains("synthetic-private"), "Microsoft diagnostic lost stage/code or exposed token/callback data"); oauthFailure.Close();
         var ready = new AccountSetupWindow(null, config, fake, delegate { }, "Microsoft");
         Check(Descendants<Button>(ready).Any(b => b.Content as string == "Continue with Outlook") && !Descendants<TextBox>(ready).Any(), "Configured Outlook has no simple sign-in action"); ready.Close();
         var bundled = ProviderConfiguration.Load();
