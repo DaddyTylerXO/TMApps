@@ -1,0 +1,36 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Postbox;
+class CalendarProviderTests {
+    static int checks;
+    static void Check(bool value, string name) { if (!value) throw new Exception(name); checks++; }
+    static void Reject(Action action, string name) { bool rejected = false; try { action(); } catch { rejected = true; } Check(rejected, name); }
+    sealed class Handler : HttpMessageHandler {
+        public Queue<string> Replies = new Queue<string>(); public List<string> Methods = new List<string>(); public List<string> Bodies = new List<string>(); public List<string> Urls = new List<string>(); public string Match; public HttpStatusCode Status = HttpStatusCode.OK; public Uri Redirect;
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) { Methods.Add(request.Method.Method); Urls.Add(request.RequestUri.AbsoluteUri); Bodies.Add(request.Content == null ? "" : await request.Content.ReadAsStringAsync()); Match = request.Headers.IfNoneMatch.FirstOrDefault() == null ? null : request.Headers.IfNoneMatch.First().Tag; var response = new HttpResponseMessage(Status) { Content = new StringContent(Replies.Count > 0 ? Replies.Dequeue() : "{}") }; response.Headers.Location = Redirect; return response; }
+    }
+    static void Main() {
+        string ics = CalendarImport.CreateEvent("Planning", new DateTime(2026, 10, 20, 9, 0, 0), new DateTime(2026, 10, 20, 10, 0, 0), "Studio", "Daily", 3, false, 4, 10);
+        foreach (string provider in new[] { "Microsoft", "Gmail" }) {
+            var handler = new Handler(); var login = new MailAccount { Provider = provider, Email = "calendar@example.com", AccessToken = "synthetic" }; var source = new CalendarSource { RemoteId = "personal", Login = login, Provider = provider };
+            using (var client = new CalendarProviderClient(login, handler)) {
+                client.Upload(source, ics).GetAwaiter().GetResult(); string body = handler.Bodies.Last(); Check(handler.Methods.Last() == "POST" && body.Contains("Planning") && body.Contains("Studio"), provider + " event payload missing");
+                Check(provider == "Gmail" ? body.Contains("INTERVAL=4") && body.Contains("\"minutes\":10") : body.Contains("\"interval\":4") && body.Contains("\"reminderMinutesBeforeStart\":10"), provider + " recurrence or reminder missing");
+                string idBody = body; client.Upload(source, ics).GetAwaiter().GetResult(); Check(idBody == handler.Bodies.Last(), provider + " retries changed stable event identity");
+                string allDay = CalendarImport.CreateEvent("Day off", new DateTime(2026, 10, 22), new DateTime(2026, 10, 23), "", "None", 1, true, 1, 0); client.Upload(source, allDay).GetAwaiter().GetResult(); body = handler.Bodies.Last(); Check(provider == "Gmail" ? body.Contains("\"date\":\"2026-10-22\"") : body.Contains("\"isAllDay\":true"), provider + " all-day event not exported");
+                handler.Replies.Enqueue(provider == "Gmail" ? "{\"items\":[{\"id\":\"test\",\"summary\":\"Imported day\",\"start\":{\"date\":\"2026-10-22\"},\"end\":{\"date\":\"2026-10-23\"},\"reminders\":{\"overrides\":[{\"minutes\":15}]}}]}" : "{\"value\":[{\"id\":\"test\",\"subject\":\"Imported day\",\"isAllDay\":true,\"start\":{\"dateTime\":\"2026-10-22T00:00:00\",\"timeZone\":\"UTC\"},\"end\":{\"dateTime\":\"2026-10-23T00:00:00\",\"timeZone\":\"UTC\"},\"isReminderOn\":true,\"reminderMinutesBeforeStart\":15}]}" );
+                string fetched = client.Read(source, new DateTime(2026, 10, 1)).GetAwaiter().GetResult(); var entries = CalendarImport.Month(new[] { new CalendarSource { Id = "test", Ics = fetched } }, new DateTime(2026, 10, 1)); Check(entries.Count == 1 && entries[0].AllDay && entries[0].ReminderMinutes == 15, provider + " calendar read lost all-day or alarm");
+            }
+        }
+        var apple = new Handler(); apple.Replies.Enqueue("<d:multistatus xmlns:d='DAV:'><d:response><d:propstat><d:prop><d:current-user-principal><d:href>https://p01-caldav.icloud.com/123/principal/</d:href></d:current-user-principal></d:prop></d:propstat></d:response></d:multistatus>"); apple.Replies.Enqueue("<d:multistatus xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'><d:response><d:propstat><d:prop><c:calendar-home-set><d:href>/123/calendars/</d:href></c:calendar-home-set></d:prop></d:propstat></d:response></d:multistatus>"); apple.Replies.Enqueue("<d:multistatus xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'><d:response><d:href>/123/calendars/personal/</d:href><d:propstat><d:prop><d:displayname>Personal</d:displayname><d:resourcetype><c:calendar/></d:resourcetype><d:current-user-privilege-set><d:privilege><d:write/></d:privilege></d:current-user-privilege-set></d:prop></d:propstat></d:response></d:multistatus>");
+        using (var client = new CalendarProviderClient(new MailAccount { Provider = "iCloud", Email = "synthetic@icloud.com", Password = "synthetic" }, apple)) { var calendars = client.Discover().GetAwaiter().GetResult(); Check(calendars.Count == 1 && calendars[0].Writable && calendars[0].Name == "Personal", "CalDAV discovery failed"); apple.Replies.Enqueue("<d:multistatus xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'><d:response><d:propstat><d:prop><c:calendar-data><![CDATA[" + ics + "]]></c:calendar-data></d:prop></d:propstat></d:response></d:multistatus>"); Check(client.Read(calendars[0], new DateTime(2026, 10, 1)).GetAwaiter().GetResult().Contains("Planning"), "CalDAV REPORT lost event"); client.Upload(calendars[0], ics).GetAwaiter().GetResult(); Check(apple.Methods.Last() == "PUT" && apple.Match == "*" && apple.Bodies.Last().Contains("BEGIN:VTIMEZONE") && apple.Bodies.Last().Contains("SUMMARY:Planning"), "CalDAV create was not conditional PUT"); }
+        Reject(() => CalendarProviderClient.CheckedEndpoint("https://example.com/calendar", "iCloud"), "Apple credentials could reach non-Apple server"); Reject(() => CalendarProviderClient.CheckedEndpoint("https://graph.microsoft.com.evil.example/events", "Microsoft"), "Graph host check bypassed");
+        var redirect = new Handler { Status = HttpStatusCode.Redirect, Redirect = new Uri("https://evil.example/calendars") }; using (var client = new CalendarProviderClient(new MailAccount { Provider = "iCloud", Email = "a@icloud.com", Password = "synthetic" }, redirect)) Reject(() => client.Discover().GetAwaiter().GetResult(), "CalDAV followed credential redirect to another host"); Check(redirect.Methods.Count == 1, "Credentials were sent after invalid redirect");
+        Console.WriteLine("Passed " + checks + " calendar provider checks with intercepted HTTP only. No real account sign-in, calendar read or write occurred.");
+    }
+}

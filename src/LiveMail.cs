@@ -53,7 +53,7 @@ namespace Postbox {
             Status(account.Email + " · " + FolderDisplayName(folder));
             if (!syncedAccounts.Contains(account.Id) && syncTimer != null) QueueMailSync(account.Id);
         }
-        private string FolderDisplayName(string key) { var value = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == key); return value == null ? key : value.Name; }
+        private string FolderDisplayName(string key) { if (new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash", "Starred" }.Contains(key)) return key; var value = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == key); return value == null ? key : value.Name; }
         private TaskCompletionSource<bool> syncCompletion;
         private readonly HashSet<Task> cacheWrites = new HashSet<Task>();
         private bool closingCache, cacheCloseReady;

@@ -23,14 +23,13 @@ namespace Postbox {
             if (window.TaskbarItemInfo == null) window.TaskbarItemInfo = new TaskbarItemInfo();
             if (count == 0) { window.Icon = AppBrand.Logo(); window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail"; return; }
             string number = count > 99 ? "99+" : count.ToString(CultureInfo.InvariantCulture);
-            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 0, 64, 64)); DrawUnreadCircle(draw, number, 45, 45, 19); }
+            var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) { draw.DrawImage(AppBrand.Logo(), new Rect(0, 0, 64, 64)); DrawUnreadCircle(draw, number, 40, 24, 24); }
             var icon = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32); icon.Render(visual); icon.Freeze(); window.Icon = icon;
-            var overlayVisual = new DrawingVisual(); using (var draw = overlayVisual.RenderOpen()) DrawUnreadCircle(draw, number, 16, 16, 16);
-            var overlay = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32); overlay.Render(overlayVisual); overlay.Freeze(); window.TaskbarItemInfo.Overlay = overlay; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
+            window.TaskbarItemInfo.Overlay = null; window.TaskbarItemInfo.Description = "TMA-Mail · " + count + " unread inbox messages";
         }
         private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
             draw.DrawEllipse(new SolidColorBrush(Color.FromRgb(231, 49, 67)), null, new Point(x, y), radius, radius);
-            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? radius * 0.78 : radius, Brushes.White, 1.0);
+            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? radius * 0.9 : radius * 1.15, Brushes.White, 1.0);
             draw.DrawText(label, new Point(x - label.Width / 2, y - label.Height / 2));
         }
         private void InitializeSuiteUi() {
@@ -41,8 +40,11 @@ namespace Postbox {
             var toolbar = (Panel)Find<Button>("DeleteButton").Parent;
             var toolbarHost = (DockPanel)toolbar.Parent; var star = Find<Button>("StarButton"); toolbarHost.Children.Remove(star); DockPanel.SetDock(star, Dock.Right); toolbarHost.Children.Insert(0, star);
             foreach (string label in new[] { "↶ Reply", "↶ Reply all", "↪ Forward", "⚑ Follow up", "▦ Categorise", "▧ Print", "⇩ Save .eml", "▦ Apps" }) {
-                string action = label; var button = Action(label, false); button.Padding = new Thickness(10, 7, 10, 7); button.Margin = new Thickness(2); button.Click += delegate { RunMailboxAction(action, button); }; toolbar.Children.Add(button);
+                string action = label; var button = Action(label, false); button.VerticalAlignment = VerticalAlignment.Center; button.Padding = new Thickness(10, 7, 10, 7); button.Margin = new Thickness(2); button.Click += delegate { RunMailboxAction(action, button); }; toolbar.Children.Add(button);
             }
+            InitializeExtendedMailUi(toolbar, toolbarHost);
+            StartCalendarReminders();
+            StartCalendarProviderTimer();
         }
         private void RunMailboxAction(string action, Button anchor) {
             if (action == "▦ Apps") { ShowPluginMenu(anchor); return; }

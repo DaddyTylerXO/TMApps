@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.11.0')
+param([string]$OutputDirectory = 'build\v0.12.0')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -6,14 +6,14 @@ $compiler = Join-Path $framework 'csc.exe'
 $out = Join-Path $root $OutputDirectory
 & (Join-Path $root 'restore.ps1')
 New-Item -ItemType Directory -Path $out -Force | Out-Null
-$references = @('System.dll', 'System.Core.dll', 'System.Windows.Forms.dll', 'System.Drawing.dll', 'System.Xaml.dll', 'System.Web.Extensions.dll', 'WPF\System.Speech.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
+$references = @('System.dll', 'System.Core.dll', 'System.Xml.dll', 'System.Xml.Linq.dll', 'System.Windows.Forms.dll', 'System.Drawing.dll', 'System.Xaml.dll', 'System.Web.Extensions.dll', 'WPF\System.Speech.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
 $arguments = @('/nologo', '/target:winexe', '/optimize+', ('/out:' + (Join-Path $out 'TMA-Mail.exe')))
 $arguments += '/win32icon:' + (Join-Path $root 'assets\TMA-Mail.ico')
 $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mail.ico'
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
 $arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
 foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
-foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions','ExtendedMail','CalendarReminders','CalendarProviders','CalendarSyncUi')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net461') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }

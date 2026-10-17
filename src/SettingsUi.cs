@@ -120,6 +120,7 @@ namespace Postbox {
             UpdateConnectionLamp();
             Find<Button>("AccountTop").ToolTip = preferences.DisplayName + " · Account connections";
             ApplyNavigation();
+            if (mailToolbarContainer != null) mailToolbarContainer.Height = preferences.MailToolbarHeight; RenderFastFunctions();
             ApplyInboxLayout(); if (htmlReader != null) htmlReader.SetImagePolicy(preferences.AutoLoadImages);
             if (richReader != null) richReader.FontSize = preferences.TextSize;
             if (calendarPage != null && calendarPage.Visibility == Visibility.Visible) RenderCalendarMonth();
@@ -241,17 +242,19 @@ namespace Postbox {
             FieldLabel(panel, label); var choice = new ComboBox { ItemsSource = options, SelectedItem = value, Padding = new Thickness(8), FontSize = 13, MinHeight = 34 }; panel.Children.Add(choice); return choice;
         }
         private static string Value(ComboBox combo) { return combo.SelectedItem as string; }
-        private static void Tab(TabControl tabs, string title, StackPanel content) { tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(8, 6, 8, 6), Width = 130 }, Content = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
+        private static void Tab(TabControl tabs, string title, StackPanel content) { tabs.Items.Add(new TabItem { Header = new TextBlock { Text = title, Margin = new Thickness(8, 6, 8, 6), Width = 130 }, Content = new ScrollViewer { Background = Theme.B("Surface"), Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } }); }
 
         private void ShowSettings(string section = "Accounts") {
+            reminderOptionGroups.Clear();
             var previewSession = new SettingsPreview(settingsStore, preferences);
             var editing = settingsStore.Clone(preferences); editing.Normalize();
             bool committed = false;
             var dialog = Dialog("Settings · TMA-Mail", 900, 760); dialog.MinWidth = 780; dialog.MinHeight = 620;
             var layout = new Grid(); dialog.Content = layout;
             layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var heading = new Border { Background = Theme.B("Surface"), Padding = new Thickness(26, 20, 26, 10) }; var headingText = Label("TMA-Mail  /  Settings", 23, "Text"); heading.Child = headingText; layout.Children.Add(heading);
-            var tabs = new TabControl { TabStripPlacement = Dock.Left, BorderThickness = new Thickness(0), Background = Theme.B("Surface") }; Grid.SetRow(tabs, 1); layout.Children.Add(tabs);
+            var heading = new Border { Background = Brush("#0D2419"), Padding = new Thickness(26, 20, 26, 10) }; var headingText = Label("TMA-Mail  /  Settings", 23, "#FFFFFF"); heading.Child = headingText; layout.Children.Add(heading);
+            var tabs = new TabControl { TabStripPlacement = Dock.Left, BorderThickness = new Thickness(0), Background = Brush("#0D2419") }; Grid.SetRow(tabs, 1); layout.Children.Add(tabs);
+            tabs.Resources[typeof(TabItem)] = (Style)XamlReader.Parse("<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='TabItem'><Setter Property='Foreground' Value='White'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='TabItem'><Border Name='pill' Background='#28503A' CornerRadius='15' Margin='2,3' Padding='13,8'><ContentPresenter ContentSource='Header'/></Border><ControlTemplate.Triggers><Trigger Property='IsSelected' Value='True'><Setter TargetName='pill' Property='Background' Value='#3A8C5E'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>");
             Tab(tabs, "Accounts", AccountsSettings(dialog));
             var profile = SettingsSection("Make it yours", "Set the name and signature used for messages you compose.");
             var name = TextField(profile, "Display name", preferences.DisplayName, false);
@@ -292,6 +295,7 @@ namespace Postbox {
             var notifyAddress = Toggle(notifications, "Show sender / recipient address in banners", preferences.NotificationAddress);
             var notifySubject = Toggle(notifications, "Show email subject in banners", preferences.NotificationSubject);
             var unreadBadge = Toggle(notifications, "Show unread inbox count on the running app icon (all mailboxes)", preferences.UnreadBadge);
+            AddReminderOptions(notifications);
             notifications.Children.Add(Label("The badge appears on the Windows taskbar/app icon, capped at 99+. Desktop shortcuts keep the standard logo.", 11, "Muted"));
             string[] sounds = SoundCatalog.Choices;
             var receiveSound = Choice(notifications, "Incoming mail sound", preferences.ReceiveSound, sounds);
@@ -330,6 +334,7 @@ namespace Postbox {
                 updated.LaunchWithWindows = login.IsChecked == true; updated.StartMinimized = minimized.IsChecked == true; updated.StartMaximized = maximized.IsChecked == true; updated.CloseToTray = closeTray.IsChecked == true; updated.StartupFolder = Value(startupFolder);
                 updated.NotifyReceived = received.IsChecked == true; updated.NotifySent = sent.IsChecked == true; updated.ReceiveSound = Value(receiveSound); updated.SendSound = Value(sendSound); updated.ReceiveWavePath = receivePath.Text; updated.SendWavePath = sendPath.Text;
                 updated.NotificationAddress = notifyAddress.IsChecked == true; updated.NotificationSubject = notifySubject.IsChecked == true; updated.UnreadBadge = unreadBadge.IsChecked == true;
+                if (reminderOptionGroups.Count > 0) { updated.CalendarReminders = reminderOptionGroups[0][0].IsChecked == true; updated.CalendarReminderPopup = reminderOptionGroups[0][1].IsChecked == true; updated.CalendarReminderDesktop = reminderOptionGroups[0][2].IsChecked == true; } if (calendarSyncToggle != null) updated.CalendarProviderSync = calendarSyncToggle.IsChecked == true;
                 updated.SpellCheckEnabled = spell.IsChecked == true; updated.SpellLanguage = Value(language); updated.Normalize();
                 editing.DisplayName = updated.DisplayName; editing.ComposeFont = updated.ComposeFont; editing.ComposeFontSize = updated.ComposeFontSize; editing.SpellCheckEnabled = updated.SpellCheckEnabled; editing.SpellLanguage = updated.SpellLanguage;
                 return updated;
@@ -352,7 +357,7 @@ namespace Postbox {
                 try {
                     if (startupChanged || updated.LaunchWithWindows) SetWindowsStartup(updated.LaunchWithWindows);
                     try { settingsStore.Save(updated); } catch { if (startupChanged) SetWindowsStartup(previewSession.Original.LaunchWithWindows); throw; }
-                    preferences = updated; committed = true; ApplyPreferences(); dialog.Close(); Status("Settings saved · startup choices apply on next launch");
+                    preferences = updated; calendarSyncCommitted = updated.CalendarProviderSync; committed = true; ApplyPreferences(); dialog.Close(); Status("Settings saved · startup choices apply on next launch");
                 } catch (Exception ex) { status.Text = "Could not save: " + ex.Message; status.Foreground = Brush("#BC4343"); }
             };
             tabs.SelectedIndex = section == "Accounts" ? 0 : section == "Calendar" ? 6 : section == "Plugins" ? 7 : section == "App Info" ? 8 : 1; if (section == "Name") dialog.Loaded += delegate { name.Focus(); name.SelectAll(); };

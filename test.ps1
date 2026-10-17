@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.11.0')
+param([string]$OutputDirectory = 'build\v0.12.0')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -67,5 +67,23 @@ $suiteArguments += Join-Path $PSScriptRoot 'tests\SuiteFeaturesTests.cs'
 & (Join-Path $framework 'csc.exe') @suiteArguments
 if($LASTEXITCODE -ne 0) { throw 'Suite test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'SuiteFeaturesTests.exe.config') -Force
-& (Join-Path $out 'SuiteFeaturesTests.exe') --data-dir (Join-Path $out ('test-data\suite-' + [guid]::NewGuid().ToString()))
+& (Join-Path $out 'SuiteFeaturesTests.exe') --data-dir (Join-Path $out ('test-data\suite-' + [guid]::NewGuid().ToString())) --offline-preview
 if($LASTEXITCODE -ne 0) { throw 'Workspace-suite tests failed.' }
+
+$calendarArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'CalendarProviderTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach($reference in @('System.dll','System.Core.dll','System.Net.Http.dll')) { $calendarArguments += '/reference:' + (Join-Path $framework $reference) }
+$calendarArguments += Join-Path $PSScriptRoot 'tests\CalendarProviderTests.cs'
+& (Join-Path $framework 'csc.exe') @calendarArguments
+if($LASTEXITCODE -ne 0) { throw 'Calendar provider test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'CalendarProviderTests.exe.config') -Force
+& (Join-Path $out 'CalendarProviderTests.exe')
+if($LASTEXITCODE -ne 0) { throw 'Calendar provider tests failed.' }
+
+$calendarUiArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'CalendarUiTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach($reference in @('System.dll','System.Core.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $calendarUiArguments += '/reference:' + (Join-Path $framework $reference) }
+$calendarUiArguments += Join-Path $PSScriptRoot 'tests\CalendarUiTests.cs'
+& (Join-Path $framework 'csc.exe') @calendarUiArguments
+if($LASTEXITCODE -ne 0) { throw 'Calendar UI test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'CalendarUiTests.exe.config') -Force
+& (Join-Path $out 'CalendarUiTests.exe') --data-dir (Join-Path $out ('test-data\calendar-ui-' + [guid]::NewGuid().ToString())) --offline-preview
+if($LASTEXITCODE -ne 0) { throw 'Calendar UI tests failed.' }

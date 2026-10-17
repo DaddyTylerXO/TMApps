@@ -33,7 +33,7 @@ class ProviderSetupTests {
         var msal = typeof(ProviderLogin).GetMethod("MicrosoftClient", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { microsoft });
         Check(msal != null, "Microsoft authentication dependency load");
         var gmail = ProviderChoices.Account("Gmail"); gmail.ClientId = config.GmailClientId; gmail.ClientSecret = config.GmailDesktopClientSecret;
-        var google = (IDisposable)typeof(ProviderLogin).GetMethod("GoogleFlow", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { gmail }); google.Dispose();
+        var google = (IDisposable)typeof(ProviderLogin).GetMethod("GoogleFlow", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { gmail, false }); google.Dispose();
         Check(google != null, "Google PKCE authentication dependency load");
         Check(ProviderChoices.Account("iCloud").ImapHost == "imap.mail.me.com" && ProviderChoices.Account("iCloud").SmtpHost == "smtp.mail.me.com", "iCloud preset");
         gmail.AuthMethod = "OAuth"; gmail.Email = "test@gmail.com"; gmail.Validate(); Check(ProviderLogin.UsesOAuth(gmail), "Gmail OAuth incorrectly required a password");

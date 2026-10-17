@@ -7,6 +7,7 @@ using System.Web.Script.Serialization;
 using System.Net.Mail;
 
 namespace Postbox {
+    public class FastFunction { public string Name { get; set; } public string Action { get; set; } public string Destination { get; set; } public string AccountId { get; set; } }
     public class MailSignature {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -40,6 +41,12 @@ namespace Postbox {
         public bool NotificationAddress { get; set; }
         public bool NotificationSubject { get; set; }
         public bool UnreadBadge { get; set; }
+        public bool CalendarReminders { get; set; }
+        public bool CalendarReminderPopup { get; set; }
+        public bool CalendarReminderDesktop { get; set; }
+        public bool CalendarProviderSync { get; set; }
+        public double MailToolbarHeight { get; set; }
+        public List<FastFunction> FastFunctions { get; set; }
         public string ReceiveSound { get; set; }
         public string SendSound { get; set; }
         public string ReceiveWavePath { get; set; }
@@ -62,6 +69,7 @@ namespace Postbox {
         public string ReplySignatureId { get; set; }
         public Preferences() {
             CalendarMonday = true;
+            CalendarReminders = true; CalendarReminderPopup = true; CalendarReminderDesktop = true; MailToolbarHeight = 148; FastFunctions = new List<FastFunction>();
             NotificationAddress = true; NotificationSubject = true; UnreadBadge = true;
             AutoLoadImages = true; NavigationWidth = 224; InboxWidth = 365; InboxHeight = 260; FolderAppearances = new Dictionary<string, FolderAppearance>();
             DisplayName = "Tyler"; Signature = ""; SignatureOnNew = true; SignatureOnReplies = true;
@@ -73,6 +81,8 @@ namespace Postbox {
             InboxEdge = "Left"; SpotifyPlacement = "Off"; Signatures = new List<MailSignature>(); SignatureTemplates = new List<MailSignature>();
         }
         public void Normalize() {
+            if (Double.IsNaN(MailToolbarHeight) || Double.IsInfinity(MailToolbarHeight)) MailToolbarHeight = 148; MailToolbarHeight = Math.Max(88, Math.Min(300, MailToolbarHeight));
+            FastFunctions = (FastFunctions ?? new List<FastFunction>()).Where(f => f != null && !String.IsNullOrWhiteSpace(f.Name)).Take(24).ToList();
             DisplayName = String.IsNullOrWhiteSpace(DisplayName) ? "Tyler" : DisplayName.Trim();
             EmailAddress = (EmailAddress ?? "").Trim();
             Signature = Signature ?? "";

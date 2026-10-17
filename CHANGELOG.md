@@ -2,6 +2,17 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.12.0 beta — 17 October 2026
+
+- Enlarge the red unread icon badge and remove the simultaneous Windows overlay drawing; keep 99+ and zero/disabled clearing behavior.
+- Remove native white DatePicker text borders. Add All day with cleared/disabled times, named calendar selection/creation, custom Every recurrence intervals, and preset/custom reminder offsets.
+- Add a calendar selector before the month/year. Connect Outlook/Google calendar access separately from mail, or discover iCloud calendars through CalDAV/app-specific passwords. Gate provider reads/uploads behind a saved opt-in setting; keep queued events locally after errors. Read provider events and upload new all-day/recurring/reminder events. Add local calendar exports and copying local events to a connected provider. Existing provider-event editing/deletion and meeting invitations are not supported.
+- Add persistent in-app and desktop reminders, enabled by default while the app runs, with shared Calendar/Notifications controls, snooze, dismiss and dismiss-all.
+- Add double-click mail pop-outs with captured message/account context and green action bars. Expand right-click mail options with copy, print, reply, reply all, forward, follow-up, categories, read/star and filing actions. Normalize Inbox display casing.
+- Add horizontal/vertical overflow and a draggable lower edge to resize the main action bar. Add account-specific Fast Functions with named move/read/star/reply/flag/category buttons and removal menus.
+- Apply forest-green header/rail and green selected tabs to Settings while retaining neutral content backgrounds.
+- Extend synthetic workspace, provider-transport and actual editor/reminder integration checks. Provider requests are intercepted; no live calendar writes, unsubscribe requests or email sends are performed by tests.
+
 ## 0.11.0 beta — 17 October 2026
 
 - Add a slim rounded green progress bar below subscription scan counts, showing progress through the current folder and completing when scanning finishes.

@@ -38,19 +38,19 @@ namespace Postbox {
             account.Email = WelcomeFlow.ValidateEmail(result.Account.Username); account.UserName = account.Email;
             account.AccessToken = result.AccessToken; account.ExpiresUtc = result.ExpiresOn.UtcDateTime.AddSeconds(-90); account.AuthMethod = "OAuth";
         }
-        private static PkceGoogleAuthorizationCodeFlow GoogleFlow(MailAccount account) {
-            return new PkceGoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer { ClientSecrets = new ClientSecrets { ClientId = account.ClientId, ClientSecret = account.ClientSecret }, Scopes = GmailScopes, Prompt = "consent select_account", DataStore = null });
+        private static PkceGoogleAuthorizationCodeFlow GoogleFlow(MailAccount account, bool calendar = false) {
+            return new PkceGoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer { ClientSecrets = new ClientSecrets { ClientId = account.ClientId, ClientSecret = account.ClientSecret }, Scopes = calendar ? new[] { "openid", "email", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly" } : GmailScopes, Prompt = "consent select_account", DataStore = null });
         }
-        public static async Task SignIn(MailAccount account, ProviderConfiguration config, CancellationToken cancellation) {
+        public static async Task SignIn(MailAccount account, ProviderConfiguration config, CancellationToken cancellation, bool calendar = false) {
             if (!config.Ready(account.Provider)) throw new InvalidOperationException("Provider sign-in has not been enabled for this build yet.");
             if (account.Provider == "Microsoft") {
                 account.ClientId = config.OutlookClientId;
                 var client = MicrosoftClient(account);
-                var result = await client.AcquireTokenInteractive(OutlookScopes).WithUseEmbeddedWebView(false).WithPrompt(Prompt.SelectAccount).ExecuteAsync(cancellation).ConfigureAwait(false);
+                var result = await client.AcquireTokenInteractive(calendar ? new[] { "https://graph.microsoft.com/Calendars.ReadWrite" } : OutlookScopes).WithUseEmbeddedWebView(false).WithPrompt(Prompt.SelectAccount).ExecuteAsync(cancellation).ConfigureAwait(false);
                 ApplyMicrosoft(account, result);
             } else if (account.Provider == "Gmail") {
                 account.ClientId = config.GmailClientId; account.ClientSecret = config.GmailDesktopClientSecret;
-                using (var flow = GoogleFlow(account)) {
+                using (var flow = GoogleFlow(account, calendar)) {
                     var credential = await new AuthorizationCodeInstalledApp(flow, new LocalServerCodeReceiver()).AuthorizeAsync(Guid.NewGuid().ToString("N"), cancellation).ConfigureAwait(false);
                     if (String.IsNullOrEmpty(credential.Token.RefreshToken)) throw new InvalidOperationException("Google did not grant ongoing access. Please try signing in again and approve mail access.");
                     var identity = await GoogleJsonWebSignature.ValidateAsync(credential.Token.IdToken, new GoogleJsonWebSignature.ValidationSettings { Audience = new[] { account.ClientId } }).ConfigureAwait(false);
@@ -61,16 +61,16 @@ namespace Postbox {
                 }
             } else throw new ArgumentException("Choose Outlook or Gmail for browser sign-in.");
         }
-        public static void Refresh(MailAccount account) {
+        public static void Refresh(MailAccount account, bool calendar = false) {
             if (account.ExpiresUtc > DateTime.UtcNow) return;
             if (account.Provider == "Microsoft") {
                 // Keep existing 0.7 device-code connections working after upgrading.
-                if (String.IsNullOrEmpty(account.AuthCache)) { MicrosoftLogin.Refresh(account); return; }
+                if (String.IsNullOrEmpty(account.AuthCache)) { if (calendar) throw new InvalidOperationException("Reconnect calendar access."); MicrosoftLogin.Refresh(account); return; }
                 var client = MicrosoftClient(account); var identity = client.GetAccountsAsync().GetAwaiter().GetResult().FirstOrDefault();
                 if (identity == null) throw new InvalidOperationException("Please reconnect Outlook from Accounts.");
-                ApplyMicrosoft(account, client.AcquireTokenSilent(OutlookScopes, identity).ExecuteAsync().GetAwaiter().GetResult());
+                ApplyMicrosoft(account, client.AcquireTokenSilent(calendar ? new[] { "https://graph.microsoft.com/Calendars.ReadWrite" } : OutlookScopes, identity).ExecuteAsync().GetAwaiter().GetResult());
             } else if (account.Provider == "Gmail" && account.AuthMethod == "OAuth") {
-                using (var flow = GoogleFlow(account)) {
+                using (var flow = GoogleFlow(account, calendar)) {
                     var token = flow.RefreshTokenAsync(account.Id, account.RefreshToken, CancellationToken.None).GetAwaiter().GetResult();
                     account.AccessToken = token.AccessToken; if (!String.IsNullOrEmpty(token.RefreshToken)) account.RefreshToken = token.RefreshToken;
                     account.ExpiresUtc = DateTime.UtcNow.AddSeconds((token.ExpiresInSeconds ?? 3600) - 90);
