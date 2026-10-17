@@ -2,6 +2,10 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.8 beta — 17 October 2026
+
+- Add a green question-mark help button beside the Google app-password option and password field. Hover shows 'How to get app specific password?'; clicking opens Google's official app-password guide.
+
 ## 0.15.7 beta — 17 October 2026
 
 - Keep Google desktop OAuth configuration local and preserve the Google app-specific password option. Public packaging uses only the public provider configuration and refuses a nonempty Google OAuth client secret.

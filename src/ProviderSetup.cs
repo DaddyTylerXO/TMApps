@@ -86,10 +86,21 @@ namespace Postbox {
             form.Children.Add(new TextBlock { Text = title, FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = Theme.B("Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12) });
             form.Children.Add(new TextBlock { Text = subtitle, FontSize = 13, Foreground = Theme.B("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 24) });
         }
-        private void AddAction(string label, Action action, bool primary) {
+        private void AddAction(string label, Action action, bool primary, bool googlePasswordHelp = false) {
             var button = new Button { Content = label, Padding = new Thickness(18, 12, 18, 12), Margin = new Thickness(0, 12, 0, 0), HorizontalContentAlignment = HorizontalAlignment.Center };
             if (primary) { button.Background = Theme.B("Accent"); button.Foreground = Brushes.White; }
-            button.Click += delegate { try { action(); } catch (Exception ex) { status.Text = ex.Message; } }; form.Children.Add(button);
+            button.Click += delegate { try { action(); } catch (Exception ex) { status.Text = ex.Message; } };
+            if (googlePasswordHelp) {
+                var row = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 12, 0, 0) }; button.Margin = new Thickness(0);
+                var help = GooglePasswordHelp(); DockPanel.SetDock(help, Dock.Right); row.Children.Add(help); row.Children.Add(button); form.Children.Add(row);
+            } else form.Children.Add(button);
+        }
+        private Button GooglePasswordHelp() {
+            const string title = "How to get app specific password?";
+            var help = new Button { Content = "?", Width = 24, Height = 24, MinHeight = 0, FontSize = 12, FontWeight = FontWeights.Bold, Padding = new Thickness(0), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Background = Theme.B("Accent"), Foreground = Brushes.White, Cursor = Cursors.Hand, ToolTip = title };
+            System.Windows.Automation.AutomationProperties.SetName(help, title);
+            help.Click += delegate { try { Process.Start(new ProcessStartInfo("https://support.google.com/accounts/answer/185833") { UseShellExecute = true }); } catch { status.Text = "The Google guide could not be opened. Please try again."; } };
+            return help;
         }
         public void ShowPicker() {
             if (busy) return; SelectedProvider = null; back.Visibility = Visibility.Hidden;
@@ -108,14 +119,14 @@ namespace Postbox {
                 form.Children.Add(new TextBlock { Text = "Sign-in isn’t enabled in this build yet. The app owner needs to finish the provider setup before you can connect.", TextWrapping = TextWrapping.Wrap, Foreground = Theme.B("Muted"), Margin = new Thickness(0, 22, 0, 0), FontSize = 13 });
                 AddAction("View provider setup guide", OpenGuide, false);
             } else AddAction("Continue with " + ProviderChoices.Name(provider), async delegate { await RunConnection(async delegate(CancellationToken token) { var account = ProviderChoices.Account(provider); await ProviderLogin.SignIn(account, configuration, token); return account; }); }, true);
-            if (provider == "Gmail") AddAction("Use a Google app password instead", delegate { ShowPassword("Gmail"); }, false);
+            if (provider == "Gmail") AddAction("Use a Google app password instead", delegate { ShowPassword("Gmail"); }, false, true);
         }
         private static void OpenGuide() { Process.Start(new ProcessStartInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SETUP.md")) { UseShellExecute = true }); }
         private TextBox Field(string label, string value) {
             form.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = Theme.B("Text"), Margin = new Thickness(0, 12, 0, 6) });
             var input = new TextBox { Text = value ?? "", Padding = new Thickness(12, 10, 12, 10) }; System.Windows.Automation.AutomationProperties.SetName(input, label); form.Children.Add(input); return input;
         }
-        private PasswordBox Password(bool appleHelp = false) {
+        private PasswordBox Password(bool appleHelp = false, bool googleHelp = false) {
             var label = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 6) };
             label.Children.Add(new TextBlock { Text = "App-specific password", FontSize = 12, Foreground = Theme.B("Text"), VerticalAlignment = VerticalAlignment.Center }); form.Children.Add(label);
             if (appleHelp) {
@@ -129,6 +140,7 @@ namespace Postbox {
                 System.Windows.Automation.AutomationProperties.SetName(question, "Help creating an Apple app-specific password");
                 question.Click += delegate { help.Visibility = help.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; }; label.Children.Add(question);
             }
+            if (googleHelp) label.Children.Add(GooglePasswordHelp());
             var password = new PasswordBox { Padding = new Thickness(12, 10, 12, 10), Background = Theme.B("Surface"), Foreground = Theme.B("Text"), BorderBrush = Theme.B("Borders") }; System.Windows.Automation.AutomationProperties.SetName(password, "App-specific password"); form.Children.Add(password); return password;
         }
         private TextBox EmailField(string currentEmail) {
@@ -144,7 +156,7 @@ namespace Postbox {
         private void ShowPassword(string provider) {
             SelectedProvider = provider;
             Heading("Sign in with " + ProviderChoices.Name(provider), provider == "iCloud" ? "Enter your iCloud Mail address and an app-specific password from Apple. Your server settings are filled in automatically." : "Use a Google app password with 2-Step Verification. Your Gmail settings are already filled in.");
-            var email = EmailField(current != null && current.Provider == provider ? current.Email : null); var password = Password(provider == "iCloud");
+            var email = EmailField(current != null && current.Provider == provider ? current.Email : null); var password = Password(provider == "iCloud", provider == "Gmail");
             AddAction(provider == "iCloud" ? "Get an app-specific password from Apple ↗" : "Get a Google app password ↗", delegate { Process.Start(provider == "iCloud" ? "https://account.apple.com/" : "https://myaccount.google.com/apppasswords"); }, false);
             AddAction("Connect " + ProviderChoices.Name(provider), async delegate { await RunConnection(delegate(CancellationToken token) { var value = ProviderChoices.Account(provider); value.Email = email.Text.Trim(); value.Password = password.Password.Replace(" ", ""); value.Validate(); return Task.FromResult(value); }); }, true);
         }
