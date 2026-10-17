@@ -2,6 +2,13 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.2 beta — 17 October 2026
+
+- Add All Calendars to the calendar list, combining events from every calendar while keeping event creation targeted to a writable calendar. Sync downloads all connected calendars in the combined view.
+- Download connected calendar events when adding a connection or pressing Sync even with automatic sync disabled. Keep queued uploads paused until provider sync is enabled and saved. Show sync failures on the calendar page as well as the mail status bar.
+- Resolve iCloud CalDAV discovery links against the final server after a validated redirect. Preserve the selected month for an in-flight download.
+- Add intercepted discovery and UI integration regressions for combined/single calendar selection and read-only manual downloads. Live iCloud sign-in is not exercised.
+
 ## 0.15.1 beta — 17 October 2026
 
 - Render the branded loading screen before loading the local mail profile and constructing the workspace. Give the loading screen its own STA dispatcher so its animation, progress text and Cancel control stay responsive while the main UI is busy.

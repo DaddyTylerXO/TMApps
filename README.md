@@ -2,13 +2,13 @@
 
 A native Windows desktop mail client with forest green navigation, neutral dark/light themes, a rich composer, and customisable layouts.
 
-**Version 0.15.1 beta** shows a responsive branded loading screen while the local mail profile and workspace load, then hands off after the mailbox or welcome screen has rendered. It preserves the full-size logo, unread badge controls, Mailbox Management pages and Launcher profile integration.
+**Version 0.15.2 beta** adds All Calendars and fixes connected calendars remaining empty while automatic sync is disabled, including iCloud redirected calendar discovery.
 
 ## Download and run
 
 This build is for Windows. The [macOS and Linux migration plan](PORTABILITY.md) describes the proposed cross-platform edition and the work needed before platform-specific releases can be tested and shipped.
 
-Download [the Windows portable ZIP](dist/TMA-Mail-0.15.1-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
+Download [the Windows portable ZIP](dist/TMA-Mail-0.15.2-beta-windows.zip), extract the whole folder, and open `TMA-Mail.exe`. Keep the configuration, XAML, and DLL files together. Requires Windows 10/11 x64 with .NET Framework 4.8. HTML reading uses the Microsoft Edge WebView2 Runtime; plain-text reading remains available if it is missing. The executable is unsigned.
 
 Choose a provider or **Explore for now** with sample mail. You can add an account later through Settings → Accounts. Outlook and Gmail use the official provider sign-in page in your default browser; iCloud asks only for a mail address and an Apple app-specific password. Manual IMAP/SMTP fields are under Advanced Setup. Gmail also offers an app-password fallback.
 
@@ -35,8 +35,8 @@ Choose a provider or **Explore for now** with sample mail. You can add an accoun
 - Live footer progress identifies the mailbox, folder, and item count. A neon green indicator means the active mail server is connected and Windows reports a network; red means disconnected, reconnecting, or waiting for confirmation.
 - Mailbox Management scans all selectable server folders for List-Unsubscribe headers, with checkboxes and bulk unsubscribe requests where senders advertise one-click support. Other senders need a browser/email step. Scanning is read-only, cancellable by closing the dialog, and runs on its own connection. A discovered list does not prove the subscription is still active.
 - Notifications use green branded cards with optional address/subject details, silent None, and an optional red unread inbox badge on the running app/taskbar icon (99+ cap). Desktop shortcuts keep the static logo.
-- Add to Calendar supports named calendar selection, all-day dates, reminders, and counted recurrence including custom intervals such as every four days. The calendar header switches calendars and creates custom local calendars. Return to Mailbox restores email navigation.
-- **Settings → Calendar** connects Outlook/Google through separate calendar OAuth consent and iCloud through CalDAV with an app-specific password. Provider sync starts disabled and must be enabled and saved. Connected calendars refresh about every two minutes and when opening another month; newly created events upload to the selected writable calendar. Pending events remain protected locally after failures. Local calendars can queue copies to a connected provider or export .ics. Existing provider-event editing/deletion and meeting invitations/responses are not implemented. Provider connections are covered by intercepted transport tests; live provider round trips are unverified.
+- Add to Calendar supports named calendar selection, all-day dates, reminders, and counted recurrence including custom intervals such as every four days. The calendar header switches individual calendars, displays All Calendars together, and creates custom local calendars. Return to Mailbox restores email navigation.
+- **Settings → Calendar** connects Outlook/Google through separate calendar OAuth consent and iCloud through CalDAV with an app-specific password. Connecting a calendar downloads its events immediately; Sync also downloads with automatic sync disabled. Automatic refresh and uploads start disabled and must be enabled and saved. Connected calendars refresh about every two minutes and when opening another month; newly created events upload to the selected writable calendar. Pending events remain protected locally after failures. Local calendars can queue copies to a connected provider or export .ics. Existing provider-event editing/deletion and meeting invitations/responses are not implemented. Provider connections are covered by intercepted transport tests; live provider round trips are unverified.
 - In-app and desktop calendar reminders are enabled by default while TMA-Mail runs. Calendar and Notifications settings share the same controls. The reminder window supports Dismiss, Dismiss all, and Snooze; state survives restarts. Closing the app stops reminder delivery. Imports of .ics files, public HTTPS/webcal export URLs and cached mail invitations remain read-only snapshots.
 - Double-click received mail for a separate TMA-Mail reading window with green action buttons. Right-click mail for copy, print, reply, reply all, forward, flags, categories and filing. Drag the mail toolbar's lower green edge to change height; overflow can scroll horizontally. Edit Bar enables drag-to-swap action ordering. Fast Functions can combine up to 12 actions with recipient/folder/category settings; right-click a button to edit or remove it. Replies and forwards open a composer for review.
 - **Settings → Add-ins / plug-ins** installs TMA-Mail JSON web-tool launchers, with enable/disable and removal. Outlook Office.js/COM/VSTO add-ins are not supported; see [PLUGINS.md](PLUGINS.md).
@@ -61,7 +61,7 @@ Keyboard shortcuts: Ctrl+N compose, Ctrl+F search, Ctrl+, settings, Ctrl+Shift+B
 .\package.ps1
 ```
 
-Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.1/`. Close that executable before rebuilding.
+Or `start.ps1` to build and launch. Build uses the Windows .NET Framework C# compiler, so no separate SDK is required. First build downloads pinned NuGet dependencies via `restore.ps1`. Output: `build/v0.15.2/`. Close that executable before rebuilding.
 
 For provider browser sign-in, copy `provider-settings.example.json` to ignored `provider-settings.json`, configure desktop OAuth registrations as described in [SETUP.md](SETUP.md), then rebuild. A blank configuration still allows Explore mode, iCloud/app-password connections, and custom IMAP/SMTP.
 

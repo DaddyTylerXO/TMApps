@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.1')
+param([string]$OutputDirectory = 'build\v0.15.2')
 $ErrorActionPreference = 'Stop'
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $out = Join-Path $PSScriptRoot $OutputDirectory
@@ -81,6 +81,7 @@ if($LASTEXITCODE -ne 0) { throw 'Calendar provider tests failed.' }
 
 $calendarUiArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'CalendarUiTests.exe')),('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
 foreach($reference in @('System.dll','System.Core.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')) { $calendarUiArguments += '/reference:' + (Join-Path $framework $reference) }
+$calendarUiArguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
 $calendarUiArguments += Join-Path $PSScriptRoot 'tests\CalendarUiTests.cs'
 & (Join-Path $framework 'csc.exe') @calendarUiArguments
 if($LASTEXITCODE -ne 0) { throw 'Calendar UI test compilation failed.' }

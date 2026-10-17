@@ -10,6 +10,15 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Postbox;
 class CalendarUiTests {
+    sealed class CalendarHandler : System.Net.Http.HttpMessageHandler {
+        public int Reads, Writes;
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken token) {
+            if (request.Method.Method == "REPORT") Reads++; else Writes++;
+            string ics = CalendarImport.CreateEvent("Downloaded iCloud event", DateTime.Today.AddHours(9), DateTime.Today.AddHours(10), "", "None", 1);
+            string xml = "<d:multistatus xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'><d:response><d:propstat><d:prop><c:calendar-data><![CDATA[" + ics + "]]></c:calendar-data></d:prop></d:propstat></d:response></d:multistatus>";
+            return Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new System.Net.Http.StringContent(xml) });
+        }
+    }
     static int checks;
     static void Check(bool value, string name) { if (!value) throw new Exception(name); checks++; }
     static object Get(object value, string field) { return value.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(value); }
@@ -54,6 +63,22 @@ class CalendarUiTests {
             ((CheckBox)Get(app, "calendarSyncToggle")).IsChecked = true; Check(!(bool)typeof(App).GetProperty("CalendarSyncEnabled", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(app, null), "Settings preview activated provider writes");
         } catch (Exception ex) { failure = ex; } finally { settings.Close(); } };
         settingsTimer.Start(); Call(app, "ShowSettings", "Calendar"); settingsTimer.Stop(); if (failure != null) throw failure; var restored = (Preferences)Get(app, "preferences"); Check(restored.CalendarReminders && !restored.CalendarReminderPopup && !restored.CalendarProviderSync, "Cancel did not restore reminder/sync preferences");
+        var local = new CalendarSource { Id = "local-test", Name = "Local", Provider = "Local", Writable = true, Ics = CalendarImport.CreateEvent("Local event", DateTime.Today.AddHours(11), DateTime.Today.AddHours(12), "", "None", 1) };
+        var connected = new CalendarSource { Id = "cloud-test", Name = "iCloud", Provider = "iCloud", Login = new MailAccount { Provider = "iCloud", Email = "synthetic@icloud.com", Password = "synthetic" }, RemoteUrl = "https://p01-caldav.icloud.com/123/calendars/personal/", Ics = CalendarImport.Empty, Pending = new List<string> { local.Ics } };
+        typeof(App).GetField("calendarSources", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(app, new List<CalendarSource> { local, connected });
+        Call(app, "ShowCalendarView"); Wait(Task.Delay(100));
+        var selector = (ComboBox)Get(app, "calendarSelector"); selector.SelectedItem = selector.Items.Cast<CalendarSource>().Single(c => c.Id == "__all"); Wait(Task.Delay(100)); Call(app, "UpdateCalendarSelector");
+        Check(((CalendarSource)selector.SelectedItem).ToString() == "All Calendars", "All Calendars selection did not survive refresh");
+        Check(((IEnumerable<CalendarSource>)Call(app, "VisibleCalendarSources")).Count() == 2, "All Calendars omitted a source");
+        selector.SelectedItem = selector.Items.Cast<CalendarSource>().Single(c => c.Id == local.Id); Wait(Task.Delay(100)); Check(((IEnumerable<CalendarSource>)Call(app, "VisibleCalendarSources")).Single() == local, "Single-calendar filtering was lost");
+        var handler = new CalendarHandler(); typeof(App).GetField("calendarClientFactory", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(app, new Func<MailAccount, CalendarProviderClient>(account => new CalendarProviderClient(account, handler)));
+        typeof(App).GetField("offlinePreview", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(app, false);
+        try {
+            Wait((Task)Call(app, "SynchronizeCalendar", connected, false)); Check(handler.Reads == 0 && handler.Writes == 0, "Paused automatic sync contacted provider");
+            Wait((Task)Call(app, "SynchronizeCalendar", connected, true)); Check(handler.Reads == 1 && handler.Writes == 0 && connected.Pending.Count == 1, "Manual download uploaded queued events while sync paused");
+            Check(connected.Ics.Contains("Downloaded iCloud event") && connected.Ics.Contains("Local event"), "Manual download lost provider or queued events");
+            Check(CalendarImport.Month(new[] { local, connected }, new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1)).Any(e => e.SourceId == connected.Id && e.Summary == "Downloaded iCloud event"), "Downloaded iCloud event not visible");
+        } finally { typeof(App).GetField("offlinePreview", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(app, true); }
         main.Close(); app.Shutdown(); Console.WriteLine("Passed " + checks + " calendar editor/reminder/settings integration checks. Synthetic local data only; no provider contacted.");
     }
 }
