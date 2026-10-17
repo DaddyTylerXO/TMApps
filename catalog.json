@@ -6,12 +6,12 @@
       "name": "TMA-Mail",
       "category": "COMMUNICATION",
       "description": "A calmer home for your inbox. Connect your accounts, compose beautifully, and keep your day in focus.",
-      "version": "0.10.0-beta",
-      "updatedAt": "2026-10-16T22:53:40Z",
+      "version": "0.14.1-beta",
+      "updatedAt": "2026-10-17T04:57:03+01:00",
       "branch": "TMA-Mail",
       "executable": "TMA-Mail.exe",
-      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/a89f1c754116975bc149c0e78f224e32ad30ab9a/dist/TMA-Mail-0.10.0-beta-windows.zip",
-      "sha256": "a606e13a93339eaabae6df9eabe2a5a1c0eac8e38e013b92aa668b1c4d5787cd"
+      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/3f2510ce13c2884e4ba23b7d42bdaf2e92b374e2/dist/TMA-Mail-0.14.1-beta-windows.zip",
+      "sha256": "cf851a37dcfff9369d6c5a92f40a3b9b3d1cc1a9348e54978a9f566047998119"
     },
     {
       "id": "tma-agent-office",

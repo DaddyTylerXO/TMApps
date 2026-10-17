@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.0
+
+- Added an optional top-right profile avatar and themed editor for a name and multiple email addresses.
+- Added explicit opt-in local profile sharing with TMA-Mail 0.14.1 or later, using a credential-free shared contract.
+- Profile options explain that each mailbox still needs its own app-specific password/key or provider sign-in in Mail.
+- Added profile validation, save/cancel, avatar, and cross-app sync checks.
+
 ## 1.7.0
 
 - Check for updates now includes the launcher itself, independently of the application catalog.

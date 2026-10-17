@@ -34,7 +34,7 @@ namespace TMApps {
             public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
                 token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
-                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.7.0.exe\",\"id\":11}]}") });
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.8.0.exe\",\"id\":11}]}") });
                 bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
                 if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
                 Downloads++;
@@ -124,6 +124,7 @@ namespace TMApps {
                 string staleCatalog=original.Replace(catalog.apps[0].version,"0.9.2-beta");
                 var updateHandler=new CatalogHandler { Shared=staleCatalog };
                 using(var updates=new LauncherService(Path.Combine(root,"updates"),updateHandler)) {
+                    LauncherService.AtomicWrite(Path.Combine(root,"updates","catalog.json"),staleCatalog);
                     var refreshed=updates.Refresh(CancellationToken.None).GetAwaiter().GetResult(); var mail=refreshed.apps.First(a=>a.id=="tma-mail");
                     Check(mail.version=="0.10.0-beta" && mail.sha256==new string('b',64) && mail.downloadUrl.Contains(new string('a',40)),"Branch manifest discovers Mail 0.10 with commit-pinned archive and checksum despite stale shared catalog");
                     updateHandler.Shared=staleCatalog.Replace("0.9.2-beta","9.0.0");
@@ -139,6 +140,7 @@ namespace TMApps {
                 }
                 var branchOnly=new CatalogHandler { FailShared=true,Shared=staleCatalog };
                 using(var updates=new LauncherService(Path.Combine(root,"branch-only"),branchOnly)) {
+                    LauncherService.AtomicWrite(Path.Combine(root,"branch-only","catalog.json"),staleCatalog);
                     Check(updates.Refresh(CancellationToken.None).GetAwaiter().GetResult().apps[0].version=="0.10.0-beta","Mail branch can refresh when shared release catalog is unavailable");
                     branchOnly.FailBranch=true; Reject(()=>updates.Refresh(CancellationToken.None).GetAwaiter().GetResult(),"Failed update sources never report a successful check");
                 }
@@ -290,20 +292,20 @@ namespace TMApps {
                 string shortcut=Path.Combine(standalone,"Launcher.lnk"); DesktopIntegration.CreateShortcut(shortcut,exe);
                 Check(File.Exists(shortcut) && BitConverter.ToInt32(File.ReadAllBytes(shortcut),0)==76,"Windows desktop/Start menu shortcut helper creates a real shell link");
                 Check(DesktopIntegration.ShortcutTargets(shortcut,exe),"Desktop shortcut target can be verified before removing a launcher-managed icon");
-                Check(new AppView { Info = catalog.apps[0] }.UpdatedLabel == "Oct 16, 2026", "App update date displayed from metadata");
+                Check(new AppView { Info = new AppInfo { updatedAt="2026-10-16T22:53:40Z" } }.UpdatedLabel == "Oct 16, 2026", "App update date displayed from metadata");
                 using (var embedded = new LauncherService(Path.Combine(root,"embedded-profile"))) Check(embedded.LoadCatalog().apps.Count == 2, "Embedded catalog fallback works without source files");
                 string installerRoot=Path.Combine(root,"installer");
                 var installStart=new System.Diagnostics.ProcessStartInfo(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"),"--verify-install \""+installerRoot+"\"") { UseShellExecute=false,CreateNoWindow=true };
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
                 byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
                 string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
-                var release=new LauncherRelease { schemaVersion=1,version="1.7.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.7.0.exe",sha256=setupHash };
+                var release=new LauncherRelease { schemaVersion=1,version="1.8.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.8.0.exe",sha256=setupHash };
                 var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
                 using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
-                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.7.0","Launcher check discovers a newer launcher independently of app catalog");
-                    Check(updater.CheckLauncherUpdate("1.7.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("1.8.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.8.0","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.8.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("1.9.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
                     string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
-                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.7.0.0","Launcher installer download verifies checksum and embedded product version");
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.8.0.0","Launcher installer download verifies checksum and embedded product version");
                     File.Delete(downloaded);
                     launcherHandler.Installer=new byte[]{1,2,3};
                     Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
@@ -341,6 +343,16 @@ namespace TMApps {
                     var end=DateTime.UtcNow.AddSeconds(10); while(!File.Exists(Path.Combine(handoffRoot,"handoff-report.txt")) && DateTime.UtcNow<end) Thread.Sleep(50);
                     Check(File.Exists(Path.Combine(handoffRoot,"handoff-report.txt")),"Updater waits for parent launcher exit before applying changes");
                 }
+                string sharedPath=Path.Combine(root,"shared-suite","profile.json");
+                Check(TMAppsShared.SuiteProfileStore.Load(sharedPath).emails.Count==0,"Optional profile starts empty without creating a shared file");
+                var suiteFixture=TMAppsShared.SuiteProfileStore.Save(sharedPath,new TMAppsShared.SuiteProfile { displayName="  Example User  ",emails=new System.Collections.Generic.List<string> { "first@example.com","FIRST@example.com","second@example.org" },shareWithMail=true });
+                Check(suiteFixture.displayName=="Example User" && suiteFixture.emails.Count==2 && suiteFixture.revision.Length==32,"Suite profile normalizes name, deduplicates addresses, and generates a sync revision");
+                var loadedProfile=TMAppsShared.SuiteProfileStore.Load(sharedPath);
+                Check(loadedProfile.shareWithMail && loadedProfile.emails[1]=="second@example.org","Shared suite profile saves and reloads multiple addresses");
+                Reject(()=>TMAppsShared.SuiteProfileStore.Save(sharedPath,new TMAppsShared.SuiteProfile { emails=new System.Collections.Generic.List<string> { "invalid address" } }),"Profile rejects invalid emails before writing");
+                Check(TMAppsShared.SuiteProfileStore.Load(sharedPath).revision==suiteFixture.revision,"Rejected profile edit retains the previous saved profile");
+                Reject(()=>TMAppsShared.SuiteProfileStore.Validate(new TMAppsShared.SuiteProfile { displayName="Bad\nName" }),"Profile rejects control characters in names");
+                Check(!File.ReadAllText(sharedPath).Contains("password") && !File.ReadAllText(sharedPath).Contains("token"),"Shared profile contract contains no passwords or auth tokens");
                 var application = new LauncherApplication();
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
                 string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
@@ -425,6 +437,23 @@ namespace TMApps {
                 PumpUntil(()=>uiHandler.LauncherChecks>0 && checkUpdates.IsEnabled);
                 Check(launcherPromptSeen,"Real Check for updates button offers a newer launcher in a themed popup");
                 Check(!Directory.Exists(Path.Combine(uiRoot,"updates")),"Declining launcher update performs no installer download");
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
+                    var popup=application.Windows.OfType<ThemedDialog>().Single();
+                    popup.Body.Children.OfType<TextBox>().First().Text="Example User";
+                    popup.Body.Children.OfType<TextBox>().Last().Text="first@example.com\nsecond@example.org";
+                    SaveDialog(popup,Path.Combine(args[0],"build","profile-preview.png"));
+                    popup.Actions.Children.OfType<Button>().Last().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }));
+                var profileButton=(Button)window.FindName("ProfileButton"); profileButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,profileButton));
+                var savedProfile=TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json"));
+                Check(savedProfile.displayName=="Example User" && savedProfile.emails.Count==2 && savedProfile.shareWithMail,"Real profile icon opens optional editor and saves the shared profile");
+                Check(((TextBlock)window.FindName("ProfileInitial")).Text=="E","Top-right profile avatar shows the saved name initial");
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
+                    var popup=application.Windows.OfType<ThemedDialog>().Single(); popup.Body.Children.OfType<TextBox>().First().Text="Cancelled edit";
+                    popup.Actions.Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }));
+                profileButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,profileButton));
+                Check(TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).revision==savedProfile.revision,"Cancelling profile edits leaves sync state unchanged");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.7.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.7.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.8.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.8.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -38,6 +38,7 @@ namespace TMApps {
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
         EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
         Func<AppInfo,AppInstallOptions> chooseInstallLocation;
+        string suiteProfilePath; TMAppsShared.SuiteProfile suiteProfile; string suiteProfileWarning;
         string filter = "all"; bool listView = true; bool refreshing; bool selfUpdating; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
@@ -69,6 +70,8 @@ namespace TMApps {
         internal Window Initialize(string root, System.Net.Http.HttpMessageHandler handler, bool desktop, Func<AppInfo,AppInstallOptions> locationPicker = null, IAppIntegration appIntegration = null) {
             service = new LauncherService(root, handler,appIntegration);
             chooseInstallLocation=locationPicker ?? new Func<AppInfo,AppInstallOptions>(PromptInstallLocation);
+            suiteProfilePath=desktop ? TMAppsShared.SuiteProfileStore.DefaultPath : Path.Combine(root,"shared-profile.json");
+            try { suiteProfile=TMAppsShared.SuiteProfileStore.Load(suiteProfilePath); } catch { suiteProfile=new TMAppsShared.SuiteProfile(); suiteProfileWarning="The saved profile could not be read. You can replace it by saving a new profile."; }
             preferences = DesktopIntegration.LoadPreferences(root);
             window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
             using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
@@ -79,6 +82,7 @@ namespace TMApps {
             Find<TextBox>("Search").TextChanged += (s, ev) => Render();
             apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
             ApplyNavigation(window, preferences); ApplyView(window, preferences.libraryView); listView = preferences.libraryView == "List";
+            UpdateProfileAvatar();
             Render(); Notice("Choose an application to install. Downloads and installation happen here.");
             if (desktop) {
                 SetupTray();
@@ -271,6 +275,7 @@ namespace TMApps {
             e.Handled=true;
             string name = b.Name; string tag = b.Tag as string;
             if(name=="CompactButton") { preferences.compactNavigation=!preferences.compactNavigation; ApplyNavigation(window,preferences); Render(); DesktopIntegration.SavePreferences(service.Root,preferences); return; }
+            if(name=="ProfileButton") { ShowProfile(); return; }
             if(name=="SettingsButton") { Settings(); return; }
             if(name=="GitHubButton") { Browse("https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher"); return; }
             if (name == "RefreshButton") { RefreshCatalog(); return; }
@@ -324,6 +329,32 @@ namespace TMApps {
             } catch(OperationCanceledException) { Notice("Uninstall cancelled."); }
             catch(Exception ex) { ThemedDialogs.Info(window,"Could not uninstall "+app.Name,ex.Message); Notice(ex.Message); }
             finally { app.Busy=false; app.Removing=false; app.Cancellation.Dispose(); app.Cancellation=null; Render(); }
+        }
+        void UpdateProfileAvatar() {
+            string value=!String.IsNullOrWhiteSpace(suiteProfile.displayName) ? suiteProfile.displayName : suiteProfile.emails.FirstOrDefault();
+            var initial=Find<TextBlock>("ProfileInitial");
+            initial.Text=String.IsNullOrEmpty(value) ? "\uE77B" : System.Globalization.StringInfo.GetNextTextElement(value).ToUpperInvariant();
+            initial.FontFamily=new FontFamily(String.IsNullOrEmpty(value) ? "Segoe MDL2 Assets" : "Segoe UI");
+            Find<Button>("ProfileButton").ToolTip=String.IsNullOrEmpty(value) ? "Set up your optional profile" : value+" - Your profile";
+        }
+        internal void ShowProfile() {
+            var dialog=new ThemedDialog(window,"Your TMApps profile","Optional. Save your name and email addresses for your apps on this PC. The first email address is your primary suggestion.");
+            Action<string> label=text=>dialog.Body.Children.Add(new TextBlock { Text=text,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,10,0,7) });
+            label("Your name"); var name=new TextBox { Name="ProfileName",Text=suiteProfile.displayName,MaxLength=100 }; dialog.Body.Children.Add(name);
+            label("Email addresses (one per line)"); var emails=new TextBox { Name="ProfileEmails",Text=String.Join("\r\n",suiteProfile.emails),AcceptsReturn=true,Height=100,VerticalScrollBarVisibility=ScrollBarVisibility.Auto }; dialog.Body.Children.Add(emails);
+            var share=new CheckBox { Name="ShareWithMail",Content="Sync this profile to TMA-Mail on this PC",IsChecked=suiteProfile.revision==null || suiteProfile.shareWithMail,Margin=new Thickness(0,18,0,12) }; dialog.Body.Children.Add(share);
+            dialog.Body.Children.Add(new TextBlock { Text="This shares only your name and email addresses with TMA-Mail for this Windows user. It does not sign in or connect accounts. TMA-Mail still requires an app-specific password/key for providers such as iCloud, or the provider's own sign-in. Enter those credentials in TMA-Mail, never here.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=12 });
+            dialog.Body.Children.Add(new TextBlock { Text="Requires TMA-Mail 0.14.1 or later. Changes appear when Mail opens or shortly afterward while it is running. Disabling sync stops future sharing; it does not disconnect mail accounts or erase an existing Mail profile.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11,Margin=new Thickness(0,10,0,0) });
+            var error=new TextBlock { Text=suiteProfileWarning,TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightSalmon,Margin=new Thickness(0,8,0,0) }; dialog.Body.Children.Add(error);
+            dialog.AddAction("Cancel",false,()=>dialog.Close(),"CancelAction").IsCancel=true;
+            dialog.AddAction("Save profile",true,()=> {
+                try {
+                    var selected=new TMAppsShared.SuiteProfile { displayName=name.Text,emails=emails.Text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).ToList(),shareWithMail=share.IsChecked==true };
+                    suiteProfile=TMAppsShared.SuiteProfileStore.Save(suiteProfilePath,selected); suiteProfileWarning=null; UpdateProfileAvatar(); dialog.DialogResult=true;
+                    Notice(suiteProfile.shareWithMail ? "Profile saved. Compatible TMA-Mail versions will sync your name and account suggestions. Credentials are still required in Mail." : "Profile saved. Sync to TMA-Mail is off.");
+                } catch(Exception ex) { error.Text=ex.Message; }
+            },"ConfirmAction");
+            dialog.ShowDialog();
         }
         void Settings() {
             var original=LauncherService.Json.Deserialize<Preferences>(LauncherService.Json.Serialize(preferences));

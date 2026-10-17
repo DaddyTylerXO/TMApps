@@ -79,7 +79,7 @@ namespace TMApps {
             integration=appIntegration ?? new WindowsAppIntegration();
             processes=appProcesses ?? new WindowsAppProcesses(app=>InstallRoot(app,GetInstalled(app)));
             data=appData ?? new WindowsAppData();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.7");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TMApps-Launcher/1.8");
             try { githubToken = Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(Path.Combine(Root, "github-token.dat")), null, DataProtectionScope.CurrentUser)); } catch { }
         }
         public async Task<LauncherRelease> CheckLauncherUpdate(string currentVersion,CancellationToken token) {

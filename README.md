@@ -4,6 +4,20 @@ A Windows launcher for **TMA-Mail** and **TMA-Agent Office**, installed through 
 
 ![TMApps Launcher library](docs/launcher-preview.png)
 
+## Optional profile and TMA-Mail sync
+
+Click the circular **profile icon at the top right** to save a name and up to 20 email addresses, one per line. The first address is the primary suggestion. This setup is optional; the launcher works without a profile. The avatar shows your initial after saving.
+
+Enable **Sync this profile to TMA-Mail on this PC** to share the name and account-setup suggestions with **TMA-Mail 0.14.1 or later** for the current Windows user. Mail reads changes at startup and within a few seconds while running. Connected mailbox identities and credentials remain separate. This is local sharing, not cloud/device sync or a sign-in service.
+
+**A saved profile does not connect email accounts.** In TMA-Mail, choose the saved address and enter that provider's app-specific password/key (for example, iCloud) or complete its provider sign-in. The launcher does not ask for or transfer passwords, keys, or authentication tokens. The same explanation appears on the profile options page.
+
+Cancel discards profile edits. Disabling sync stops future sharing and removes Mail's imported address suggestions; an existing Mail display name and connected accounts remain. You can erase the launcher's saved name/addresses by clearing the fields, disabling sync, and saving.
+
+Shared profile data is stored at `%LOCALAPPDATA%\TMApps\profile.json`, separately from Mail's account store and the launcher installation. Custom Mail data profiles are isolated by default; `--launcher-profile <path>` explicitly opts one in for controlled use/testing.
+
+![Optional launcher profile](docs/profile-preview.png)
+
 ## Download and run
 
 Download [**TMApps-Launcher-Setup.exe**](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) and run it. Setup installs the launcher for your Windows user, creates a Start menu entry, and adds a normal Windows Apps uninstall entry. No ZIP extraction, administrator access, or developer tools are needed. Requires Windows 10/11 x64 with .NET Framework 4.8. Builds are currently unsigned.

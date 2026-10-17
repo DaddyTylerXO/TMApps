@@ -62,7 +62,7 @@
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
    <StackPanel Margin="26,24,26,20">
-    <DockPanel><TextBlock Text="Your applications" FontSize="27" FontWeight="SemiBold"/><TextBlock Text="TMApps / Library" Foreground="#A9B0C0" VerticalAlignment="Center" HorizontalAlignment="Right"/></DockPanel>
+    <DockPanel LastChildFill="True"><Button x:Name="ProfileButton" DockPanel.Dock="Right" Width="38" Height="38" Padding="0" Margin="14,0,0,0" ToolTip="Your optional profile" AutomationProperties.Name="Your optional TMApps profile"><Button.Template><ControlTemplate TargetType="Button"><Border CornerRadius="19" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="#CC5500"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="#CC5500"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Button.Template><TextBlock x:Name="ProfileInitial" Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button><TextBlock Text="TMApps / Library" DockPanel.Dock="Right" Foreground="#A9B0C0" VerticalAlignment="Center"/><TextBlock Text="Your applications" FontSize="27" FontWeight="SemiBold"/></DockPanel>
     <TextBlock Text="A home for your tools. Install, open, and keep everything up to date." Foreground="#A9B0C0" FontSize="12" Margin="0,9,0,21"/>
     <Grid Height="42"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <Grid Margin="0,0,20,0" MaxWidth="360" HorizontalAlignment="Left" Width="300"><TextBox x:Name="Search" ToolTip="Search applications" AutomationProperties.Name="Search applications"/><TextBlock Text="Search applications…" Foreground="#A9B0C0" VerticalAlignment="Center" Margin="15,0" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=Search}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid>
@@ -75,7 +75,7 @@
     <TextBlock x:Name="Empty" Text="No applications match this view." Foreground="#A9B0C0" Visibility="Collapsed" Margin="0,25"/>
     <TextBlock x:Name="Notice" Text="Choose an application to install." Foreground="#A9B0C0" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,0"/>
    </StackPanel></ScrollViewer>
-   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.7.0 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
+   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.8.0 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
   </Grid>
  </DockPanel>
 </Window>
