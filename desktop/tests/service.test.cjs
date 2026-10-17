@@ -124,3 +124,11 @@ test('native close detection finds managed background processes and preserves ot
   assert.equal(first.exitCode,null); library.confirm=async()=>true;
   await library.closeApp({name:'Fixture'},state); assert.equal((await library.running(state)).length,0); assert.equal(other.exitCode,null);
 });
+
+test('Linux x86_64 builder names normalize to the exact x64 update URL',async t=>{
+  const f=await fixture(t);const generate=require('../scripts/release-metadata.cjs');
+  const name='TMApps-Launcher-1.9.0-linux-x86_64.AppImage';await fs.writeFile(path.join(f.root,name),f.payload);
+  const release=generate(f.root,{version:'1.9.0',platform:'linux',arch:'x64'});
+  assert.equal(release.filename,'TMApps-Launcher-1.9.0-linux-x64.AppImage');assert.equal(release.sha256,hash(f.payload));
+  assert.ok(await fs.stat(path.join(f.root,release.filename)));await assert.rejects(fs.stat(path.join(f.root,name)),{code:'ENOENT'});
+});

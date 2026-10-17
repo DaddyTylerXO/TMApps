@@ -140,6 +140,7 @@ jobs:
             platform: linux
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: desktop
@@ -161,9 +162,11 @@ jobs:
       - name: Test native backend and UI
         run: pnpm test
       - name: Smoke test Electron on Linux
+        timeout-minutes: 3
         if: matrix.platform == 'linux'
         run: xvfb-run -a pnpm exec electron . --no-sandbox --smoke "$PWD/build/source-smoke.json"
       - name: Smoke test Electron on macOS
+        timeout-minutes: 3
         if: matrix.platform == 'darwin'
         run: pnpm exec electron . --smoke "$PWD/build/source-smoke.json"
       - name: Package native installer
@@ -177,13 +180,21 @@ jobs:
           fi
           node scripts/release-metadata.cjs
       - name: Verify packaged Linux launcher
+        timeout-minutes: 3
         if: matrix.platform == 'linux'
         run: |
           APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a dist/TMApps-Launcher-*-linux-${{ matrix.arch }}.AppImage --no-sandbox --smoke "$PWD/build/packaged-smoke.json"
       - name: Verify packaged macOS launcher
+        timeout-minutes: 3
         if: matrix.platform == 'darwin'
         run: |
-          BUNDLE="dist/mac${{ matrix.arch == 'arm64' && '-arm64' || '' }}/TMApps Launcher.app"
+          DMG=$(find dist -maxdepth 1 -name '*.dmg' -print -quit)
+          hdiutil verify "$DMG"
+          MOUNT="$PWD/build/mounted-installer"
+          mkdir -p "$MOUNT"
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MOUNT"
+          trap 'hdiutil detach "$MOUNT" || true' EXIT
+          BUNDLE="$MOUNT/TMApps Launcher.app"
           codesign --verify --deep --strict "$BUNDLE"
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$BUNDLE/Contents/Info.plist")
           "$BUNDLE/Contents/MacOS/$EXECUTABLE" --smoke "$PWD/build/packaged-smoke.json"
