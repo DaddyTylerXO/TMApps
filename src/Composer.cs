@@ -67,8 +67,9 @@ namespace Postbox {
         public event Action<bool, string> Saved;
         public string RecipientAddresses { get { return String.Join(", ", new[] { to.Text, cc.Text, bcc.Text }.Where(v => !String.IsNullOrWhiteSpace(v))); } }
         public void SetFastRecipients(string recipients) { to.Text = String.Join("; ", RichMail.Recipients(recipients)); cc.Clear(); bcc.Clear(); baseline = Snapshot(); }
-        public ComposerWindow(Preferences prefs, MailStore mailbox, Message existing, string mode, Message original) {
+        public ComposerWindow(Preferences prefs, MailStore mailbox, Message existing, string mode, Message original, string accountId = null) {
             preferences = prefs; store = mailbox; draft = existing;
+            recipientHistory = RecipientHistory.Build(mailbox.Messages, prefs.EmailAddress, accountId);
             Title = existing == null ? "New message · TMA-Mail" : "Edit draft · TMA-Mail";
             Width = 1180; Height = 880; MinWidth = 940; MinHeight = 700; WindowStartupLocation = WindowStartupLocation.CenterOwner; FontFamily = new FontFamily("Segoe UI"); Theme.Install(this);
             var root = new Grid { Margin = new Thickness(28, 24, 28, 22) }; Content = root;
@@ -136,9 +137,9 @@ namespace Postbox {
             System.Windows.Automation.AutomationProperties.SetName(button, label);
             button.Click += delegate { try { action(); } catch (Exception ex) { MessageBox.Show("That action could not be completed.\n" + ex.Message, "TMA-Mail"); } }; return button;
         }
-        private static TextBox RecipientField(Grid parent, string name, string value, int row, int column) {
+        private TextBox RecipientField(Grid parent, string name, string value, int row, int column) {
             var group = new DockPanel(); var label = Text(name, 12); label.Width = 60; label.Foreground = Theme.B("#8793A7"); label.VerticalAlignment = VerticalAlignment.Center; group.Children.Add(label);
-            var box = new TextBox { Text = value ?? "", BorderThickness = new Thickness(0), Background = Brushes.Transparent, ToolTip = "Separate email addresses with semicolons" }; group.Children.Add(box); var card = new Border { Background = Theme.B("Surface"), CornerRadius = new CornerRadius(15), Padding = new Thickness(16, 5, 16, 5), Margin = new Thickness(0, 0, column == 0 && row > 0 ? 10 : 0, 10), Child = group }; Grid.SetRow(card, row); Grid.SetColumn(card, column); parent.Children.Add(card); return box;
+            var box = new TextBox { Text = value ?? "", BorderThickness = new Thickness(0), Background = Brushes.Transparent, ToolTip = "Separate email addresses with semicolons" }; System.Windows.Automation.AutomationProperties.SetName(box, name); AttachRecipientSuggestions(box); group.Children.Add(box); var card = new Border { Background = Theme.B("Surface"), CornerRadius = new CornerRadius(15), Padding = new Thickness(16, 5, 16, 5), Margin = new Thickness(0, 0, column == 0 && row > 0 ? 10 : 0, 10), Child = group }; Grid.SetRow(card, row); Grid.SetColumn(card, column); parent.Children.Add(card); return box;
         }
         private StackPanel RibbonTab(TabControl tabs, string name) {
             var panel = new StackPanel { Orientation = Orientation.Vertical, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(1) };

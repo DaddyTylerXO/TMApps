@@ -15,6 +15,8 @@ namespace Postbox {
         private StackPanel attachmentReader;
         private Button moveButton;
         private bool favouritesTab;
+        private Func<MailAccount, List<Message>, string, Dictionary<string, Message>> serverMove;
+        private readonly HashSet<string> pendingServerMoves = new HashSet<string>();
         private void InitializeMailboxFeatures() {
             var list = Find<ListBox>("MessageList"); list.SelectionMode = SelectionMode.Extended;
             list.ToolTip = "Ctrl+click to select individual messages. Shift+click to select a range.";
@@ -47,19 +49,43 @@ namespace Postbox {
         }
         private async void MoveSelected(string destination) {
             var messages = SelectedMessages().Where(m => m.Folder != destination).ToList(); if (messages.Count == 0) return;
-            if (destination.StartsWith("Server:") && messages.All(m => m.RemoteUid == 0)) { Status("Local drafts stay on this PC. Server folders are available for synced messages."); return; }
+            if (destination.StartsWith("Server:") && messages.Any(m => m.RemoteUid == 0)) { Status("Local drafts stay on this PC. Select only synced messages to move to a server folder."); return; }
             if (activeAccount != null && messages.Any(m => m.RemoteUid != 0)) {
-                var movingAccount = activeAccount; var movingService = new MailTransport(movingAccount, accountStore);
+                var movingAccount = activeAccount; var movingMailbox = store;
                 if (destination == "Drafts" || destination == "Sent") { Status("Server mail can be moved to Inbox, Archive, or Trash. Drafts and Sent are managed by composing and delivery."); return; }
-                if (!await mailGate.WaitAsync(0)) { Status("Please wait for the current mail operation."); return; }
-                try { Status("Moving messages on the server…"); await System.Threading.Tasks.Task.Run(() => movingService.Move(messages, destination)); lastBatchMove = null; }
-                catch (Exception ex) { Status("Server move failed or was interrupted: " + ex.Message + " · sync to check the server before retrying"); return; }
-                finally { mailGate.Release(); }
-                await SyncMail(movingAccount.Id); return;
+                await MoveServerMessages(messages, movingAccount, movingMailbox, destination); return;
             }
             var history = messages.ToDictionary(m => m.Id, m => m.Folder);
             store.MoveMany(messages, destination); lastBatchMove = history; Refresh(null);
             Status(messages.Count + " message(s) moved to " + destination + " · Ctrl+Z to undo");
+        }
+        private async System.Threading.Tasks.Task<bool> MoveServerMessages(List<Message> messages, MailAccount account, MailStore mailbox, string destination) {
+            if (destination == "Drafts" || destination == "Sent") { Status("Drafts and Sent are managed by composing and delivery."); return false; }
+            var moveKeys = messages.Select(m => account.Id + ":" + m.Id).ToList();
+            if (moveKeys.Any(k => pendingServerMoves.Contains(k))) { Status("These messages are already being moved."); return false; }
+            foreach (var key in moveKeys) pendingServerMoves.Add(key);
+            string interrupted = null;
+            var waiting = mailGate.WaitAsync();
+            if (!waiting.IsCompleted) { Status("Waiting for the current mail operation…"); if (currentSyncCancellation != null) { interrupted = currentSyncAccountId; currentSyncCancellation.Cancel(); } }
+            await waiting;
+            try {
+                if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account)) || removingMailAccounts.Contains(account.Id)) { Status("The mailbox was disconnected before the move started."); return false; }
+                Status("Moving messages on the server…");
+                var remote = messages.Where(m => m.RemoteUid != 0).Select(m => m.CopyForSync()).ToList();
+                var moved = await System.Threading.Tasks.Task.Run(() => serverMove == null ? new MailTransport(account, accountStore).Move(remote, destination) : serverMove(account, remote, destination));
+                var ids = new HashSet<string>(remote.Select(m => m.Id));
+                var destinationIds = new HashSet<string>(moved.Values.Select(m => m.Id)); mailbox.Messages.RemoveAll(m => ids.Contains(m.Id) || destinationIds.Contains(m.Id)); mailbox.Messages.AddRange(moved.Values);
+                foreach (var message in messages.Where(m => m.RemoteUid == 0)) message.Folder = destination;
+                lastBatchMove = null;
+                foreach (var group in remote.GroupBy(m => m.RemoteFolder)) { var source = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.Path == group.Key); if (source != null) { source.Count = Math.Max(0, source.Count - group.Count()); source.Unread = Math.Max(0, source.Unread - group.Count(m => m.Unread)); } }
+                var target = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.LocalName == destination); if (target != null) { target.Count += remote.Count; target.Unread += remote.Count(m => m.Unread); }
+                if (store == mailbox) Refresh(null); UpdateUnreadBadge(); UpdateNavigationLabels();
+                try { await PersistMailboxAsync(mailbox); } catch { Status("Messages moved on the server, but the local cache could not be saved. Sync before retrying."); return true; }
+                Status(messages.Count + " message(s) moved to " + FolderDisplayName(destination) + (pausedMailSync.Contains(account.Id) && moved.Count < remote.Count ? " · resume sync to refresh destination messages" : ""));
+            } catch (Exception ex) { Status("Server move failed or was interrupted: " + ex.Message + " · sync to check the server before retrying"); return false; }
+            finally { foreach (var key in moveKeys) pendingServerMoves.Remove(key); mailGate.Release(); if (interrupted != null && !pausedMailSync.Contains(interrupted) && mailAccounts.Any(a => a.Id == interrupted)) QueueMailSync(interrupted); }
+            if (!pausedMailSync.Contains(account.Id)) QueueMailSync(account.Id);
+            return true;
         }
         private IEnumerable<string> MoveDestinations() { return new[] { "Inbox", "Drafts", "Sent", "Archive", "Trash" }.Concat(activeAccount == null ? new string[0] : (activeAccount.Folders ?? new List<ServerFolder>()).Where(f => f.Selectable && f.LocalName.StartsWith("Server:")).Select(f => f.LocalName)); }
         private void UndoMove() {

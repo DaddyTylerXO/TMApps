@@ -14,6 +14,11 @@ class LiveMailboxTests {
     static void Check(bool value, string name) { if (!value) throw new Exception(name); checks++; }
     static object Get(object value, string name) { return value.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(value); }
     static object Call(object value, string name, params object[] args) { return value.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(value, args); }
+    static void PumpUntil(Func<bool> done) {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!done() && DateTime.UtcNow < deadline) { var frame = new System.Windows.Threading.DispatcherFrame(); System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate { frame.Continue = false; })); System.Windows.Threading.Dispatcher.PushFrame(frame); }
+        if (!done()) throw new Exception("Timed out waiting for a synthetic toolbar action");
+    }
     static IEnumerable<T> Children<T>(DependencyObject parent) where T : DependencyObject { foreach (var value in LogicalTreeHelper.GetChildren(parent)) { var child = value as DependencyObject; if (child == null) continue; if (child is T) yield return (T)child; foreach (var nested in Children<T>(child)) yield return nested; } }
     [STAThread] static void Main(string[] args) {
         string directory = args[1]; Directory.CreateDirectory(directory);
@@ -127,6 +132,38 @@ class LiveMailboxTests {
         Check(((Button)window.FindName("FooterPauseSyncButton")).Content.ToString().Contains("Resume"), "Paused mailbox did not offer Resume sync");
         Call(app, "ResumeMailSync", second.Id);
         Check(!paused.Contains(second.Id) && ((Button)window.FindName("FooterPauseSyncButton")).Content.ToString().Contains("Pause"), "Resume sync did not restore the mailbox controls");
+        // Exercise real Delete/Restore/Archive clicks and a queued server move, without a server.
+        var actionAccount = (MailAccount)Get(app,"activeAccount"); var actionMailbox = (MailStore)Get(app,"store");
+        Call(app,"PauseMailSync",actionAccount.Id); Call(app,"SelectMailbox",actionAccount,"Inbox");
+        var localAction = new Message { Id="local-toolbar", AccountId=actionAccount.Id, Folder="Inbox", Subject="Local action fixture" }; actionMailbox.Messages.Add(localAction); Call(app,"Refresh",new object[]{null});
+        var messageList=(ListBox)window.FindName("MessageList"); messageList.SelectedItem=localAction;
+        ((Button)window.FindName("DeleteButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Check(localAction.Folder=="Trash","Delete toolbar click did not move local mail to Trash");
+        Call(app,"SelectMailbox",actionAccount,"Trash"); messageList.SelectedItem=localAction; ((Button)window.FindName("DeleteButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Check(localAction.Folder=="Inbox","Restore toolbar click did not return local mail to Inbox");
+        Call(app,"SelectMailbox",actionAccount,"Inbox"); messageList.SelectedItem=localAction; ((Button)window.FindName("ArchiveButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Check(localAction.Folder=="Archive","Archive toolbar click did not move local mail");
+        var remoteAction=new Message{Id="server-toolbar",AccountId=actionAccount.Id,Folder="Inbox",RemoteFolder="INBOX",RemoteUid=33,UidValidity=77,Subject="Remote action fixture"}; actionMailbox.Messages.Add(remoteAction); Call(app,"Refresh",new object[]{null}); messageList.SelectedItem=remoteAction;
+        int serverCalls=0;
+        Func<MailAccount,List<Message>,string,Dictionary<string,Message>> fakeMove=delegate(MailAccount account,List<Message> batch,string target) { serverCalls++; var moved=new Dictionary<string,Message>(); foreach(var item in batch) { var copy=item.CopyForSync(); copy.Id="moved-"+item.Id; copy.Folder=target; copy.RemoteFolder=target; copy.RemoteUid=999; copy.UidValidity=88; moved[item.Id]=copy; } return moved; };
+        typeof(App).GetField("serverMove",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,fakeMove);
+        var busySync=new System.Threading.CancellationTokenSource(); gate.Wait();
+        typeof(App).GetField("currentSyncCancellation",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,busySync); typeof(App).GetField("currentSyncAccountId",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,actionAccount.Id);
+        using(busySync.Token.Register(delegate { gate.Release(); })) {
+            ((Button)window.FindName("DeleteButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            PumpUntil(()=>actionMailbox.Messages.Any(m=>m.Id=="moved-server-toolbar"));
+        }
+        Check(busySync.IsCancellationRequested && serverCalls==1,"Delete was rejected during sync or sent more than once");
+        Check(!actionMailbox.Messages.Contains(remoteAction) && actionMailbox.Messages.Single(m=>m.Id=="moved-server-toolbar").RemoteUid==999 && actionMailbox.Messages.Single(m=>m.Id=="moved-server-toolbar").Folder=="Trash","Successful server move did not update cache and remote identity while paused");
+        Check(paused.Contains(actionAccount.Id),"Toolbar move unexpectedly resumed a paused mailbox");
+        typeof(App).GetField("currentSyncCancellation",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,null); typeof(App).GetField("currentSyncAccountId",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,null); busySync.Dispose();
+        var failureAction=new Message{Id="failed-server-move",AccountId=actionAccount.Id,Folder="Inbox",RemoteFolder="INBOX",RemoteUid=34,UidValidity=77}; actionMailbox.Messages.Add(failureAction);
+        Func<MailAccount,List<Message>,string,Dictionary<string,Message>> failMove=delegate { throw new InvalidOperationException("Synthetic server refusal"); }; typeof(App).GetField("serverMove",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,failMove);
+        var failedMove=(System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{failureAction},actionAccount,actionMailbox,"Archive"); PumpUntil(()=>failedMove.IsCompleted); Check(!failedMove.Result && actionMailbox.Messages.Contains(failureAction) && failureAction.Folder=="Inbox","Failed server move hid or relocated cached mail");
+        typeof(App).GetField("serverMove",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,fakeMove); gate.Wait();
+        var disconnectedMove=(System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{failureAction},actionAccount,actionMailbox,"Trash");
+        var duplicateMove=(System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{failureAction},actionAccount,actionMailbox,"Trash"); Check(duplicateMove.IsCompleted && !duplicateMove.Result,"Repeated toolbar clicks queued the same server move twice");
+        var currentAccounts=(List<MailAccount>)Get(app,"mailAccounts"); currentAccounts.Remove(actionAccount); gate.Release(); PumpUntil(()=>disconnectedMove.IsCompleted); currentAccounts.Add(actionAccount);
+        Check(!disconnectedMove.Result && serverCalls==1 && actionMailbox.Messages.Contains(failureAction),"Queued move accessed an account after disconnection");
+        Check(MailTransport.FolderAliases("Trash").Contains("Deleted Items") && MailTransport.FolderAliases("Trash").Contains("Deleted Messages"),"Common provider Trash aliases were not recognized");
+        string selectedEmail=prefs.EmailAddress; prefs.EmailAddress="different-active@example.com"; var capturedPrefs=(Preferences)Call(app,"ComposerPreferences",actionAccount); Check(capturedPrefs.EmailAddress==actionAccount.Email && prefs.EmailAddress=="different-active@example.com","Pop-out reply preferences leaked the newly selected account into the composing account"); prefs.EmailAddress=selectedEmail;
         window.Close(); app.Shutdown();
         accounts.Remove(first.Id); Check(accounts.LoadAll().Count == 1 && accounts.Load().Id == second.Id, "Removing one account removed another mailbox");
         Console.WriteLine("Passed " + checks + " live-mail workspace checks. Synthetic data only; no server contacted.");

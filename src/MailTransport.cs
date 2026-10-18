@@ -36,14 +36,20 @@ namespace Postbox {
             catch { client.Dispose(); throw; }
         }
         public void Test() { using (var client = Connect()) client.Disconnect(true); using (var client = ConnectSmtp()) client.Disconnect(true); }
-        private static IMailFolder Folder(ImapClient client, string name) {
+        private IMailFolder Folder(ImapClient client, string name) {
             if (name.StartsWith("Server:", StringComparison.Ordinal)) return client.GetFolder(Uri.UnescapeDataString(name.Substring(7)));
             if (name == "Inbox") return client.Inbox;
-            if (name == "Drafts") return client.GetFolder(SpecialFolder.Drafts);
-            if (name == "Sent") return client.GetFolder(SpecialFolder.Sent);
-            if (name == "Trash") return client.GetFolder(SpecialFolder.Trash);
-            if (name == "Archive") return client.GetFolder(SpecialFolder.Archive);
+            try {
+                IMailFolder advertised = name == "Drafts" ? client.GetFolder(SpecialFolder.Drafts) : name == "Sent" ? client.GetFolder(SpecialFolder.Sent) : name == "Trash" ? client.GetFolder(SpecialFolder.Trash) : name == "Archive" ? client.GetFolder(SpecialFolder.Archive) : null;
+                if (advertised != null) return advertised;
+            } catch (NotSupportedException) { } catch (FolderNotFoundException) { }
+            if (name == "Archive" && account.Provider == "Gmail") { try { return client.GetFolder(SpecialFolder.All); } catch (NotSupportedException) { } catch (FolderNotFoundException) { } }
+            var known = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.Selectable && (f.LocalName == name || FolderAliases(name).Contains(f.Name, StringComparer.OrdinalIgnoreCase)));
+            if (known != null) return client.GetFolder(known.Path);
             return null;
+        }
+        public static string[] FolderAliases(string name) {
+            return name == "Trash" ? new[] { "Trash", "Deleted Messages", "Deleted Items", "Bin" } : name == "Archive" ? new[] { "Archive", "Archives" } : name == "Sent" ? new[] { "Sent", "Sent Messages", "Sent Items" } : name == "Drafts" ? new[] { "Drafts" } : new string[0];
         }
         public static Message ConvertMessage(MimeMessage mime, string accountId, string localFolder, string remoteFolder, uint validity, uint uid, MessageFlags flags) {
             var from = mime.From.Mailboxes.FirstOrDefault();
@@ -97,16 +103,21 @@ namespace Postbox {
                 return null;
             } catch (Exception) { return "Mail was accepted by SMTP. The server Sent copy could not be saved; your local copy was kept. Do not resend."; }
         }
-        public void Move(List<Message> messages, string target) {
+        public Dictionary<string, Message> Move(List<Message> messages, string target) {
+            var moved = new Dictionary<string, Message>();
             using (var client = Connect()) {
                 var destination = Folder(client, target); if (destination == null) throw new InvalidOperationException("The server does not advertise a " + target + " folder.");
+                destination.Status(StatusItems.UidValidity);
                 foreach (var group in messages.Where(m => m.RemoteUid != 0).GroupBy(m => m.RemoteFolder)) {
                     var source = client.GetFolder(group.Key); source.Open(FolderAccess.ReadWrite);
                     if (group.Any(m => m.UidValidity != source.UidValidity)) throw new InvalidOperationException("The server mailbox changed. Sync before moving messages.");
-                    source.MoveTo(group.Select(m => new UniqueId(m.RemoteUid)).ToList(), destination); source.Close();
+                    var mapping = source.MoveTo(group.Select(m => new UniqueId(m.RemoteUid)).ToList(), destination);
+                    foreach (var message in group) { UniqueId uid; if (mapping != null && mapping.TryGetValue(new UniqueId(message.RemoteUid), out uid)) { var copy = message.CopyForSync(); copy.RemoteUid = uid.Id; copy.RemoteFolder = destination.FullName; copy.UidValidity = destination.UidValidity; copy.Folder = target; copy.Id = account.Id + ":" + destination.FullName + ":" + copy.UidValidity + ":" + copy.RemoteUid; moved[message.Id] = copy; } }
+                    source.Close();
                 }
                 client.Disconnect(true);
             }
+            return moved;
         }
         public void Flags(Message message) {
             using (var client = Connect()) {

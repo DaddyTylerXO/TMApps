@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.9')
+param([string]$OutputDirectory = 'build\v0.16.0')
 $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'tests\SecretScanTests.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -45,6 +45,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Provider setup test compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'ProviderSetupTests.exe.config') -Force
 & (Join-Path $out 'ProviderSetupTests.exe') (Join-Path $out 'test-data')
 if ($LASTEXITCODE -ne 0) { throw 'Provider setup checks failed.' }
+$recipientArguments = @('/nologo', '/target:exe', ('/out:' + (Join-Path $out 'RecipientSuggestionTests.exe')), ('/reference:' + (Join-Path $out 'TMA-Mail.exe')))
+foreach ($reference in @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')) { $recipientArguments += '/reference:' + (Join-Path $framework $reference) }
+$recipientArguments += Join-Path $PSScriptRoot 'tests\RecipientSuggestionTests.cs'
+& (Join-Path $framework 'csc.exe') @recipientArguments
+if ($LASTEXITCODE -ne 0) { throw 'Recipient test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'RecipientSuggestionTests.exe.config') -Force
+& (Join-Path $out 'RecipientSuggestionTests.exe') (Join-Path $out ('test-data\recipients-' + [guid]::NewGuid().ToString('N')))
+if ($LASTEXITCODE -ne 0) { throw 'Recipient suggestion checks failed.' }
 $msalJsonArguments = @('/nologo','/target:exe',('/out:' + (Join-Path $out 'MsalJsonTests.exe')),('/reference:' + (Join-Path $out 'Microsoft.Identity.Client.dll')),('/reference:' + (Join-Path $framework 'System.Core.dll')))
 $msalJsonArguments += Join-Path $PSScriptRoot 'tests\MsalJsonTests.cs'
 & (Join-Path $framework 'csc.exe') @msalJsonArguments

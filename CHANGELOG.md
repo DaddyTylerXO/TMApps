@@ -2,6 +2,14 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.0 beta — 18 October 2026
+
+- Suggest recipient addresses while typing in To, Cc or Bcc for new messages, replies, forwards and Fast Functions. Rank valid addresses from the composing account's cached sent mail by message frequency, then recency; omit the account itself, duplicates, drafts and unrelated accounts. Support arrows, Enter/Tab, Escape and mouse selection, preserving other recipients.
+- Queue Delete, Archive and Move behind active mail operations instead of refusing clicks during sync. Cancel an active sync to let queued moves proceed, then resume background work where appropriate. Keep manually paused mailboxes paused and reject duplicate moves or moves queued for disconnected accounts.
+- Refresh source and destination cache entries after successful moves using the server's destination UID mapping. On servers without a mapping, refresh the destination on the next sync. Failed moves keep the cached source visible and do not automatically retry.
+- Recognize common Deleted Items/Deleted Messages folder names and Gmail's All Mail archive when special-folder flags are unavailable. Keep pop-out reply recipient history tied to its original account after mailbox switching.
+- Add 14 synthetic recipient/dropdown checks and 11 toolbar/move/account-isolation checks. No real mailbox was modified by automated tests.
+
 ## 0.15.9 beta — 18 October 2026
 
 - Add per-mailbox Pause sync / Resume sync controls in the footer and Settings → Accounts. Pause stops queued/periodic sync and new-mail monitoring for that mailbox until resumed or the app restarts.

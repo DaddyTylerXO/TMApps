@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.9')
+param([string]$OutputDirectory = 'build\v0.16.0')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -13,7 +13,7 @@ $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mai
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
 $arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
 foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
-foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions','ExtendedMail','MailboxTools','ManagementUi','UiPolish','CalendarReminders','CalendarProviders','CalendarSyncUi')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions','ExtendedMail','MailboxTools','ManagementUi','UiPolish','RecipientSuggestions','CalendarReminders','CalendarProviders','CalendarSyncUi')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1
     if (!$dll) { $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net461') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }

@@ -78,11 +78,11 @@ namespace Postbox {
             root.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); pop.Closed += delegate { if (html != null) html.Dispose(); }; pop.Show();
         }
         private void ComposeMessageInWindow(Message message, MailAccount account, MailStore mailbox, string mode, Window owner) {
-            var composer = new ComposerWindow(settingsStore.Clone(preferences), mailbox, null, mode, message) { Owner = owner }; if (account != null) composer.Deliver = m => SendMail(m, account);
+            var composer = new ComposerWindow(ComposerPreferences(account), mailbox, null, mode, message, account == null ? null : account.Id) { Owner = owner }; if (account != null) composer.Deliver = m => SendMail(m, account);
             composer.Saved += delegate(bool sent, string subject) { if (store == mailbox) Refresh(selected == null ? null : selected.Id); if (sent) MailNotification(false, subject, composer.RecipientAddresses); }; composer.ShowDialog();
         }
         private async Task MovePoppedMessage(Message message, MailAccount account, MailStore mailbox, string destination) {
-            if (message.RemoteUid != 0 && account != null) { if (!await mailGate.WaitAsync(0)) { Status("Please wait for the current mail operation."); return; } try { await Task.Run(() => new MailTransport(account, accountStore).Move(new List<Message> { message }, destination)); } catch (Exception ex) { Status("Move failed: " + ex.Message); return; } finally { mailGate.Release(); } await SyncMail(account.Id); }
+            if (message.RemoteUid != 0 && account != null) { await MoveServerMessages(new List<Message> { message }, account, mailbox, destination); }
             else { mailbox.Move(message, destination); if (mailbox == store) Refresh(null); }
         }
     }

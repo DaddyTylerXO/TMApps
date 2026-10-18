@@ -44,7 +44,7 @@ namespace Postbox {
                 foreach (var space in client.PersonalNamespaces) foreach (var value in client.GetFolders(space, StatusItems.Count | StatusItems.Unread, false, cancellation)) folders[value.FullName] = value;
                 folders[client.Inbox.FullName] = client.Inbox;
                 var mapped = new Dictionary<string, string> { { client.Inbox.FullName, "Inbox" } };
-                foreach (string name in new[] { "Drafts", "Sent", "Archive", "Trash" }) { try { var value = Folder(client, name); if (value != null) { mapped[value.FullName] = name; folders[value.FullName] = value; } } catch (NotSupportedException) { } }
+                foreach (string name in new[] { "Drafts", "Sent", "Archive", "Trash" }) { try { var value = Folder(client, name) ?? folders.Values.FirstOrDefault(f => FolderAliases(name).Contains(f.Name, StringComparer.OrdinalIgnoreCase)); if (value != null) { mapped[value.FullName] = name; folders[value.FullName] = value; } } catch (NotSupportedException) { } }
                 foreach (var value in folders.Values.OrderBy(f => f.FullName == client.Inbox.FullName ? 0 : 1).ThenBy(f => f.FullName)) {
                     int separator = value.DirectorySeparator == '\0' ? -1 : value.FullName.LastIndexOf(value.DirectorySeparator);
                     snapshot.Folders.Add(new ServerFolder { Name = value.Name, Path = value.FullName, ParentPath = separator < 0 ? "" : value.FullName.Substring(0, separator), LocalName = mapped.ContainsKey(value.FullName) ? mapped[value.FullName] : FolderKey(value.FullName), Count = value.Count, Unread = value.Unread, Selectable = (value.Attributes & FolderAttributes.NoSelect) == 0 });

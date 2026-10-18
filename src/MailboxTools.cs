@@ -86,7 +86,7 @@ namespace Postbox {
                 foreach (var step in function.Steps()) {
                     string kind = FastKind(step.Action);
                     if (new[] { "Reply", "Reply all", "Forward" }.Contains(kind)) {
-                        var composer = new ComposerWindow(settingsStore.Clone(preferences), mailbox, null, kind == "Forward" ? "forward" : kind == "Reply all" ? "replyAll" : "reply", messages[0]) { Owner = window };
+                        var composer = new ComposerWindow(ComposerPreferences(account), mailbox, null, kind == "Forward" ? "forward" : kind == "Reply all" ? "replyAll" : "reply", messages[0], account == null ? null : account.Id) { Owner = window };
                         if (!String.IsNullOrWhiteSpace(step.Recipients)) composer.SetFastRecipients(step.Recipients);
                         if (account != null) composer.Deliver = m => SendMail(m, account);
                         bool saved = false; composer.Saved += delegate(bool sent, string subject) { saved = true; if (sent) MailNotification(false, subject, composer.RecipientAddresses); };
@@ -94,9 +94,7 @@ namespace Postbox {
                     } else if (kind == "Move to folder") {
                         if (String.IsNullOrEmpty(step.Destination)) throw new InvalidOperationException("Choose a folder for this action.");
                         if (account != null && messages.Any(m => m.RemoteUid != 0)) {
-                            if (!await mailGate.WaitAsync(0)) throw new InvalidOperationException("Please wait for the current mail operation.");
-                            try { await Task.Run(() => new MailTransport(account, accountStore).Move(messages, step.Destination)); } finally { mailGate.Release(); }
-                            await SyncMail(account.Id);
+                            if (!await MoveServerMessages(messages, account, mailbox, step.Destination)) return;
                             var relocated = new List<Message>(); foreach (var original in messages) { var candidates = mailbox.Messages.Where(m => m.Folder == step.Destination && !String.IsNullOrEmpty(original.InternetMessageId) && m.InternetMessageId == original.InternetMessageId).ToList(); if (candidates.Count != 1) throw new InvalidOperationException("The move completed, but its destination copy is not uniquely available in the cache. Later actions were stopped; sync and select the moved email before continuing."); relocated.Add(candidates[0]); } messages = relocated;
                         } else foreach (var message in messages) message.Folder = step.Destination;
                     } else foreach (var message in messages) {

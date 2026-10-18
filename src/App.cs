@@ -165,11 +165,12 @@ namespace Postbox {
         }
         private void Compose(Message draft, string mode) {
             var composingAccount = activeAccount;
-            var composer = new ComposerWindow(settingsStore.Clone(preferences), store, draft, mode, selected);
+            var composer = new ComposerWindow(ComposerPreferences(composingAccount), store, draft, mode, selected, composingAccount == null ? null : composingAccount.Id);
             composer.Owner = window; if (composingAccount != null) composer.Deliver = message => SendMail(message, composingAccount);
             composer.Saved += delegate(bool sent, string subject) { Refresh(selected == null ? null : selected.Id); Status(sent ? "Message accepted by your mail server" : "Draft saved on this PC"); if (sent) MailNotification(false, subject, composer.RecipientAddresses); };
             composer.ShowDialog();
         }
+        private Preferences ComposerPreferences(MailAccount account) { var prefs = settingsStore.Clone(preferences); if (account != null) prefs.EmailAddress = account.Email; return prefs; }
         private void ShowAccounts() { ShowConnectedAccounts(); }
     }
 }
