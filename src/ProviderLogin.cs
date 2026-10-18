@@ -61,17 +61,18 @@ namespace Postbox {
                 }
             } else throw new ArgumentException("Choose Outlook or Gmail for browser sign-in.");
         }
-        public static void Refresh(MailAccount account, bool calendar = false) {
+        public static void Refresh(MailAccount account, bool calendar = false, CancellationToken cancellation = default(CancellationToken)) {
+            cancellation.ThrowIfCancellationRequested();
             if (account.ExpiresUtc > DateTime.UtcNow) return;
             if (account.Provider == "Microsoft") {
                 // Keep existing 0.7 device-code connections working after upgrading.
                 if (String.IsNullOrEmpty(account.AuthCache)) { if (calendar) throw new InvalidOperationException("Reconnect calendar access."); MicrosoftLogin.Refresh(account); return; }
                 var client = MicrosoftClient(account); var identity = client.GetAccountsAsync().GetAwaiter().GetResult().FirstOrDefault();
                 if (identity == null) throw new InvalidOperationException("Please reconnect Outlook from Accounts.");
-                ApplyMicrosoft(account, client.AcquireTokenSilent(calendar ? new[] { "https://graph.microsoft.com/Calendars.ReadWrite" } : OutlookScopes, identity).ExecuteAsync().GetAwaiter().GetResult());
+                ApplyMicrosoft(account, client.AcquireTokenSilent(calendar ? new[] { "https://graph.microsoft.com/Calendars.ReadWrite" } : OutlookScopes, identity).ExecuteAsync(cancellation).GetAwaiter().GetResult());
             } else if (account.Provider == "Gmail" && account.AuthMethod == "OAuth") {
                 using (var flow = GoogleFlow(account, calendar)) {
-                    var token = flow.RefreshTokenAsync(account.Id, account.RefreshToken, CancellationToken.None).GetAwaiter().GetResult();
+                    var token = flow.RefreshTokenAsync(account.Id, account.RefreshToken, cancellation).GetAwaiter().GetResult();
                     account.AccessToken = token.AccessToken; if (!String.IsNullOrEmpty(token.RefreshToken)) account.RefreshToken = token.RefreshToken;
                     account.ExpiresUtc = DateTime.UtcNow.AddSeconds((token.ExpiresInSeconds ?? 3600) - 90);
                 }

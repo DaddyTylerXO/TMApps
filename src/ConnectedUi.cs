@@ -39,6 +39,8 @@ namespace Postbox {
         private bool periodicSyncRunning;
         private async void StartMailConnection() {
             Find<Button>("FooterSyncButton").Click += async delegate { await SyncMail(); };
+            Find<Button>("FooterPauseSyncButton").Click += delegate { if (activeAccount == null) return; if (pausedMailSync.Contains(activeAccount.Id)) ResumeMailSync(activeAccount.Id); else PauseMailSync(activeAccount.Id); };
+            UpdateSyncControls();
             InitializeCacheShutdown();
             if (offlinePreview) { Status("Offline preview · synthetic mailboxes · no server connections"); return; }
             syncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -81,12 +83,12 @@ namespace Postbox {
                 folder = "Inbox"; ApplyPreferences(); Refresh(null); EnsureMailWatchers();
             } finally { mailGate.Release(); }
         }
-        private void DisconnectAccount() {
-            if (activeAccount != null) RemoveMailAccount(activeAccount.Id);
+        private Task DisconnectAccount() {
+            return activeAccount == null ? Task.FromResult(true) : RemoveMailAccount(activeAccount.Id);
         }
         private async void ShowConnectedAccounts(string initialProvider = null) {
             try {
-                var setup = new AccountSetupWindow(activeAccount, ProviderConfiguration.Load(), ConnectAccount, DisconnectAccount, initialProvider, preferences.LauncherEmailSuggestions) { Owner = window };
+                var setup = new AccountSetupWindow(activeAccount, ProviderConfiguration.Load(), ConnectAccount, new Func<Task>(DisconnectAccount), initialProvider, preferences.LauncherEmailSuggestions) { Owner = window };
                 setup.ShowDialog();
                 if (setup.Connected) await SyncMail();
             } catch (Exception ex) { Status("Account setup could not open: " + ex.Message); }

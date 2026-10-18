@@ -17,21 +17,22 @@ namespace Postbox {
         private readonly AccountStore accounts;
         private readonly bool persistTokens;
         public MailTransport(MailAccount value, AccountStore storage, bool persist = true) { account = value; accounts = storage; persistTokens = persist; }
-        private void Authenticate(IMailService client) { lock (account) {
-            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account); if (persistTokens) accounts.SaveTokens(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken)); }
-            else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password); }
+        private void Authenticate(IMailService client, CancellationToken cancellation = default(CancellationToken)) { lock (account) {
+            cancellation.ThrowIfCancellationRequested();
+            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account, false, cancellation); cancellation.ThrowIfCancellationRequested(); if (persistTokens) accounts.SaveTokens(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken), cancellation); }
+            else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password, cancellation); }
         }
         }
         internal static ImapClient CreateImapClient() { return new ImapClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
         internal static SmtpClient CreateSmtpClient() { return new SmtpClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }
         private ImapClient Connect(CancellationToken cancellation = default(CancellationToken)) {
             var client = CreateImapClient();
-            try { client.Connect(account.ImapHost, account.ImapPort, account.ImapPort == 993 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client); return client; }
+            try { client.Connect(account.ImapHost, account.ImapPort, account.ImapPort == 993 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client, cancellation); return client; }
             catch { client.Dispose(); throw; }
         }
         private SmtpClient ConnectSmtp(CancellationToken cancellation = default(CancellationToken)) {
             var client = CreateSmtpClient();
-            try { client.Connect(account.SmtpHost, account.SmtpPort, account.SmtpSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client); return client; }
+            try { client.Connect(account.SmtpHost, account.SmtpPort, account.SmtpSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls, cancellation); Authenticate(client, cancellation); return client; }
             catch { client.Dispose(); throw; }
         }
         public void Test() { using (var client = Connect()) client.Disconnect(true); using (var client = ConnectSmtp()) client.Disconnect(true); }

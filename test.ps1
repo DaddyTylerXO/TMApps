@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.15.8')
+param([string]$OutputDirectory = 'build\v0.15.9')
 $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'tests\SecretScanTests.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'

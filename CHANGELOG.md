@@ -2,6 +2,13 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.15.9 beta — 18 October 2026
+
+- Add per-mailbox Pause sync / Resume sync controls in the footer and Settings → Accounts. Pause stops queued/periodic sync and new-mail monitoring for that mailbox until resumed or the app restarts.
+- Pause immediately when removal is selected. Cancelling the confirmation restores syncing unless the mailbox was already paused; confirming waits asynchronously for sync cancellation and the mail-operation lock before removing credentials. Reconnect-dialog disconnection also awaits removal.
+- Pass cancellation through IMAP/SMTP authentication and modern OAuth token renewal, suppress late sync callbacks, retain completed cache batches and preserve other accounts and encrypted caches.
+- Add eight synthetic workspace checks for cancellation, removal ordering, queue isolation, cache retention and resume controls. No real mailbox is removed during tests.
+
 ## 0.15.8 beta — 17 October 2026
 
 - Add a green question-mark help button beside the Google app-password option and password field. Hover shows 'How to get app specific password?'; clicking opens Google's official app-password guide.

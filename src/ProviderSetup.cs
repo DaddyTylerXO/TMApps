@@ -52,7 +52,7 @@ namespace Postbox {
         private readonly string[] launcherEmails;
         private readonly ProviderConfiguration configuration;
         private readonly Func<MailAccount, CancellationToken, Task> connect;
-        private readonly Action disconnect;
+        private readonly Func<Task> disconnect;
         private readonly StackPanel form;
         private readonly TextBlock status;
         private readonly Button detailsButton;
@@ -62,7 +62,9 @@ namespace Postbox {
         private bool busy, closeAfterCancel;
         public string SelectedProvider { get; private set; }
         public bool Connected { get; private set; }
-        public AccountSetupWindow(MailAccount existing, ProviderConfiguration config, Func<MailAccount, CancellationToken, Task> connection, Action remove, string initialProvider, System.Collections.Generic.IEnumerable<string> suggestedEmails = null) {
+        public AccountSetupWindow(MailAccount existing, ProviderConfiguration config, Func<MailAccount, CancellationToken, Task> connection, Action remove, string initialProvider, System.Collections.Generic.IEnumerable<string> suggestedEmails = null)
+            : this(existing, config, connection, delegate { remove(); return Task.FromResult(true); }, initialProvider, suggestedEmails) { }
+        public AccountSetupWindow(MailAccount existing, ProviderConfiguration config, Func<MailAccount, CancellationToken, Task> connection, Func<Task> remove, string initialProvider, System.Collections.Generic.IEnumerable<string> suggestedEmails = null) {
             launcherEmails=(suggestedEmails ?? new string[0]).ToArray();
             current = existing; configuration = config; connect = connection; disconnect = remove;
             Title = "Add an account · TMA-Mail"; Width = 610; Height = 690; MinWidth = 500; MinHeight = 560; MaxHeight = Math.Max(560, SystemParameters.WorkArea.Height - 30); WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = true; Theme.Install(this); Background = Theme.B("Canvas");
@@ -107,7 +109,7 @@ namespace Postbox {
             Heading(current == null ? "Add your email" : "Your connected account", current == null ? "Choose your provider. We’ll take care of the settings." : current.Email + "\nYou can reconnect or choose a different provider.");
             if(launcherEmails.Length>0) form.Children.Add(new TextBlock { Text="From TMApps Launcher: "+String.Join(", ",launcherEmails)+". Choose a provider to connect an address. Your app-specific password or provider sign-in is still required.",TextWrapping=TextWrapping.Wrap,Foreground=Theme.B("Muted"),Margin=new Thickness(0,0,0,14) });
             form.Children.Add(ProviderChoices.Picker(SelectProvider));
-            if (current != null) AddAction("Disconnect " + current.Email, delegate { disconnect(); Close(); }, false);
+            if (current != null) AddAction("Disconnect " + current.Email, async delegate { form.IsEnabled = false; try { status.Text = "Stopping sync and removing account…"; await disconnect(); Close(); } catch (Exception ex) { status.Text = "Account could not be removed: " + ex.Message; } finally { form.IsEnabled = true; } }, false);
         }
         public void SelectProvider(string provider) {
             if (busy) return; SelectedProvider = provider; back.Visibility = Visibility.Visible;

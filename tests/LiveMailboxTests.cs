@@ -94,6 +94,39 @@ class LiveMailboxTests {
         Check(Math.Abs(((Border)Get(app, "navigation")).ActualWidth - 88) < 1, "Compact sidebar does not have sufficient width");
         var inboxIcon = (Button)window.FindName("InboxNav"); Check(inboxIcon.ActualWidth >= 44 && inboxIcon.ActualHeight >= 44 && inboxIcon.Content.ToString() == "▣", "Compact folder icon is clipped or too small");
         Check(Children<Button>(window).Any(b => b.Content != null && b.Content.ToString() == "★" && b.ToolTip != null && b.ToolTip.ToString().Contains("Design & notes")), "Compact custom folder lost its icon or folder tooltip");
+        // Hold a synthetic sync open to prove removal cancels it and waits without blocking WPF.
+        var syncSource = new System.Threading.CancellationTokenSource();
+        var syncDone = new System.Threading.Tasks.TaskCompletionSource<bool>();
+        var gate = (System.Threading.SemaphoreSlim)Get(app, "mailGate"); gate.Wait();
+        typeof(App).GetField("currentSyncCancellation", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, syncSource);
+        typeof(App).GetField("currentSyncAccountId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, first.Id);
+        typeof(App).GetField("syncCompletion", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, syncDone);
+        var pending = (HashSet<string>)Get(app, "pendingMailSync"); pending.Add(first.Id); pending.Add(second.Id);
+        var watcherSource = new System.Threading.CancellationTokenSource();
+        ((Dictionary<string, System.Threading.CancellationTokenSource>)Get(app, "mailWatchers"))[first.Id] = watcherSource;
+        var removal = (System.Threading.Tasks.Task)Call(app, "RemoveMailAccount", first.Id);
+        Check(syncSource.IsCancellationRequested && watcherSource.IsCancellationRequested && !pending.Contains(first.Id) && pending.Contains(second.Id), "Removing an account did not cancel its sync/watcher and clear only its queued work");
+        Check(!removal.IsCompleted && new AccountStore(directory).LoadAll().Any(a => a.Id == first.Id), "Account credentials were removed before the sync stopped");
+        var paused = (HashSet<string>)Get(app, "pausedMailSync");
+        Check(paused.Contains(first.Id) && !paused.Contains(second.Id), "Removing one account paused another mailbox");
+        var suppressedSync = (System.Threading.Tasks.Task)Call(app, "SyncMail", first.Id);
+        Check(suppressedSync.IsCompleted && !pending.Contains(first.Id), "Paused sync was allowed to queue itself again");
+        gate.Release(); syncDone.SetResult(true);
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!removal.IsCompleted && DateTime.UtcNow < deadline) {
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate { frame.Continue = false; }));
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+        }
+        Check(removal.IsCompleted && !removal.IsFaulted, "Account removal did not finish after sync cancellation completed");
+        Check(new AccountStore(directory).LoadAll().Count == 1 && File.Exists(Path.Combine(directory, "mail-" + first.Id + ".protected")), "Removal deleted another account or the retained local cache");
+        typeof(App).GetField("currentSyncCancellation", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, null);
+        typeof(App).GetField("currentSyncAccountId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, null);
+        typeof(App).GetField("offlinePreview", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(app, true);
+        Call(app, "PauseMailSync", second.Id);
+        Check(((Button)window.FindName("FooterPauseSyncButton")).Content.ToString().Contains("Resume"), "Paused mailbox did not offer Resume sync");
+        Call(app, "ResumeMailSync", second.Id);
+        Check(!paused.Contains(second.Id) && ((Button)window.FindName("FooterPauseSyncButton")).Content.ToString().Contains("Pause"), "Resume sync did not restore the mailbox controls");
         window.Close(); app.Shutdown();
         accounts.Remove(first.Id); Check(accounts.LoadAll().Count == 1 && accounts.Load().Id == second.Id, "Removing one account removed another mailbox");
         Console.WriteLine("Passed " + checks + " live-mail workspace checks. Synthetic data only; no server contacted.");

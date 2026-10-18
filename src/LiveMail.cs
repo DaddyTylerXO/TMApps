@@ -16,6 +16,26 @@ namespace Postbox {
         private readonly Dictionary<string, bool> mailHealth = new Dictionary<string, bool>();
         private readonly HashSet<string> pendingMailSync = new HashSet<string>();
         private readonly HashSet<string> syncedAccounts = new HashSet<string>();
+        private readonly HashSet<string> pausedMailSync = new HashSet<string>();
+        private readonly HashSet<string> removingMailAccounts = new HashSet<string>();
+        private CancellationTokenSource currentSyncCancellation;
+        private string currentSyncAccountId;
+        private void UpdateSyncControls() {
+            if (window == null) return;
+            var button = Find<Button>("FooterPauseSyncButton"); if (button == null) return;
+            bool paused = activeAccount != null && pausedMailSync.Contains(activeAccount.Id);
+            button.Content = paused ? "▶ Resume sync" : "Ⅱ Pause sync"; button.IsEnabled = activeAccount != null && !removingMailAccounts.Contains(activeAccount.Id);
+            button.ToolTip = paused ? "Resume automatic sync for this mailbox" : "Pause sync and new-mail monitoring for this mailbox";
+        }
+        private void PauseMailSync(string id) {
+            pausedMailSync.Add(id); pendingMailSync.Remove(id); RestartMailWatcher(id);
+            if (currentSyncAccountId == id && currentSyncCancellation != null) currentSyncCancellation.Cancel();
+            UpdateConnectionLamp(); if (activeAccount != null && activeAccount.Id == id) Status(activeAccount.Email + " · Sync paused");
+        }
+        private void ResumeMailSync(string id) {
+            if (removingMailAccounts.Contains(id) || !mailAccounts.Any(a => a.Id == id)) return;
+            pausedMailSync.Remove(id); EnsureMailWatchers(); UpdateConnectionLamp(); QueueMailSync(id);
+        }
         private readonly CancellationTokenSource mailShutdown = new CancellationTokenSource();
         private NetworkAvailabilityChangedEventHandler networkHandler;
         private void QueueMailSync(string id) { Dispatcher.BeginInvoke(new Action(async delegate { await SyncMail(id); })); }
@@ -26,7 +46,7 @@ namespace Postbox {
                 NetworkChange.NetworkAvailabilityChanged += networkHandler;
             }
             foreach (var account in mailAccounts) {
-                if (mailWatchers.ContainsKey(account.Id)) continue;
+                if (mailWatchers.ContainsKey(account.Id) || pausedMailSync.Contains(account.Id) || removingMailAccounts.Contains(account.Id)) continue;
                 var cancellation = CancellationTokenSource.CreateLinkedTokenSource(mailShutdown.Token); mailWatchers[account.Id] = cancellation;
                 var watcher = new MailTransport(account, accountStore);
                 Task.Run(delegate { watcher.WatchInbox(
@@ -37,11 +57,13 @@ namespace Postbox {
         private void RestartMailWatcher(string id) { CancellationTokenSource source; if (mailWatchers.TryGetValue(id, out source)) { source.Cancel(); mailWatchers.Remove(id); } mailHealth[id] = false; }
         private void StopMailWatchers() { mailShutdown.Cancel(); foreach (var source in mailWatchers.Values) source.Cancel(); if (networkHandler != null) NetworkChange.NetworkAvailabilityChanged -= networkHandler; }
         private void UpdateConnectionLamp() {
+            UpdateSyncControls();
             if (window == null) return;
             var lamp = Find<System.Windows.Shapes.Ellipse>("ConnectionLamp"); if (lamp == null) return;
             bool good = activeAccount != null && mailHealth.ContainsKey(activeAccount.Id) && mailHealth[activeAccount.Id] && NetworkInterface.GetIsNetworkAvailable();
             var color = (Color)ColorConverter.ConvertFromString(good ? "#39FF70" : "#FF3B4D"); lamp.Fill = new SolidColorBrush(color); lamp.Effect = new DropShadowEffect { Color = color, BlurRadius = 10, ShadowDepth = 0, Opacity = 0.9 };
             lamp.ToolTip = good ? "Online · connected to the mail server" : activeAccount == null ? "No mailbox connected" : "Connection issue · offline, reconnecting, or waiting for the mail server";
+            if (activeAccount != null && pausedMailSync.Contains(activeAccount.Id)) lamp.ToolTip = "Sync paused · cached mail remains available";
             System.Windows.Automation.AutomationProperties.SetName(lamp, (string)lamp.ToolTip);
         }
         private void SelectMailbox(MailAccount account, string target) {
@@ -81,13 +103,16 @@ namespace Postbox {
             if (offlinePreview) { Status("Offline preview · network connections disabled"); return; }
             if (mailShutdown.IsCancellationRequested) return;
             var account = accountId == null ? activeAccount : mailAccounts.FirstOrDefault(a => a.Id == accountId); if (account == null) { Status("Add an email account in Settings → Accounts."); return; }
+            if (pausedMailSync.Contains(account.Id) || removingMailAccounts.Contains(account.Id)) return;
             if (syncing || !await mailGate.WaitAsync(0)) { pendingMailSync.Add(account.Id); return; }
             syncing = true; var completion = new TaskCompletionSource<bool>(); syncCompletion = completion;
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(mailShutdown.Token); currentSyncCancellation = cancellation; currentSyncAccountId = account.Id;
             MailStore mailbox = null; bool changed = false; string oldFolders = FolderState(account.Folders);
             object progressGate = new object(); bool progressQueued = false, reporting = true; string latestProgress = null;
             try {
                 try {
                     mailbox = await GetMailboxAsync(account);
+                    cancellation.Token.ThrowIfCancellationRequested();
                     var oldInbox = new HashSet<string>(mailbox.Messages.Where(m => m.Folder == "Inbox").Select(m => m.Id));
                     var cached = mailbox.Messages.ToList(); var service = new MailTransport(account, accountStore); DateTime lastProgress = DateTime.MinValue;
                     var snapshot = await Task.Run(() => service.Synchronize(cached,
@@ -99,43 +124,53 @@ namespace Postbox {
                             }
                             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
                                 string text; lock (progressGate) { text = latestProgress; progressQueued = false; if (!reporting) return; }
-                                if (mailAccounts.Any(a => Object.ReferenceEquals(a, account))) Status(text);
+                                if (!cancellation.IsCancellationRequested && mailAccounts.Any(a => Object.ReferenceEquals(a, account))) Status(text);
                             }));
                         }, delegate(List<ServerFolder> foldersFound) {
                             Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
-                                if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
+                                cancellation.Token.ThrowIfCancellationRequested(); if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                                 account.Folders = foldersFound.Select(f => new ServerFolder { Name = f.Name, Path = f.Path, ParentPath = f.ParentPath, LocalName = f.LocalName, Count = f.Count, Unread = f.Unread, Selectable = f.Selectable }).ToList();
                                 UpdateUnreadBadge(); if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             }));
                         }, delegate(ServerFolder completed, List<Message> batch) { Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate {
-                            if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
+                            cancellation.Token.ThrowIfCancellationRequested(); if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) throw new OperationCanceledException();
                             bool folderChanged = mailbox.ApplyFolderBatch(completed, batch); changed |= folderChanged;
                             var metadata = account.Folders == null ? null : account.Folders.FirstOrDefault(f => f.Path == completed.Path); if (metadata != null) { metadata.Count = completed.Count; metadata.Unread = completed.Unread; }
                             UpdateUnreadBadge(); if (activeAccount != null && activeAccount.Id == account.Id) UpdateNavigationLabels();
                             if (folderChanged && activeAccount != null && account.Id == activeAccount.Id && (folder == completed.LocalName || folder == "Starred")) Refresh(selected == null ? null : selected.Id);
-                        })); }, mailShutdown.Token));
+                        })); }, cancellation.Token));
+                    cancellation.Token.ThrowIfCancellationRequested();
                     lock (progressGate) reporting = false;
                     if (!mailAccounts.Any(a => Object.ReferenceEquals(a, account))) return;
-                    account.Folders = snapshot.Folders; await Task.Run(() => accountStore.SaveTokens(account)); mailHealth[account.Id] = true; UpdateConnectionLamp();
+                    account.Folders = snapshot.Folders; await Task.Run(() => accountStore.SaveTokens(account)); cancellation.Token.ThrowIfCancellationRequested(); mailHealth[account.Id] = true; UpdateConnectionLamp();
                     if (activeAccount != null && account.Id == activeAccount.Id) { if (oldFolders != FolderState(account.Folders)) ApplyNavigation(); UpdateCounts(); }
                     var fresh = snapshot.Messages.Where(m => m.Folder == "Inbox" && m.Unread && !oldInbox.Contains(m.Id)).ToList();
                     if (syncedAccounts.Contains(account.Id) && fresh.Count > 0) MailNotification(true, fresh.Count == 1 ? fresh[0].Subject : fresh.Count + " new messages", fresh[0].Address);
                     syncedAccounts.Add(account.Id); Status(account.Email + " · Up to date · 100% · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
                 } catch (OperationCanceledException) { }
-                catch (Exception error) { mailHealth[account.Id] = false; UpdateConnectionLamp(); Status(account.Email + " · Sync interrupted: " + error.Message.Split('\n')[0] + " · cached mail kept; retrying automatically"); }
+                catch (Exception error) { if (!cancellation.IsCancellationRequested) { mailHealth[account.Id] = false; UpdateConnectionLamp(); Status(account.Email + " · Sync interrupted: " + error.Message.Split('\n')[0] + " · cached mail kept; retrying automatically"); } }
                     lock (progressGate) reporting = false;
                 try { if (changed && mailbox != null) await PersistMailboxAsync(mailbox); }
                 catch (Exception ex) { Status(account.Email + " · Local cache could not be saved: " + ex.Message); }
             } finally {
                 lock (progressGate) reporting = false;
-                syncing = false; mailGate.Release(); completion.TrySetResult(true);
+                currentSyncCancellation = null; currentSyncAccountId = null; cancellation.Dispose(); syncing = false; mailGate.Release(); completion.TrySetResult(true);
                 if (pendingMailSync.Count > 0 && !mailShutdown.IsCancellationRequested) { string next = pendingMailSync.First(); pendingMailSync.Remove(next); QueueMailSync(next); }
             }
         }
-        private void RemoveMailAccount(string id) {
+        private async Task RemoveMailAccount(string id) {
+            if (!removingMailAccounts.Add(id)) return;
+            PauseMailSync(id);
+            try {
+                if (currentSyncAccountId == id && syncCompletion != null) await syncCompletion.Task;
+                await mailGate.WaitAsync();
+                try { RemoveStoppedMailAccount(id); } finally { mailGate.Release(); }
+            } finally { removingMailAccounts.Remove(id); UpdateSyncControls(); }
+        }
+        private void RemoveStoppedMailAccount(string id) {
             RestartMailWatcher(id); accountStore.Remove(id); mailAccounts = accountStore.LoadAll();
             if (activeAccount != null && activeAccount.Id == id) { activeAccount = accountStore.Load(); transport = activeAccount == null ? null : new MailTransport(activeAccount, accountStore); store = CurrentMailbox(); selected = null; lastBatchMove = null; folder = "Inbox"; }
-            pendingMailSync.Remove(id); ApplyPreferences(); Refresh(null); UpdateConnectionLamp();
+            pendingMailSync.Remove(id); pausedMailSync.Remove(id); syncedAccounts.Remove(id); mailHealth.Remove(id); ApplyPreferences(); Refresh(null); EnsureMailWatchers(); UpdateConnectionLamp();
         }
     }
 }
