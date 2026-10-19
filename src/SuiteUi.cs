@@ -31,11 +31,11 @@ namespace Postbox {
         private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
             double width = 64; x -= width;
             draw.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(231, 49, 67)), new Pen(Theme.B("Surface"), 3), new Rect(x + 2, y + 2, width - 4, radius * 2 - 4), radius, radius);
-            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 56, Brushes.White, 1.0);
+            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Black, FontStretches.Normal), 56, Brushes.White, 1.0);
             var lettering = label.BuildGeometry(new Point(0, 0)); var ink = lettering.Bounds;
-            // Keep the visible digits ten pixels tall at a 16px taskbar size, including 99+.
-            double horizontal = Math.Min(1, 50 / ink.Width), vertical = 40 / ink.Height;
-            lettering.Transform = new MatrixTransform(horizontal, 0, 0, vertical, x + width / 2 - (ink.X + ink.Width / 2) * horizontal, y + radius - (ink.Y + ink.Height / 2) * vertical);
+            // Use a heavier font with uniform scaling so digits keep their natural proportions.
+            double scale = Math.Min(56 / ink.Width, 40 / ink.Height);
+            lettering.Transform = new MatrixTransform(scale, 0, 0, scale, x + width / 2 - (ink.X + ink.Width / 2) * scale, y + radius - (ink.Y + ink.Height / 2) * scale);
             draw.DrawGeometry(Brushes.White, null, lettering);
         }
         private void InitializeSuiteUi() {

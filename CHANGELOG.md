@@ -2,6 +2,11 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.5 beta — 19 October 2026
+
+- Replace stretched notification lettering with the heavier Segoe UI Black weight. Scale uniformly to preserve the natural digit proportions while keeping the count centred inside the red bubble.
+- Visually verify single digits, two digits and `99+` at full and taskbar sizes; pass the existing notification integration checks.
+
 ## 0.16.4 beta — 19 October 2026
 
 - Correct the remaining small `99+` notification text by fitting the glyph height independently of its width. Use narrower lettering for large counts so it remains tall inside the circular badge.
