@@ -2,6 +2,16 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.2 beta — 19 October 2026
+
+- Hide deleted messages immediately, including bulk deletes and deletes queued behind sync or another mail operation. Complete the server move in the background, preserving original cached folders and UIDs until confirmation. Keep pending deletions hidden if a refresh replaces cached message objects.
+- Update visible Inbox unread counts and the notification badge while deletion is pending. Restore messages and counts if the server rejects the delete or the account disconnects before the operation starts. Retain the existing duplicate-operation guard and server-identity handling.
+- Move local message persistence off the immediate toolbar and pop-out action path so local deletes update the view before saving to disk.
+- Use the same responsive toolbar layout and green buttons in separate email windows, including all main actions, the divider, Fast Functions, Create New Button and Edit Bar. Synchronize saved action/Fast Function ordering and edit mode between windows. Keep actions, recipient history and custom buttons tied to the opened message's mailbox rather than the main selection.
+- Double-click a separate window's subject to edit it in a themed Save/Cancel dialog. Validate a single-line subject, update the main list and window title, and retain the local edit through sync and encrypted cache reload. The original server subject is unchanged.
+- Add 11 synthetic checks for immediate visibility, slow-server behavior, bulk deletion, account isolation, refresh persistence, confirmation and failure recovery. No real mail was deleted by automated tests.
+- Add 12 separate-window toolbar/editor checks and three edited-subject persistence/search checks.
+
 ## 0.16.1 beta — 19 October 2026
 
 - Prevent `Unknown Mailbox: [Gmail]` sync failures by excluding Gmail's reserved system-label parent containers, non-selectable folders and nonexistent placeholders before sending STATUS or EXAMINE. Preserve the folder hierarchy and sync real children, including All Mail. Apply the same folder eligibility check to subscription scans.

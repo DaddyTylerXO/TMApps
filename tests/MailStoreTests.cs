@@ -40,6 +40,12 @@ class MailStoreTests {
         rich.Attachments = new System.Collections.Generic.List<MailAttachment> { new MailAttachment { Name = "large.bin", Data = Convert.ToBase64String(new byte[2200000]), Size = 2200000 } }; reload.Save();
         var richReload = new MailStore(path).Messages.Single(m => m.Id == id);
         Check(richReload.Attachments.Single().Size == 2200000 && richReload.RichBody == "sample" && richReload.Cc == "cc@example.com" && richReload.FollowUp, "Rich metadata and large attachment persistence");
+        var edited = new Message { Id="edited-subject", AccountId="test", Folder="Inbox", RemoteFolder="INBOX", RemoteUid=8, UidValidity=9, Subject="Local edited subject", EditedSubject="Local edited subject", Body="old" }; reload.Messages.Add(edited); reload.Save();
+        var editedReload = new MailStore(path); Check(editedReload.Messages.Single(m=>m.Id==edited.Id).EditedSubject=="Local edited subject","Edited subject did not survive cache reload");
+        var incoming = edited.CopyForSync(); incoming.Subject="Original server subject"; incoming.EditedSubject=null; incoming.Body="Updated body";
+        editedReload.ApplyFolderBatch(new ServerFolder{Path="INBOX",LocalName="Inbox"},new System.Collections.Generic.List<Message>{incoming});
+        Check(editedReload.Messages.Single(m=>m.Id==edited.Id).Subject=="Local edited subject" && incoming.Body=="Updated body","Server refresh overwrote the edited subject or discarded fresh content");
+        Check(editedReload.Query("Inbox","Local edited",false).Any(),"Edited subject was not searchable");
         File.WriteAllText(path, "broken json");
         var recovered = new MailStore(path);
         Check(recovered.LoadWarning != null, "Recovery warning");

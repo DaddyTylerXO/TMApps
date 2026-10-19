@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.16.1')
+param([string]$OutputDirectory = 'build\v0.16.2')
 $ErrorActionPreference = 'Stop'
 $out = Join-Path $PSScriptRoot $OutputDirectory
 $stage = Join-Path $PSScriptRoot ('build\package-' + [guid]::NewGuid().ToString('N'))
@@ -13,7 +13,7 @@ foreach ($file in @('README.md','SETUP.md','CHANGELOG.md','THIRD_PARTY.md','SECU
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $out 'Sounds') -Destination $stage -Recurse
 foreach ($file in @('PLUGINS.md','PORTABILITY.md','example.tmaplugin.json','update.json')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $stage }
-$archive = Join-Path $out 'TMA-Mail-0.16.1-beta-windows.zip'
+$archive = Join-Path $out 'TMA-Mail-0.16.2-beta-windows.zip'
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
 try { & (Join-Path $PSScriptRoot 'check-secrets.ps1') -Paths @($archive) }
 catch { Remove-Item -LiteralPath $archive -Force; if (Test-Path -LiteralPath ($archive + '.sha256')) { Remove-Item -LiteralPath ($archive + '.sha256') -Force }; throw }

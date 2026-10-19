@@ -17,6 +17,18 @@ namespace Postbox {
         private bool favouritesTab;
         private Func<MailAccount, List<Message>, string, Dictionary<string, Message>> serverMove;
         private readonly HashSet<string> pendingServerMoves = new HashSet<string>();
+        private readonly Dictionary<MailStore, HashSet<string>> pendingDeletes = new Dictionary<MailStore, HashSet<string>>();
+        private bool DeletePending(MailStore mailbox, Message message) {
+            HashSet<string> ids; return message.Folder != "Trash" && pendingDeletes.TryGetValue(mailbox, out ids) && ids.Contains(message.Id);
+        }
+        private int PendingDeleteCount(MailStore mailbox, string source, bool unread) {
+            return mailbox == null ? 0 : mailbox.Messages.Count(m => m.Folder == source && (!unread || m.Unread) && DeletePending(mailbox, m));
+        }
+        private int DisplayedInboxUnread(MailAccount account) {
+            MailStore mailbox; connectedMailboxes.TryGetValue(account.Id, out mailbox);
+            int count = account.Folders == null ? 0 : account.Folders.Where(f => f.LocalName == "Inbox").Select(f => Math.Max(0, f.Unread)).DefaultIfEmpty(0).Max();
+            return Math.Max(0, count - PendingDeleteCount(mailbox, "Inbox", true));
+        }
         private void InitializeMailboxFeatures() {
             var list = Find<ListBox>("MessageList"); list.SelectionMode = SelectionMode.Extended;
             list.ToolTip = "Ctrl+click to select individual messages. Shift+click to select a range.";
@@ -56,7 +68,8 @@ namespace Postbox {
                 await MoveServerMessages(messages, movingAccount, movingMailbox, destination); return;
             }
             var history = messages.ToDictionary(m => m.Id, m => m.Folder);
-            store.MoveMany(messages, destination); lastBatchMove = history; Refresh(null);
+            foreach (var message in messages) message.Folder = destination;
+            lastBatchMove = history; Refresh(null); SaveMailboxInBackground(store);
             Status(messages.Count + " message(s) moved to " + destination + " · Ctrl+Z to undo");
         }
         private async System.Threading.Tasks.Task<bool> MoveServerMessages(List<Message> messages, MailAccount account, MailStore mailbox, string destination) {
@@ -64,6 +77,14 @@ namespace Postbox {
             var moveKeys = messages.Select(m => account.Id + ":" + m.Id).ToList();
             if (moveKeys.Any(k => pendingServerMoves.Contains(k))) { Status("These messages are already being moved."); return false; }
             foreach (var key in moveKeys) pendingServerMoves.Add(key);
+            bool deleting = destination == "Trash", committed = false;
+            if (deleting) {
+                HashSet<string> hidden;
+                if (!pendingDeletes.TryGetValue(mailbox, out hidden)) pendingDeletes[mailbox] = hidden = new HashSet<string>();
+                foreach (var message in messages) hidden.Add(message.Id);
+                // Hide immediately without changing cached folders or remote UIDs before server confirmation.
+                if (store == mailbox) Refresh(null); UpdateUnreadBadge();
+            }
             string interrupted = null;
             var waiting = mailGate.WaitAsync();
             if (!waiting.IsCompleted) { Status("Waiting for the current mail operation…"); if (currentSyncCancellation != null) { interrupted = currentSyncAccountId; currentSyncCancellation.Cancel(); } }
@@ -76,14 +97,24 @@ namespace Postbox {
                 var ids = new HashSet<string>(remote.Select(m => m.Id));
                 var destinationIds = new HashSet<string>(moved.Values.Select(m => m.Id)); mailbox.Messages.RemoveAll(m => ids.Contains(m.Id) || destinationIds.Contains(m.Id)); mailbox.Messages.AddRange(moved.Values);
                 foreach (var message in messages.Where(m => m.RemoteUid == 0)) message.Folder = destination;
+                committed = true;
                 lastBatchMove = null;
                 foreach (var group in remote.GroupBy(m => m.RemoteFolder)) { var source = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.Path == group.Key); if (source != null) { source.Count = Math.Max(0, source.Count - group.Count()); source.Unread = Math.Max(0, source.Unread - group.Count(m => m.Unread)); } }
                 var target = (account.Folders ?? new List<ServerFolder>()).FirstOrDefault(f => f.LocalName == destination); if (target != null) { target.Count += remote.Count; target.Unread += remote.Count(m => m.Unread); }
                 if (store == mailbox) Refresh(null); UpdateUnreadBadge(); UpdateNavigationLabels();
                 try { await PersistMailboxAsync(mailbox); } catch { Status("Messages moved on the server, but the local cache could not be saved. Sync before retrying."); return true; }
                 Status(messages.Count + " message(s) moved to " + FolderDisplayName(destination) + (pausedMailSync.Contains(account.Id) && moved.Count < remote.Count ? " · resume sync to refresh destination messages" : ""));
-            } catch (Exception ex) { Status("Server move failed or was interrupted: " + ex.Message + " · sync to check the server before retrying"); return false; }
-            finally { foreach (var key in moveKeys) pendingServerMoves.Remove(key); mailGate.Release(); if (interrupted != null && !pausedMailSync.Contains(interrupted) && mailAccounts.Any(a => a.Id == interrupted)) QueueMailSync(interrupted); }
+            } catch (Exception ex) { Status("Server move failed or was interrupted: " + ex.Message + (deleting ? " · messages restored in the app" : "") + " · sync to check the server before retrying"); return false; }
+            finally {
+                foreach (var key in moveKeys) pendingServerMoves.Remove(key);
+                if (deleting) {
+                    HashSet<string> hidden;
+                    if (pendingDeletes.TryGetValue(mailbox, out hidden)) { foreach (var message in messages) hidden.Remove(message.Id); if (hidden.Count == 0) pendingDeletes.Remove(mailbox); }
+                    if (!committed && store == mailbox) Refresh(selected == null ? null : selected.Id);
+                    UpdateUnreadBadge();
+                }
+                mailGate.Release(); if (interrupted != null && !pausedMailSync.Contains(interrupted) && mailAccounts.Any(a => a.Id == interrupted)) QueueMailSync(interrupted);
+            }
             if (!pausedMailSync.Contains(account.Id)) QueueMailSync(account.Id);
             return true;
         }

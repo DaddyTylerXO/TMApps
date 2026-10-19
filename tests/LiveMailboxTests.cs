@@ -172,6 +172,42 @@ class LiveMailboxTests {
         var duplicateMove=(System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{failureAction},actionAccount,actionMailbox,"Trash"); Check(duplicateMove.IsCompleted && !duplicateMove.Result,"Repeated toolbar clicks queued the same server move twice");
         var currentAccounts=(List<MailAccount>)Get(app,"mailAccounts"); currentAccounts.Remove(actionAccount); gate.Release(); PumpUntil(()=>disconnectedMove.IsCompleted); currentAccounts.Add(actionAccount);
         Check(!disconnectedMove.Result && serverCalls==1 && actionMailbox.Messages.Contains(failureAction),"Queued move accessed an account after disconnection");
+        Check(messageList.Items.Contains(failureAction), "Cancelled delete did not restore the message in the list");
+        // Hold both the operation gate and server response to prove Delete never waits to update the UI.
+        var instantA = new Message { Id="instant-delete-a", AccountId=actionAccount.Id, Folder="Inbox", RemoteFolder="INBOX", RemoteUid=81, UidValidity=77, Unread=true };
+        var instantB = new Message { Id="instant-delete-b", AccountId=actionAccount.Id, Folder="Inbox", RemoteFolder="INBOX", RemoteUid=82, UidValidity=77, Unread=true };
+        actionMailbox.Messages.AddRange(new[]{instantA,instantB});
+        actionAccount.Folders.Add(new ServerFolder { Name="Inbox", Path="INBOX", LocalName="Inbox", Selectable=true, Count=12, Unread=10 });
+        Call(app,"SelectMailbox",actionAccount,"Inbox");
+        int beforeUnread = (int)Call(app,"DisplayedInboxUnread",actionAccount);
+        using(var response = new System.Threading.ManualResetEventSlim(false)) using(var started = new System.Threading.ManualResetEventSlim(false)) {
+            Func<MailAccount,List<Message>,string,Dictionary<string,Message>> slowMove = delegate(MailAccount account,List<Message> batch,string target) { started.Set(); if(!response.Wait(5000)) throw new Exception("Synthetic server release timeout"); return fakeMove(account,batch,target); };
+            typeof(App).GetField("serverMove",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,slowMove);
+            gate.Wait();
+            var instantMove = (System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{instantA,instantB},actionAccount,actionMailbox,"Trash");
+            try {
+                Check(!instantMove.IsCompleted && !messageList.Items.Contains(instantA) && !messageList.Items.Contains(instantB), "Bulk Delete waited for the operation gate before hiding messages");
+                Check(actionMailbox.Messages.Contains(instantA) && instantA.Folder=="Inbox" && instantA.RemoteUid==81, "Optimistic Delete mutated or discarded the unconfirmed cache");
+                Check((int)Call(app,"DisplayedInboxUnread",actionAccount)==Math.Max(0,beforeUnread-2), "Unread count waited for server confirmation");
+                var otherMailbox = new MailStore(Path.Combine(directory,"isolated-delete.protected"),true,false);
+                Check(!(bool)Call(app,"DeletePending",otherMailbox,instantA), "Pending Delete leaked to another mailbox cache");
+                // A concurrent cache refresh can replace objects with the same ID; the pending overlay must survive.
+                actionMailbox.Messages.Remove(instantA); var refreshedA=instantA.CopyForSync(); actionMailbox.Messages.Add(refreshedA); Call(app,"Refresh",new object[]{null});
+                Check(!messageList.Items.Contains(refreshedA) && !messageList.Items.Contains(instantB), "Refresh resurrected a pending deletion");
+            } finally { gate.Release(); }
+            try {
+                PumpUntil(()=>started.IsSet);
+                Check(!instantMove.IsCompleted && !messageList.Items.Cast<Message>().Any(m=>m.Id==instantA.Id || m.Id==instantB.Id), "Delete waited for the slow server response");
+            } finally { response.Set(); }
+            PumpUntil(()=>instantMove.IsCompleted);
+            Check(instantMove.Result && actionMailbox.Messages.Count(m=>m.Id=="moved-"+instantA.Id || m.Id=="moved-"+instantB.Id)==2, "Background bulk Delete did not commit destination identities");
+        }
+        var rejected = new Message { Id="rejected-instant-delete", AccountId=actionAccount.Id, Folder="Inbox", RemoteFolder="INBOX", RemoteUid=83, UidValidity=77 }; actionMailbox.Messages.Add(rejected); Call(app,"Refresh",new object[]{null});
+        typeof(App).GetField("serverMove",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(app,failMove); gate.Wait();
+        var rejectedDelete=(System.Threading.Tasks.Task<bool>)Call(app,"MoveServerMessages",new List<Message>{rejected},actionAccount,actionMailbox,"Trash");
+        Check(!messageList.Items.Contains(rejected), "Delete did not hide immediately before a server failure"); gate.Release(); PumpUntil(()=>rejectedDelete.IsCompleted);
+        Check(!rejectedDelete.Result && messageList.Items.Contains(rejected) && rejected.Folder=="Inbox", "Failed Delete did not restore the original message");
+        Check(!(bool)Call(app,"DeletePending",actionMailbox,rejected), "Failed Delete left stale pending state");
         Check(MailTransport.FolderAliases("Trash").Contains("Deleted Items") && MailTransport.FolderAliases("Trash").Contains("Deleted Messages"),"Common provider Trash aliases were not recognized");
         string selectedEmail=prefs.EmailAddress; prefs.EmailAddress="different-active@example.com"; var capturedPrefs=(Preferences)Call(app,"ComposerPreferences",actionAccount); Check(capturedPrefs.EmailAddress==actionAccount.Email && prefs.EmailAddress=="different-active@example.com","Pop-out reply preferences leaked the newly selected account into the composing account"); prefs.EmailAddress=selectedEmail;
         window.Close(); app.Shutdown();

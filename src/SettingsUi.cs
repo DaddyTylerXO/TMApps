@@ -184,8 +184,8 @@ namespace Postbox {
             if (navigationButtons == null || store == null) return;
             UpdateCustomFolderSelection();
             for (int i = 0; i < folders.Length; i++) {
-                int count = folders[i] == "Inbox" ? store.Messages.Count(m => m.Folder == "Inbox" && m.Unread) : folders[i] == "Drafts" ? store.Messages.Count(m => m.Folder == "Drafts") : 0;
-                var serverFolder = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == folders[i]); if (serverFolder != null && folders[i] == "Inbox") count = serverFolder.Unread;
+                int count = folders[i] == "Inbox" ? store.Messages.Count(m => m.Folder == "Inbox" && m.Unread && !DeletePending(store, m)) : folders[i] == "Drafts" ? store.Messages.Count(m => m.Folder == "Drafts") : 0;
+                var serverFolder = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == folders[i]); if (serverFolder != null && folders[i] == "Inbox") count = DisplayedInboxUnread(activeAccount);
                 Find<Button>(folders[i] + "Nav").Content = icons[i] + (preferences.NavigationCollapsed ? "" : "   " + folders[i] + (count > 0 ? "  " + count : ""));
             }
         }

@@ -40,6 +40,7 @@ namespace Postbox {
         public List<MailAttachment> Attachments { get; set; }
         public string Category { get; set; }
         public string Subject { get; set; }
+        public string EditedSubject { get; set; }
         public string Body { get; set; }
         public string Folder { get; set; }
         public DateTime Date { get; set; }
@@ -115,6 +116,7 @@ namespace Postbox {
         }
         public bool ApplyFolderBatch(ServerFolder folder, List<Message> batch) {
             var old = Messages.Where(m => m.RemoteUid != 0 && m.RemoteFolder == folder.Path).GroupBy(m => m.Id).ToDictionary(g => g.Key, g => g.First());
+            foreach (var message in batch) { Message previous; if (old.TryGetValue(message.Id, out previous) && previous.EditedSubject != null) { message.EditedSubject = previous.EditedSubject; message.Subject = previous.EditedSubject; } }
             var sentIds = new HashSet<string>(batch.Where(m => !String.IsNullOrEmpty(m.InternetMessageId)).Select(m => m.InternetMessageId));
             bool localSent = folder.LocalName == "Sent" && Messages.Any(m => m.Folder == "Sent" && m.RemoteUid == 0 && !String.IsNullOrEmpty(m.InternetMessageId) && sentIds.Contains(m.InternetMessageId));
             bool changed = localSent || old.Count != batch.Count || batch.Any(m => { Message previous; return !old.TryGetValue(m.Id, out previous) || previous.Unread != m.Unread || previous.Starred != m.Starred || previous.ContentVersion != m.ContentVersion || previous.HtmlBody != m.HtmlBody || previous.Body != m.Body; });

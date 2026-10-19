@@ -90,7 +90,7 @@ namespace Postbox {
             if (store.LoadWarning != null) window.Loaded += delegate { MessageBox.Show(window, store.LoadWarning, "Mailbox recovered"); };
         }
         private void UpdateCounts() {
-            Find<TextBlock>("InboxCount").Text = store.Messages.Count(m => m.Folder == "Inbox" && m.Unread).ToString();
+            Find<TextBlock>("InboxCount").Text = store.Messages.Count(m => m.Folder == "Inbox" && m.Unread && !DeletePending(store, m)).ToString();
             int drafts = store.Messages.Count(m => m.Folder == "Drafts");
             Find<TextBlock>("DraftCount").Text = drafts == 0 ? "" : drafts.ToString();
             UpdateNavigationLabels();
@@ -98,7 +98,7 @@ namespace Postbox {
         private void Refresh(string keepId) {
             refreshing = true;
             try {
-                var messages = FilterInbox(store.Query(folder, Find<TextBox>("SearchBox").Text, unreadOnly), preferencesInboxFilter, oldestFirst).ToList();
+                var messages = FilterInbox(store.Query(folder, Find<TextBox>("SearchBox").Text, unreadOnly).Where(m => !DeletePending(store, m)), preferencesInboxFilter, oldestFirst).ToList();
                 var list = Find<ListBox>("MessageList");
                 var keepSelection = keepId == null ? new string[0] : list.SelectedItems.Cast<Message>().Select(m => m.Id).ToArray();
                 list.ItemsSource = messages;
@@ -108,7 +108,8 @@ namespace Postbox {
                 Find<TextBlock>("FolderHeading").Text = FolderDisplayName(folder);
                 Find<TextBlock>("FolderCount").Text = messages.Count + (messages.Count == 1 ? " message" : " messages");
                 var serverFolder = activeAccount == null || activeAccount.Folders == null ? null : activeAccount.Folders.FirstOrDefault(f => f.LocalName == folder);
-                if (serverFolder != null && serverFolder.Count > messages.Count) Find<TextBlock>("FolderCount").Text = messages.Count + " of " + serverFolder.Count + " messages cached";
+                int displayCount = serverFolder == null ? 0 : Math.Max(0, serverFolder.Count - PendingDeleteCount(store, folder, false));
+                if (displayCount > messages.Count) Find<TextBlock>("FolderCount").Text = messages.Count + " of " + displayCount + " messages cached";
                 Find<TextBlock>("FolderSubtitle").Text = folder == "Inbox" ? "A fresh perspective on your day." : folder == "Drafts" ? "Pick up where you left off." : folder == "Sent" ? "Messages you have sent." : folder == "Trash" ? "Deleted messages can be restored." : folder == "Starred" ? "The conversations worth keeping close." : "A little order, a little more space.";
                 Find<StackPanel>("EmptyList").Visibility = messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
                 foreach (string name in new[] { "Inbox", "Starred", "Drafts", "Sent", "Archive", "Trash" }) {

@@ -18,7 +18,7 @@ namespace Postbox {
         private int lastUnreadBadge = -1;
         private void UpdateUnreadBadge() {
             if (window == null || preferences == null) return;
-            int count = !preferences.UnreadBadge ? 0 : mailAccounts != null && mailAccounts.Count > 0 ? mailAccounts.Sum(a => a.Folders == null ? 0 : a.Folders.Where(f => f.LocalName == "Inbox").Select(f => Math.Max(0, f.Unread)).DefaultIfEmpty(0).Max()) : store == null ? 0 : store.Messages.Count(m => m.Folder == "Inbox" && m.Unread);
+            int count = !preferences.UnreadBadge ? 0 : mailAccounts != null && mailAccounts.Count > 0 ? mailAccounts.Sum(a => DisplayedInboxUnread(a)) : store == null ? 0 : store.Messages.Count(m => m.Folder == "Inbox" && m.Unread && !DeletePending(store, m));
             if (count == lastUnreadBadge) return; lastUnreadBadge = count;
             if (window.TaskbarItemInfo == null) window.TaskbarItemInfo = new TaskbarItemInfo();
             window.Icon = AppBrand.Logo();

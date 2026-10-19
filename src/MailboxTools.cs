@@ -50,7 +50,7 @@ namespace Postbox {
             foreach (var button in buttons.OrderBy(b => { int i = preferences.MailToolbarOrder.IndexOf(toolbarKeys[b]); return i < 0 ? Int32.MaxValue : i; }).ToList()) { wrap.Children.Remove(button); wrap.Children.Add(button); }
             foreach (var button in buttons) EnableToolbarDrag(button, wrap);
             editBarButton = Action("Edit Bar", false); UiPolish.MailAction(editBarButton); editBarButton.Background = Theme.B("Raised"); editBarButton.ToolTip = "Enable editing, then drag one action onto another to swap their positions";
-            editBarButton.Click += delegate { toolbarEditing = !toolbarEditing; editBarButton.Content = toolbarEditing ? "Done Editing" : "Edit Bar"; editBarButton.Background = Theme.B(toolbarEditing ? "SidebarSelected" : "Raised"); Status(toolbarEditing ? "Drag an action onto another to swap positions. Choose Done Editing when finished." : "Toolbar order saved"); };
+            editBarButton.Click += delegate { toolbarEditing = !toolbarEditing; editBarButton.Content = toolbarEditing ? "Done Editing" : "Edit Bar"; editBarButton.Background = Theme.B(toolbarEditing ? "SidebarSelected" : "Raised"); Status(toolbarEditing ? "Drag an action onto another to swap positions. Choose Done Editing when finished." : "Toolbar order saved"); NotifyMailToolbarChanged(); };
             wrap.Children.Add(editBarButton);
         }
         private void EnableToolbarDrag(Button button, Panel panel) {
@@ -72,6 +72,10 @@ namespace Postbox {
             if (toolbarKeys.ContainsKey(first)) preferences.MailToolbarOrder = children.OfType<Button>().Where(toolbarKeys.ContainsKey).Select(x => toolbarKeys[x]).ToList();
             else { var one = preferences.FastFunctions.FirstOrDefault(f => f == first.Tag); var two = preferences.FastFunctions.FirstOrDefault(f => f == second.Tag); if (one != null && two != null) { int x = preferences.FastFunctions.IndexOf(one), y = preferences.FastFunctions.IndexOf(two); preferences.FastFunctions[x] = two; preferences.FastFunctions[y] = one; } }
             settingsStore.Save(preferences);
+            var main = (Panel)Find<Button>("DeleteButton").Parent;
+            var ordered = main.Children.OfType<Button>().Where(toolbarKeys.ContainsKey).OrderBy(candidate => { int i = preferences.MailToolbarOrder.IndexOf(toolbarKeys[candidate]); return i < 0 ? Int32.MaxValue : i; }).ToList();
+            foreach (var button in ordered) main.Children.Remove(button); foreach (var button in ordered) main.Children.Insert(main.Children.IndexOf(editBarButton), button);
+            if (toolbarKeys.ContainsKey(first)) NotifyMailToolbarChanged(); else RenderFastFunctions();
         }
         private static string FastKind(string action) {
             if (action == "↶ Reply") return "Reply"; if (action == "↶ Reply all") return "Reply all"; if (action == "↪ Forward") return "Forward";
@@ -79,6 +83,9 @@ namespace Postbox {
         }
         private async Task RunFastFunction(FastFunction function, Button button) {
             var messages = SelectedMessages().ToList(); var account = activeAccount; var mailbox = store;
+            await RunFastFunctionForMessages(function, button, messages, account, mailbox, window);
+        }
+        private async Task RunFastFunctionForMessages(FastFunction function, Button button, List<Message> messages, MailAccount account, MailStore mailbox, Window owner) {
             if (messages.Count == 0) { Status("Select an email first."); return; }
             if (function.Steps().Any(s => new[] { "Reply", "Reply all", "Forward" }.Contains(FastKind(s.Action))) && messages.Count != 1) { Status("Select one email for a reply or forward Fast Function."); return; }
             button.IsEnabled = false;
@@ -86,7 +93,7 @@ namespace Postbox {
                 foreach (var step in function.Steps()) {
                     string kind = FastKind(step.Action);
                     if (new[] { "Reply", "Reply all", "Forward" }.Contains(kind)) {
-                        var composer = new ComposerWindow(ComposerPreferences(account), mailbox, null, kind == "Forward" ? "forward" : kind == "Reply all" ? "replyAll" : "reply", messages[0], account == null ? null : account.Id) { Owner = window };
+                        var composer = new ComposerWindow(ComposerPreferences(account), mailbox, null, kind == "Forward" ? "forward" : kind == "Reply all" ? "replyAll" : "reply", messages[0], account == null ? null : account.Id) { Owner = owner };
                         if (!String.IsNullOrWhiteSpace(step.Recipients)) composer.SetFastRecipients(step.Recipients);
                         if (account != null) composer.Deliver = m => SendMail(m, account);
                         bool saved = false; composer.Saved += delegate(bool sent, string subject) { saved = true; if (sent) MailNotification(false, subject, composer.RecipientAddresses); };
@@ -118,7 +125,11 @@ namespace Postbox {
         }
         private void ShowCreateFastFunction() { ShowFastFunctionEditor(null); }
         private void ShowFastFunctionEditor(FastFunction existing) {
+            ShowFastFunctionEditorForAccount(existing, activeAccount, window);
+        }
+        private void ShowFastFunctionEditorForAccount(FastFunction existing, MailAccount editingAccount, Window owner) {
             var dialog = Dialog((existing == null ? "Create" : "Edit") + " Fast Function · TMA-Mail", 600, 720); dialog.MinHeight = 520;
+            dialog.Owner = owner;
             var root = new DockPanel { Margin = new Thickness(24) }; dialog.Content = root;
             var footer = new StackPanel(); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
             var status = Label("Actions run in order. Replies/forwards open a composer for review. Closing an unchanged composer stops later actions.", 12, "Muted"); footer.Children.Add(status);
@@ -132,7 +143,7 @@ namespace Postbox {
                 var details = new StackPanel(); editor.Root.Children.Add(details);
                 Action fields = delegate {
                     details.Children.Clear(); string kind = Value(editor.Kind);
-                    if (kind == "Move to folder") { FieldLabel(details, "Folder to Move to"); editor.Folder = new ComboBox { ItemsSource = MoveDestinations().Select(d => new FolderChoice { Key = d, Name = FolderDisplayName(d) }).ToList(), SelectedIndex = 0, MinHeight = 38 }; if (step != null) editor.Folder.SelectedItem = ((IEnumerable<FolderChoice>)editor.Folder.ItemsSource).FirstOrDefault(d => d.Key == step.Destination) ?? ((IEnumerable<FolderChoice>)editor.Folder.ItemsSource).FirstOrDefault(); details.Children.Add(editor.Folder); }
+                    if (kind == "Move to folder") { FieldLabel(details, "Folder to Move to"); editor.Folder = new ComboBox { ItemsSource = WindowMoveDestinations(editingAccount).Select(d => new FolderChoice { Key = d, Name = WindowFolderName(editingAccount, d) }).ToList(), SelectedIndex = 0, MinHeight = 38 }; if (step != null) editor.Folder.SelectedItem = ((IEnumerable<FolderChoice>)editor.Folder.ItemsSource).FirstOrDefault(d => d.Key == step.Destination) ?? ((IEnumerable<FolderChoice>)editor.Folder.ItemsSource).FirstOrDefault(); details.Children.Add(editor.Folder); }
                     if (kind == "Reply" || kind == "Reply all" || kind == "Forward") {
                         editor.Target = Choice(details, kind == "Forward" ? "Forward to who" : "Reply to who", step != null && !String.IsNullOrWhiteSpace(step.Recipients) || kind == "Forward" ? "Custom email addresses" : kind == "Reply all" ? "Sender and all recipients" : "Reply to sender", kind == "Forward" ? new[] { "Custom email addresses" } : new[] { kind == "Reply all" ? "Sender and all recipients" : "Reply to sender", "Custom email addresses" });
                         var recipientFields = new StackPanel(); details.Children.Add(recipientFields); editor.Addresses = TextField(recipientFields, "Email addresses (separate with semicolons)", step == null ? "" : step.Recipients ?? "", false);
@@ -156,7 +167,7 @@ namespace Postbox {
                         if (new[] { "Reply", "Reply all", "Forward" }.Contains(step.Action) && Value(editor.Target) == "Custom email addresses") { var addresses = RichMail.Recipients(editor.Addresses.Text); if (addresses.Count == 0) throw new InvalidOperationException("Enter at least one email address."); step.Recipients = String.Join("; ", addresses); }
                         if (step.Action == "Set category") step.Category = Value(editor.Category) == "Clear category" ? "" : Value(editor.Category); steps.Add(step);
                     }
-                    var function = existing ?? new FastFunction { AccountId = activeAccount == null ? null : activeAccount.Id }; function.Name = name.Text.Trim(); function.Actions = steps; function.Action = null; function.Destination = null;
+                    var function = existing ?? new FastFunction { AccountId = editingAccount == null ? null : editingAccount.Id }; function.Name = name.Text.Trim(); function.Actions = steps; function.Action = null; function.Destination = null;
                     if (existing == null) preferences.FastFunctions.Add(function); settingsStore.Save(preferences); RenderFastFunctions(); dialog.Close();
                 } catch (Exception ex) { status.Text = ex.Message; }
             }; dialog.ShowDialog();
