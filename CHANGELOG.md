@@ -2,6 +2,11 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.4 beta — 19 October 2026
+
+- Correct the remaining small `99+` notification text by fitting the glyph height independently of its width. Use narrower lettering for large counts so it remains tall inside the circular badge.
+- Verify the `99+` white lettering occupies ten pixels vertically at a 16px taskbar size, compared with six in 0.16.3. Pass the existing 120 workspace-suite checks.
+
 ## 0.16.3 beta — 19 October 2026
 
 - Enlarge the white unread notification count for single digits, two digits and `99+`. Centre the visible glyphs rather than the font's line-height box so the text fills the red bubble more evenly.
