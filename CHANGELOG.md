@@ -2,6 +2,12 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.1 beta — 19 October 2026
+
+- Prevent `Unknown Mailbox: [Gmail]` sync failures by excluding Gmail's reserved system-label parent containers, non-selectable folders and nonexistent placeholders before sending STATUS or EXAMINE. Preserve the folder hierarchy and sync real children, including All Mail. Apply the same folder eligibility check to subscription scans.
+- Wait five minutes after each account's completed sync before its next fallback scan; retry failed attempts after one minute. Keep new-mail monitoring, explicit Sync, resume and action-triggered refreshes immediate. Avoid duplicate scheduled work already queued for an account.
+- Add 10 in-memory IMAP protocol checks for container handling, child-folder sync, cached message preservation, server failures and cancellation, plus six scheduling checks. Automated checks use synthetic data and do not access real mailboxes.
+
 ## 0.16.0 beta — 18 October 2026
 
 - Suggest recipient addresses while typing in To, Cc or Bcc for new messages, replies, forwards and Fast Functions. Rank valid addresses from the composing account's cached sent mail by message frequency, then recency; omit the account itself, duplicates, drafts and unrelated accounts. Support arrows, Enter/Tab, Escape and mouse selection, preserving other recipients.

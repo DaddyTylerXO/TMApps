@@ -100,6 +100,16 @@ class LiveMailboxTests {
         var inboxIcon = (Button)window.FindName("InboxNav"); Check(inboxIcon.ActualWidth >= 44 && inboxIcon.ActualHeight >= 44 && inboxIcon.Content.ToString() == "▣", "Compact folder icon is clipped or too small");
         Check(Children<Button>(window).Any(b => b.Content != null && b.Content.ToString() == "★" && b.ToolTip != null && b.ToolTip.ToString().Contains("Design & notes")), "Compact custom folder lost its icon or folder tooltip");
         // Hold a synthetic sync open to prove removal cancels it and waits without blocking WPF.
+        var syncNow = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
+        Check((bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow), "Initial mailbox sync was delayed");
+        Call(app, "ScheduleNextPeriodicMailSync", first.Id, true, syncNow);
+        Check(!(bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow.AddSeconds(30)) && !(bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow.AddMinutes(4)), "Completed mailbox immediately entered another periodic cycle");
+        Check((bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow.AddMinutes(5)), "Fallback sync did not become due");
+        Check((bool)Call(app, "PeriodicMailSyncDue", second.Id, syncNow), "One mailbox cooldown delayed another mailbox");
+        Call(app, "ScheduleNextPeriodicMailSync", first.Id, false, syncNow);
+        Check(!(bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow.AddSeconds(30)) && (bool)Call(app, "PeriodicMailSyncDue", first.Id, syncNow.AddMinutes(1)), "Failed mailbox did not back off before retry");
+        var scheduledPending = (HashSet<string>)Get(app, "pendingMailSync"); scheduledPending.Add(second.Id);
+        Check(!(bool)Call(app, "PeriodicMailSyncDue", second.Id, syncNow), "Periodic timer duplicated already queued work"); scheduledPending.Remove(second.Id);
         var syncSource = new System.Threading.CancellationTokenSource();
         var syncDone = new System.Threading.Tasks.TaskCompletionSource<bool>();
         var gate = (System.Threading.SemaphoreSlim)Get(app, "mailGate"); gate.Wait();

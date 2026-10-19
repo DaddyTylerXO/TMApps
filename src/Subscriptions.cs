@@ -24,7 +24,7 @@ namespace Postbox {
         public static async Task Request(MailSubscription subscription, HttpMessageHandler testHandler = null) {
             if (!subscription.OneClick) throw new InvalidOperationException("This sender requires an unsubscribe page or email.");
             var uri = SafeWeb.Https(subscription.Url); if (testHandler == null) await SafeWeb.ValidateHost(uri);
-            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.16.0"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
+            using (var client = new HttpClient(testHandler ?? new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })) { client.Timeout = TimeSpan.FromSeconds(20); client.DefaultRequestHeaders.UserAgent.ParseAdd("TMA-Mail/0.16.1"); using (var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("List-Unsubscribe", "One-Click") })) using (var response = await client.PostAsync(uri, content)) { response.EnsureSuccessStatusCode(); } }
         }
     }
     public sealed partial class MailTransport {
@@ -32,7 +32,7 @@ namespace Postbox {
             var result = new Dictionary<string, MailSubscription>();
             using (var client = Connect(token)) {
                 var all = new Dictionary<string, IMailFolder>(); foreach (var space in client.PersonalNamespaces) foreach (var folder in client.GetFolders(space, false, token)) all[folder.FullName] = folder; all[client.Inbox.FullName] = client.Inbox;
-                foreach (var folder in all.Values.Where(f => (f.Attributes & (FolderAttributes.NoSelect | FolderAttributes.Drafts | FolderAttributes.Sent)) == 0)) {
+                foreach (var folder in all.Values.Where(f => CanSelectFolder(f) && (f.Attributes & (FolderAttributes.Drafts | FolderAttributes.Sent)) == 0)) {
                     token.ThrowIfCancellationRequested(); folder.Open(FolderAccess.ReadOnly, token);
                     int count = folder.Count; for (int start = 0; start < count; start += 250) {
                         token.ThrowIfCancellationRequested(); var summaries = folder.Fetch(start, Math.Min(count - 1, start + 249), MessageSummaryItems.Envelope | MessageSummaryItems.Headers, token);

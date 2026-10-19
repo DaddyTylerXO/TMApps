@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'build\v0.16.0')
+param([string]$OutputDirectory = 'build\v0.16.1')
 $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'tests\SecretScanTests.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -8,6 +8,15 @@ New-Item -ItemType Directory -Path $out -Force | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }
 & (Join-Path $out 'MailStoreTests.exe') (Join-Path $out 'test-data')
 if ($LASTEXITCODE -ne 0) { throw 'Mailbox checks failed.' }
+$syncArguments = @('/nologo', '/target:exe', ('/out:' + (Join-Path $out 'SyncFolderTests.exe')))
+foreach ($library in @('TMA-Mail.exe','MailKit.dll','MimeKit.dll')) { $syncArguments += '/reference:' + (Join-Path $out $library) }
+foreach ($library in @('System.dll','System.Core.dll')) { $syncArguments += '/reference:' + (Join-Path $framework $library) }
+$syncArguments += Join-Path $PSScriptRoot 'tests\SyncFolderTests.cs'
+& (Join-Path $framework 'csc.exe') @syncArguments
+if ($LASTEXITCODE -ne 0) { throw 'Synthetic IMAP test compilation failed.' }
+Copy-Item -LiteralPath (Join-Path $out 'TMA-Mail.exe.config') -Destination (Join-Path $out 'SyncFolderTests.exe.config') -Force
+& (Join-Path $out 'SyncFolderTests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Synthetic IMAP folder checks failed.' }
 $layoutArguments = @('/nologo', '/target:exe', ('/out:' + (Join-Path $out 'LayoutTests.exe')))
 foreach ($reference in @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')) { $layoutArguments += '/reference:' + (Join-Path $framework $reference) }
 $layoutArguments += Join-Path $PSScriptRoot 'tests\LayoutTests.cs'

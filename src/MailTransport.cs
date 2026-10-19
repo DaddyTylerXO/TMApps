@@ -51,6 +51,11 @@ namespace Postbox {
         public static string[] FolderAliases(string name) {
             return name == "Trash" ? new[] { "Trash", "Deleted Messages", "Deleted Items", "Bin" } : name == "Archive" ? new[] { "Archive", "Archives" } : name == "Sent" ? new[] { "Sent", "Sent Messages", "Sent Items" } : name == "Drafts" ? new[] { "Drafts" } : new string[0];
         }
+        private bool CanSelectFolder(IMailFolder folder) {
+            if (!folder.Exists || String.IsNullOrEmpty(folder.FullName) || (folder.Attributes & (FolderAttributes.NoSelect | FolderAttributes.NonExistent)) != 0) return false;
+            // Gmail's reserved system-label parents are containers even if LIST omits \Noselect.
+            return account.Provider != "Gmail" || (folder.FullName != "[Gmail]" && folder.FullName != "[Google Mail]");
+        }
         public static Message ConvertMessage(MimeMessage mime, string accountId, string localFolder, string remoteFolder, uint validity, uint uid, MessageFlags flags) {
             var from = mime.From.Mailboxes.FirstOrDefault();
             string body = mime.TextBody;

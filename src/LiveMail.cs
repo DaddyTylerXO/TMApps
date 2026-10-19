@@ -15,6 +15,14 @@ namespace Postbox {
         private readonly Dictionary<string, CancellationTokenSource> mailWatchers = new Dictionary<string, CancellationTokenSource>();
         private readonly Dictionary<string, bool> mailHealth = new Dictionary<string, bool>();
         private readonly HashSet<string> pendingMailSync = new HashSet<string>();
+        private readonly Dictionary<string, DateTime> nextPeriodicMailSync = new Dictionary<string, DateTime>();
+        private bool PeriodicMailSyncDue(string id, DateTime now) {
+            DateTime next;
+            return !pausedMailSync.Contains(id) && !removingMailAccounts.Contains(id) && currentSyncAccountId != id && !pendingMailSync.Contains(id) && (!nextPeriodicMailSync.TryGetValue(id, out next) || now >= next);
+        }
+        private void ScheduleNextPeriodicMailSync(string id, bool succeeded, DateTime completed) {
+            nextPeriodicMailSync[id] = completed.AddMinutes(succeeded ? 5 : 1);
+        }
         private readonly HashSet<string> syncedAccounts = new HashSet<string>();
         private readonly HashSet<string> pausedMailSync = new HashSet<string>();
         private readonly HashSet<string> removingMailAccounts = new HashSet<string>();
@@ -105,9 +113,10 @@ namespace Postbox {
             var account = accountId == null ? activeAccount : mailAccounts.FirstOrDefault(a => a.Id == accountId); if (account == null) { Status("Add an email account in Settings → Accounts."); return; }
             if (pausedMailSync.Contains(account.Id) || removingMailAccounts.Contains(account.Id)) return;
             if (syncing || !await mailGate.WaitAsync(0)) { pendingMailSync.Add(account.Id); return; }
+            pendingMailSync.Remove(account.Id);
             syncing = true; var completion = new TaskCompletionSource<bool>(); syncCompletion = completion;
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(mailShutdown.Token); currentSyncCancellation = cancellation; currentSyncAccountId = account.Id;
-            MailStore mailbox = null; bool changed = false; string oldFolders = FolderState(account.Folders);
+            MailStore mailbox = null; bool changed = false, succeeded = false; string oldFolders = FolderState(account.Folders);
             object progressGate = new object(); bool progressQueued = false, reporting = true; string latestProgress = null;
             try {
                 try {
@@ -146,7 +155,7 @@ namespace Postbox {
                     if (activeAccount != null && account.Id == activeAccount.Id) { if (oldFolders != FolderState(account.Folders)) ApplyNavigation(); UpdateCounts(); }
                     var fresh = snapshot.Messages.Where(m => m.Folder == "Inbox" && m.Unread && !oldInbox.Contains(m.Id)).ToList();
                     if (syncedAccounts.Contains(account.Id) && fresh.Count > 0) MailNotification(true, fresh.Count == 1 ? fresh[0].Subject : fresh.Count + " new messages", fresh[0].Address);
-                    syncedAccounts.Add(account.Id); Status(account.Email + " · Up to date · 100% · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
+                    syncedAccounts.Add(account.Id); succeeded = true; Status(account.Email + " · Up to date · 100% · " + snapshot.Messages.Count + " cached items in " + snapshot.Folders.Count + " folders · listening for mail");
                 } catch (OperationCanceledException) { }
                 catch (Exception error) { if (!cancellation.IsCancellationRequested) { mailHealth[account.Id] = false; UpdateConnectionLamp(); Status(account.Email + " · Sync interrupted: " + error.Message.Split('\n')[0] + " · cached mail kept; retrying automatically"); } }
                     lock (progressGate) reporting = false;
@@ -154,6 +163,8 @@ namespace Postbox {
                 catch (Exception ex) { Status(account.Email + " · Local cache could not be saved: " + ex.Message); }
             } finally {
                 lock (progressGate) reporting = false;
+                // Start the fallback interval after completion, so slow multi-account syncs cannot run continuously.
+                ScheduleNextPeriodicMailSync(account.Id, succeeded, DateTime.UtcNow);
                 currentSyncCancellation = null; currentSyncAccountId = null; cancellation.Dispose(); syncing = false; mailGate.Release(); completion.TrySetResult(true);
                 if (pendingMailSync.Count > 0 && !mailShutdown.IsCancellationRequested) { string next = pendingMailSync.First(); pendingMailSync.Remove(next); QueueMailSync(next); }
             }
@@ -170,7 +181,7 @@ namespace Postbox {
         private void RemoveStoppedMailAccount(string id) {
             RestartMailWatcher(id); accountStore.Remove(id); mailAccounts = accountStore.LoadAll();
             if (activeAccount != null && activeAccount.Id == id) { activeAccount = accountStore.Load(); transport = activeAccount == null ? null : new MailTransport(activeAccount, accountStore); store = CurrentMailbox(); selected = null; lastBatchMove = null; folder = "Inbox"; }
-            pendingMailSync.Remove(id); pausedMailSync.Remove(id); syncedAccounts.Remove(id); mailHealth.Remove(id); ApplyPreferences(); Refresh(null); EnsureMailWatchers(); UpdateConnectionLamp();
+            pendingMailSync.Remove(id); nextPeriodicMailSync.Remove(id); pausedMailSync.Remove(id); syncedAccounts.Remove(id); mailHealth.Remove(id); ApplyPreferences(); Refresh(null); EnsureMailWatchers(); UpdateConnectionLamp();
         }
     }
 }

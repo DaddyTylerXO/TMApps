@@ -44,9 +44,9 @@ namespace Postbox {
             InitializeCacheShutdown();
             if (offlinePreview) { Status("Offline preview · synthetic mailboxes · no server connections"); return; }
             syncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-            syncTimer.Tick += async delegate { if (periodicSyncRunning || syncing || mailGate.CurrentCount == 0) return; periodicSyncRunning = true; try { foreach (var item in mailAccounts.ToList()) { if (mailShutdown.IsCancellationRequested) break; await SyncMail(item.Id); } } finally { periodicSyncRunning = false; } };
+            syncTimer.Tick += async delegate { if (periodicSyncRunning || syncing || mailGate.CurrentCount == 0) return; periodicSyncRunning = true; try { foreach (var item in mailAccounts.ToList()) { if (mailShutdown.IsCancellationRequested) break; if (PeriodicMailSyncDue(item.Id, DateTime.UtcNow)) await SyncMail(item.Id); } } finally { periodicSyncRunning = false; } };
             syncTimer.Start(); EnsureMailWatchers(); window.Closed += delegate { syncTimer.Stop(); StopMailWatchers(); };
-            if (activeAccount != null) { preferences.EmailAddress = activeAccount.Email; ApplyPreferences(); await SyncMail(); foreach (var item in mailAccounts.Where(a => a.Id != activeAccount.Id).ToList()) await SyncMail(item.Id); }
+            if (activeAccount != null) { preferences.EmailAddress = activeAccount.Email; ApplyPreferences(); await SyncMail(); foreach (var item in mailAccounts.Where(a => a.Id != activeAccount.Id).ToList()) if (PeriodicMailSyncDue(item.Id, DateTime.UtcNow)) await SyncMail(item.Id); }
             else Status("Explore mode · connect an account to receive and send real mail");
             if (showAfterWelcome && welcomeProvider != null) ShowConnectedAccounts(welcomeProvider);
         }

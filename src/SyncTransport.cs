@@ -34,42 +34,46 @@ namespace Postbox {
             } return messages;
         }
         public SyncSnapshot Synchronize(List<Message> cached, Action<SyncProgress> progress, Action<List<ServerFolder>> discovered, Action<ServerFolder, List<Message>> folderComplete, CancellationToken cancellation) {
+            if (progress != null) progress(new SyncProgress { Phase = "Connecting securely", Folder = "" });
+            using (var client = Connect(cancellation)) return SynchronizeConnected(client, cached, progress, discovered, folderComplete, cancellation);
+        }
+        internal SyncSnapshot SynchronizeConnected(ImapClient client, List<Message> cached, Action<SyncProgress> progress, Action<List<ServerFolder>> discovered, Action<ServerFolder, List<Message>> folderComplete, CancellationToken cancellation) {
             var snapshot = new SyncSnapshot();
             var cacheIndex = cached.Where(m => m.RemoteUid != 0 && m.ContentVersion >= 2 && !String.IsNullOrEmpty(m.RemoteFolder)).GroupBy(m => m.RemoteFolder).ToDictionary(g => g.Key, g => g.GroupBy(m => m.RemoteUid).ToDictionary(u => u.Key, u => u.First()));
-            Action<string, string, int, int> report = delegate(string phase, string name, int done, int total) { if (progress != null) progress(new SyncProgress { Phase = phase, Folder = name, Completed = done, Total = total }); };
-            report("Connecting securely", "", 0, 0);
-            using (var client = Connect(cancellation)) {
-                report("Discovering folders", "", 0, 0);
-                var folders = new Dictionary<string, IMailFolder>();
-                foreach (var space in client.PersonalNamespaces) foreach (var value in client.GetFolders(space, StatusItems.Count | StatusItems.Unread, false, cancellation)) folders[value.FullName] = value;
-                folders[client.Inbox.FullName] = client.Inbox;
-                var mapped = new Dictionary<string, string> { { client.Inbox.FullName, "Inbox" } };
-                foreach (string name in new[] { "Drafts", "Sent", "Archive", "Trash" }) { try { var value = Folder(client, name) ?? folders.Values.FirstOrDefault(f => FolderAliases(name).Contains(f.Name, StringComparer.OrdinalIgnoreCase)); if (value != null) { mapped[value.FullName] = name; folders[value.FullName] = value; } } catch (NotSupportedException) { } }
-                foreach (var value in folders.Values.OrderBy(f => f.FullName == client.Inbox.FullName ? 0 : 1).ThenBy(f => f.FullName)) {
-                    int separator = value.DirectorySeparator == '\0' ? -1 : value.FullName.LastIndexOf(value.DirectorySeparator);
-                    snapshot.Folders.Add(new ServerFolder { Name = value.Name, Path = value.FullName, ParentPath = separator < 0 ? "" : value.FullName.Substring(0, separator), LocalName = mapped.ContainsKey(value.FullName) ? mapped[value.FullName] : FolderKey(value.FullName), Count = value.Count, Unread = value.Unread, Selectable = (value.Attributes & FolderAttributes.NoSelect) == 0 });
-                }
-                if (discovered != null) discovered(snapshot.Folders);
-                int completed = 0, total = snapshot.Folders.Where(f => f.Selectable).Sum(f => Math.Min(f.Count, 200));
-                foreach (var item in snapshot.Folders.Where(f => f.Selectable)) {
-                    cancellation.ThrowIfCancellationRequested(); var folder = folders[item.Path]; var batch = new List<Message>();
-                    report("Checking folder", item.Name, completed, total); folder.Open(FolderAccess.ReadOnly, cancellation); item.Count = folder.Count; item.Unread = folder.Unread;
-                    if (folder.Count > 0) {
-                        var summaries = folder.Fetch(Math.Max(0, folder.Count - 200), -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags | MessageSummaryItems.Size, cancellation);
-                        foreach (var summary in summaries) {
-                            cancellation.ThrowIfCancellationRequested();
-                            Dictionary<uint, Message> folderCache; Message existing = null;
-                            if (cacheIndex.TryGetValue(folder.FullName, out folderCache)) folderCache.TryGetValue(summary.UniqueId.Id, out existing);
-                            if (existing != null) existing = existing.UidValidity == folder.UidValidity ? existing.CopyForSync() : null;
-                            if (existing != null) { existing.Folder = item.LocalName; existing.Unread = (summary.Flags & MessageFlags.Seen) == 0; existing.Starred = (summary.Flags & MessageFlags.Flagged) != 0; batch.Add(existing); }
-                            else if (summary.Size <= 25 * 1024 * 1024) batch.Add(ConvertMessage(folder.GetMessage(summary.UniqueId, cancellation), account.Id, item.LocalName, folder.FullName, folder.UidValidity, summary.UniqueId.Id, summary.Flags ?? MessageFlags.None));
-                            report("Syncing", item.Name, ++completed, Math.Max(total, completed));
-                        }
-                    }
-                    folder.Close(false, cancellation); snapshot.Messages.AddRange(batch); if (folderComplete != null) folderComplete(item, batch);
-                }
-                client.Disconnect(true, cancellation);
+            Action<string, string, int, int> report = delegate(string phase, string name, int done, int estimate) { if (progress != null) progress(new SyncProgress { Phase = phase, Folder = name, Completed = done, Total = estimate }); };
+            report("Discovering folders", "", 0, 0);
+            var folders = new Dictionary<string, IMailFolder>();
+            // Filter containers before STATUS as well as EXAMINE: neither command is valid on a placeholder.
+            foreach (var space in client.PersonalNamespaces) foreach (var value in client.GetFolders(space, false, cancellation)) folders[value.FullName] = value;
+            folders[client.Inbox.FullName] = client.Inbox;
+            var mapped = new Dictionary<string, string> { { client.Inbox.FullName, "Inbox" } };
+            foreach (string name in new[] { "Drafts", "Sent", "Archive", "Trash" }) { try { var value = Folder(client, name) ?? folders.Values.FirstOrDefault(f => FolderAliases(name).Contains(f.Name, StringComparer.OrdinalIgnoreCase)); if (value != null) { mapped[value.FullName] = name; folders[value.FullName] = value; } } catch (NotSupportedException) { } }
+            foreach (var value in folders.Values.OrderBy(f => f.FullName == client.Inbox.FullName ? 0 : 1).ThenBy(f => f.FullName)) {
+                bool selectable = CanSelectFolder(value);
+                if (selectable) value.Status(StatusItems.Count | StatusItems.Unread, cancellation);
+                int separator = value.DirectorySeparator == '\0' ? -1 : value.FullName.LastIndexOf(value.DirectorySeparator);
+                snapshot.Folders.Add(new ServerFolder { Name = value.Name, Path = value.FullName, ParentPath = separator < 0 ? "" : value.FullName.Substring(0, separator), LocalName = mapped.ContainsKey(value.FullName) ? mapped[value.FullName] : FolderKey(value.FullName), Count = value.Count, Unread = value.Unread, Selectable = selectable });
             }
+            if (discovered != null) discovered(snapshot.Folders);
+            int completed = 0, total = snapshot.Folders.Where(f => f.Selectable).Sum(f => Math.Min(f.Count, 200));
+            foreach (var item in snapshot.Folders.Where(f => f.Selectable)) {
+                cancellation.ThrowIfCancellationRequested(); var folder = folders[item.Path]; var batch = new List<Message>();
+                report("Checking folder", item.Name, completed, total); folder.Open(FolderAccess.ReadOnly, cancellation); item.Count = folder.Count; item.Unread = folder.Unread;
+                if (folder.Count > 0) {
+                    var summaries = folder.Fetch(Math.Max(0, folder.Count - 200), -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags | MessageSummaryItems.Size, cancellation);
+                    foreach (var summary in summaries) {
+                        cancellation.ThrowIfCancellationRequested();
+                        Dictionary<uint, Message> folderCache; Message existing = null;
+                        if (cacheIndex.TryGetValue(folder.FullName, out folderCache)) folderCache.TryGetValue(summary.UniqueId.Id, out existing);
+                        if (existing != null) existing = existing.UidValidity == folder.UidValidity ? existing.CopyForSync() : null;
+                        if (existing != null) { existing.Folder = item.LocalName; existing.Unread = (summary.Flags & MessageFlags.Seen) == 0; existing.Starred = (summary.Flags & MessageFlags.Flagged) != 0; batch.Add(existing); }
+                        else if (summary.Size <= 25 * 1024 * 1024) batch.Add(ConvertMessage(folder.GetMessage(summary.UniqueId, cancellation), account.Id, item.LocalName, folder.FullName, folder.UidValidity, summary.UniqueId.Id, summary.Flags ?? MessageFlags.None));
+                        report("Syncing", item.Name, ++completed, Math.Max(total, completed));
+                    }
+                }
+                folder.Close(false, cancellation); snapshot.Messages.AddRange(batch); if (folderComplete != null) folderComplete(item, batch);
+            }
+            client.Disconnect(true, cancellation);
             return snapshot;
         }
         public void WatchInbox(Action changed, Action<bool, string> connection, CancellationToken cancellation) {
