@@ -2,6 +2,11 @@
 
 Development history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.
 
+## 0.16.3 beta — 19 October 2026
+
+- Enlarge the white unread notification count for single digits, two digits and `99+`. Centre the visible glyphs rather than the font's line-height box so the text fills the red bubble more evenly.
+- Verify rendered badges at full and taskbar sizes; pass the existing 120 workspace-suite checks, including notification count and Appearance toggle behavior.
+
 ## 0.16.2 beta — 19 October 2026
 
 - Hide deleted messages immediately, including bulk deletes and deletes queued behind sync or another mail operation. Complete the server move in the background, preserving original cached folders and UIDs until confirmation. Keep pending deletions hidden if a refresh replaces cached message objects.

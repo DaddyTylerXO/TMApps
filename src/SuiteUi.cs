@@ -31,8 +31,9 @@ namespace Postbox {
         private static void DrawUnreadCircle(DrawingContext draw, string text, double x, double y, double radius) {
             double width = 64; x -= width;
             draw.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(231, 49, 67)), new Pen(Theme.B("Surface"), 3), new Rect(x + 2, y + 2, width - 4, radius * 2 - 4), radius, radius);
-            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? 26 : text.Length > 1 ? 34 : 40, Brushes.White, 1.0);
-            draw.DrawText(label, new Point(x + width / 2 - label.Width / 2, y + radius - label.Height / 2));
+            var label = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), text.Length > 2 ? 32 : text.Length > 1 ? 44 : 52, Brushes.White, 1.0);
+            var ink = label.BuildGeometry(new Point(0, 0)).Bounds;
+            draw.DrawText(label, new Point(x + width / 2 - ink.X - ink.Width / 2, y + radius - ink.Y - ink.Height / 2));
         }
         private void InitializeSuiteUi() {
             managementButton = Action("🔧  Mailbox management", false); managementButton.ToolTip = "Mailbox management"; managementButton.Click += delegate { ShowMailboxManagement(); };
