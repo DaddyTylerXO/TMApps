@@ -1,10 +1,11 @@
 'use strict';
 const fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto');
-const defaults = Object.freeze({ openAtLogin: false, showTray: true, closeToTray: false, idleMinutes: 5, clipboardSeconds: 20 });
+const defaults = Object.freeze({ openAtLogin: false, showTray: true, closeToTray: false, idleMinutes: 5, clipboardSeconds: 20, vaultFile: '' });
 function validate(value) {
   if (!value || ['openAtLogin','showTray','closeToTray'].some(k => typeof value[k] !== 'boolean') || ![1,2,5,10,15,30].includes(value.idleMinutes) || ![10,20,30,60].includes(value.clipboardSeconds)) throw Error('Invalid settings.');
   if (value.closeToTray && !value.showTray) throw Error('Enable the tray icon before closing to tray.');
-  return Object.fromEntries(Object.keys(defaults).map(k => [k, value[k]]));
+  const vaultFile = value.vaultFile ?? ''; if (typeof vaultFile !== 'string' || vaultFile.length > 4096 || /[\r\n\0]/.test(vaultFile) || vaultFile && !path.isAbsolute(vaultFile)) throw Error('Invalid remembered vault path.');
+  return { ...Object.fromEntries(Object.keys(defaults).filter(k => k !== 'vaultFile').map(k => [k, value[k]])), vaultFile };
 }
 async function load(file) { try { return validate(JSON.parse(await fs.readFile(file, 'utf8'))); } catch { return { ...defaults }; } }
 async function save(file, value) { const clean = validate(value); await fs.mkdir(path.dirname(file), { recursive: true }); const tmp = file + '.' + crypto.randomUUID() + '.tmp'; try { await fs.writeFile(tmp, JSON.stringify(clean), { mode: 0o600, flag: 'wx' }); await fs.rename(tmp, file); } finally { await fs.rm(tmp, { force: true }); } return clean; }

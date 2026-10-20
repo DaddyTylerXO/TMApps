@@ -16,6 +16,10 @@ test('settings persist validated options and startup filenames cannot inject des
   const root = await fs.mkdtemp(path.join(os.tmpdir(),'safe-settings-')); t.after(() => fs.rm(root,{recursive:true,force:true})); const file=path.join(root,'settings.json');
   assert.deepEqual(await settings.load(file),settings.defaults);
   const value={...settings.defaults,openAtLogin:true,showTray:true,closeToTray:true,idleMinutes:10,clipboardSeconds:30}; await settings.save(file,value); assert.deepEqual(await settings.load(file),value);
+  const remembered = { ...value, vaultFile: path.join(root,'portable.tmasafe') }; await settings.save(file,remembered); assert.deepEqual(await settings.load(file),remembered);
+  assert.throws(() => settings.validate({...value,vaultFile:'relative.tmasafe'}),/remembered vault/);
+  const legacy = { ...value }; delete legacy.vaultFile; await fs.writeFile(file,JSON.stringify(legacy)); assert.deepEqual(await settings.load(file),value);
+  await settings.save(file,remembered); await settings.save(file,{...remembered,vaultFile:''}); assert.equal((await settings.load(file)).vaultFile,'');
   assert.throws(() => settings.validate({...value,showTray:false}),/tray icon/); assert.throws(() => settings.validate({...value,idleMinutes:0}));
   assert.throws(() => settings.desktopEntry('/tmp/app\nExec=other'),/Invalid/); assert.match(settings.desktopEntry('/home/test/My Safe.AppImage'),/Exec="\/home\/test\/My Safe.AppImage"/);
   const desktop=path.join(root,'autostart','tma-safe.desktop'); await settings.linuxStartup(desktop,'/home/test/My Safe.AppImage',true); assert.match(await fs.readFile(desktop,'utf8'),/Type=Application/); await settings.linuxStartup(desktop,'/home/test/My Safe.AppImage',false); await assert.rejects(fs.stat(desktop),/ENOENT/);

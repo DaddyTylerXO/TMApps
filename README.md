@@ -1,10 +1,12 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a bunch-of-keys icon follow TMApps Launcher and TMA-Mail. Version 0.2.0 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a bunch-of-keys icon follow TMApps Launcher and TMA-Mail. Version 0.2.1 is an unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
 Create a `.tmasafe` vault and choose a master passphrase of at least 14 characters. There is no password reset. The master password is requested every time the app opens; no unlock key is saved. Use **Open a vault** for an existing file.
+
+Tick **Always use this vault when opening TMA-Safe** to remember the selected file on this device. Future launches preselect it and focus the master password field. Only the path is saved; no password or key-file contents are remembered. Untick the option to forget the default. If the file is moved or its drive is disconnected, choose it again. When creating a new vault, the preference is saved after successful creation.
 
 Optionally generate a separate `.tmakey` file when creating the vault. This adds a possession factor to encryption: **both** the master password and original key file are required. Keep it on a separate device/removable drive; storing it beside the vault loses the benefit. This release implements key-file two-factor protection. Authenticator TOTP and Windows Hello are not implemented. A local TOTP check alone would not protect a copied offline vault.
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TMA-Safe · Browser filling",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Fill a login with approval from your unlocked TMA-Safe vault.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["http://127.0.0.1:19473/*"],

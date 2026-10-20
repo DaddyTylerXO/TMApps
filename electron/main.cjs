@@ -31,6 +31,14 @@ async function startup(enabled) {
 }
 async function key() { if (!keyPath) return undefined; const handle = await fs.open(keyPath, 'r'); try { if ((await handle.stat()).size !== 32) throw Error('Expected a 32-byte TMA-Safe key file.'); return await handle.readFile(); } finally { await handle.close(); } }
 async function withKey(fn) { const bytes = await key(); try { return await fn(bytes); } finally { bytes?.fill(0); } }
+async function rememberVault(enabled) {
+  if (typeof enabled !== 'boolean') throw Error('Invalid vault preference.');
+  if (enabled && (!selected || !(await fs.stat(selected)).isFile())) throw Error('Choose an existing vault or create it first.');
+  const vaultFile = enabled ? selected : '';
+  if (vaultFile !== preferences.vaultFile) preferences = await settings.save(settingsFile, { ...preferences, vaultFile });
+  return { remember: !!preferences.vaultFile };
+}
+async function finishUnlock(result, value) { try { await rememberVault(value.remember === true); return result; } catch { return { ...result, preferenceWarning: 'Vault unlocked, but the launch preference could not be saved. Try again after checking file permissions.' }; } }
 async function pick(save, extension, title) {
   const options = { title, filters: [{ name: extension === 'tmasafe' ? 'Encrypted TMA-Safe vault' : 'TMA-Safe key file', extensions: [extension] }] };
   if (save) return (await dialog.showSaveDialog(win, { ...options, defaultPath: extension === 'tmasafe' ? 'My passwords.tmasafe' : 'My vault.tmakey' })).filePath;
@@ -38,14 +46,16 @@ async function pick(save, extension, title) {
 }
 const actions = {
   state: () => vault.key ? vault.list() : null,
-  settings: async value => { if (value === undefined) return { ...preferences, startupSupported: app.isPackaged }; const next = settings.validate(value), previous = preferences; if (next.openAtLogin !== previous.openAtLogin) await startup(next.openAtLogin); try { preferences = await settings.save(settingsFile, next); syncTray(); } catch (e) { preferences = previous; await settings.save(settingsFile, previous).catch(() => {}); await startup(previous.openAtLogin).catch(() => {}); syncTray(); throw e; } return { ...preferences, startupSupported: app.isPackaged }; },
+  settings: async value => { if (value === undefined) return { ...preferences, startupSupported: app.isPackaged }; const next = settings.validate({ ...value, vaultFile: preferences.vaultFile }), previous = preferences; if (next.openAtLogin !== previous.openAtLogin) await startup(next.openAtLogin); try { preferences = await settings.save(settingsFile, next); syncTray(); } catch (e) { preferences = previous; await settings.save(settingsFile, previous).catch(() => {}); await startup(previous.openAtLogin).catch(() => {}); syncTray(); throw e; } return { ...preferences, startupSupported: app.isPackaged }; },
+  vaultChoice: async () => { let available = false; if (selected) { try { available = (await fs.stat(selected)).isFile(); } catch {} } if (!available) selected = undefined; return { name: selected ? path.basename(selected) : null, remember: !!preferences.vaultFile, unavailable: !!preferences.vaultFile && !available }; },
+  rememberVault,
   folder: value => vault.folder(value),
   removeFolder: async id => { vault.require(); const result = await dialog.showMessageBox(win, { type: 'question', title: 'Delete folder?', message: 'Delete this folder?', detail: 'Its logins will remain in All logins. No passwords will be deleted.', buttons: ['Cancel', 'Delete folder'], defaultId: 0, cancelId: 0 }); if (result.response !== 1) return vault.list(); return vault.removeFolder(id); },
   chooseVault: async save => { if (vault.key) throw Error('Lock the current vault first.'); const file = await pick(save === true, 'tmasafe', save ? 'Create vault' : 'Open vault'); if (file) selected = file; return selected ? path.basename(selected) : null; },
   chooseKey: async () => { keyPath = await pick(false, 'tmakey', 'Choose your separate key file'); return keyPath ? path.basename(keyPath) : null; },
   createKey: async () => { const file = await pick(true, 'tmakey', 'Keep this key separate from your vault'); if (!file) return null; const bytes = crypto.randomBytes(32); try { await fs.writeFile(file, bytes, { flag: 'wx', mode: 0o600 }); keyPath = file; return path.basename(file); } finally { bytes.fill(0); } },
-  create: async value => { if (!selected) throw Error('Choose a new vault file first.'); if (value.password !== value.confirm) throw Error('Master passwords do not match.'); if (value.useKey && !keyPath) throw Error('Choose or create a separate key file.'); if (!value.useKey) keyPath = null; return withKey(bytes => vault.create(selected, value.password, bytes)); },
-  unlock: async value => { if (!selected) throw Error('Choose a vault file first.'); if (!value.useKey) keyPath = null; return withKey(bytes => vault.unlock(selected, value.password, bytes)); },
+  create: async value => { if (!selected) throw Error('Choose a new vault file first.'); if (value.password !== value.confirm) throw Error('Master passwords do not match.'); if (value.useKey && !keyPath) throw Error('Choose or create a separate key file.'); if (!value.useKey) keyPath = null; return finishUnlock(await withKey(bytes => vault.create(selected, value.password, bytes)), value); },
+  unlock: async value => { if (!selected) throw Error('Choose a vault file first.'); if (!value.useKey) keyPath = null; return finishUnlock(await withKey(bytes => vault.unlock(selected, value.password, bytes)), value); },
   lock: () => { lock(); keyPath = null; return null; },
   put: async value => { if (value.id && value.password === null) value.password = vault.secret(value.id).password; return vault.put(value); },
   remove: async id => { vault.require(); const result = await dialog.showMessageBox(win, { type: 'warning', title: 'Delete login?', message: 'Delete this login from the vault?', detail: 'An encrypted .bak file retains the previous save.', buttons: ['Cancel', 'Delete login'], defaultId: 0, cancelId: 0 }); if (result.response !== 1) return vault.list(); return vault.remove(id); },
@@ -73,6 +83,7 @@ else {
     app.setName('TMA-Safe');
     settingsFile = path.join(app.getPath('userData'), 'settings.json');
     if (!process.argv.includes('--smoke')) preferences = await settings.load(settingsFile);
+    selected = preferences.vaultFile || undefined;
     win = new BrowserWindow({ width: 1260, height: 850, minWidth: 900, minHeight: 680, backgroundColor: '#17191f', icon: path.join(__dirname, '../assets/icon.png'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, devTools: !app.isPackaged } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());

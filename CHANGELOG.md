@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Optional “Always use this vault when opening TMA-Safe” selection on the unlock/create screen.
+- Remembers only the device-local file path; master password and any key file remain required.
+- Missing or moved files offer a clear message and normal file selection. Unticking the option forgets the default.
+- Existing startup and tray settings are preserved when upgrading.
+
 ## 0.2.0
 
 - Redrawn purple-and-white bunch-of-keys icon throughout the app and native packages.
