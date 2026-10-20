@@ -1,10 +1,10 @@
 # Security policy and format
 
-TMA-Safe 0.1.x is an experimental, unaudited beta. Report vulnerabilities through the repository's private security advisory flow if available; otherwise contact the owner privately. Do not put real vaults, passwords, keys, CSV exports or pairing codes in issues.
+TMA-Safe 0.2.x is an experimental, unaudited beta. Report vulnerabilities through the repository's private security advisory flow if available; otherwise contact the owner privately. Do not put real vaults, passwords, keys, CSV exports or pairing codes in issues.
 
 ## At-rest encryption
 
-All titles, websites, usernames, passwords, notes, reminder policies, timestamps and IDs are inside authenticated ciphertext. The filename, file size, OS metadata and public envelope header are not concealed.
+Folder names/memberships and all titles, websites, usernames, passwords, notes, reminder policies, timestamps and IDs are inside authenticated ciphertext. The filename, file size, OS metadata and public envelope header are not concealed.
 
 * Node/OpenSSL scrypt: N=131072, r=8, p=1 (128 MiB work memory), random 32-byte salt, 32-byte derived key. Fixed parameters are strictly checked to prevent hostile resource costs. Input is SHA-256 of `TMA-Safe/v1\0`, UTF-8 master password, NUL separator and optional 32-byte key content. Passwords cannot contain NUL. This is a custom envelope, not KDBX.
 * AES-256-GCM: fresh random 96-bit IV per save and 128-bit tag. Canonical format/version/cipher/KDF/key-file/salt/IV fields are authenticated as additional data. Wrong passwords/keys and ciphertext modification fail before plaintext parsing. Unsupported versions fail closed.
@@ -24,3 +24,5 @@ Key-file protection is a cryptographic possession factor. TOTP and Windows Hello
 ## Verification
 
 Tests cover incorrect passwords/keys, encrypted-at-rest fields, ciphertext/KDF tampering, portability, lock cancellation during derivation, concurrent writes, backups, no overwrite, generator constraints, CSV parsing, DOM injection, lock cleanup and bridge authentication/origin rejection. Real Electron smoke checks cover startup, rendering, Node isolation, hidden list passwords and lock cleanup. These checks are not an independent security audit or penetration test.
+
+Device-local settings contain only preferences. Startup never unlocks the vault. Closing to tray locks immediately; the custom tray menu has a separate sandboxed renderer and an allowlisted IPC channel that cannot access credentials.

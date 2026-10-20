@@ -12,12 +12,16 @@ function origin(value) { if (!value) return ''; const u = new URL(text(value, 20
 function entry(value) {
   const title = text(value.title, 200).trim(); if (!title) throw Error('Give this login a name.');
   const expiryDays = Number(value.expiryDays || 0); if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 3650) throw Error('Expiry must be between 0 and 3650 days.');
-  return { title, username: text(value.username), password: text(value.password), url: origin(value.url), notes: text(value.notes || '', 32000), expiryDays };
+  const folderId = text(value.folderId || '', 36); if (folderId && !/^[a-f\d-]{36}$/.test(folderId)) throw Error('Invalid folder.');
+  return { title, username: text(value.username), password: text(value.password), url: origin(value.url), notes: text(value.notes || '', 32000), expiryDays, folderId };
 }
 function validateData(data) {
   if (data?.schema !== 1 || !Array.isArray(data.entries) || data.entries.length > 20000) throw Error('Unsupported vault contents.');
   const ids = new Set();
-  for (const e of data.entries) { entry(e); if (!/^[a-f\d-]{36}$/.test(e.id) || ids.has(e.id) || !Number.isFinite(Date.parse(e.updatedAt)) || !Number.isFinite(Date.parse(e.passwordChangedAt))) throw Error('Invalid vault entry.'); ids.add(e.id); }
+  data.folders ??= []; if (!Array.isArray(data.folders) || data.folders.length > 1000) throw Error('Invalid folders.');
+  const folders = new Set(), names = new Set();
+  for (const f of data.folders) { const name = text(f.name, 80).trim(); if (!name || !/^[a-f\d-]{36}$/.test(f.id) || folders.has(f.id) || names.has(name.toLowerCase())) throw Error('Invalid or duplicate folder.'); folders.add(f.id); names.add(name.toLowerCase()); }
+  for (const e of data.entries) { entry(e); if (e.folderId && !folders.has(e.folderId)) throw Error('Folder no longer exists.'); if (!/^[a-f\d-]{36}$/.test(e.id) || ids.has(e.id) || !Number.isFinite(Date.parse(e.updatedAt)) || !Number.isFinite(Date.parse(e.passwordChangedAt))) throw Error('Invalid vault entry.'); ids.add(e.id); }
   return data;
 }
 function header(h) {
@@ -69,7 +73,7 @@ class Vault {
     } catch { key.fill(0); throw Error('Could not unlock. Check the master password, key file, and vault integrity.'); } finally { plain?.fill(0); }
     return this.list();
   }
-  list() { this.require(); return { file: this.file, keyfile: this.base.keyfile, entries: this.data.entries.map(({ password, ...e }) => ({ ...e, expired: e.expiryDays > 0 && Date.now() >= Date.parse(e.passwordChangedAt) + e.expiryDays * 86400000 })) }; }
+  list() { this.require(); return { file: this.file, keyfile: this.base.keyfile, folders: structuredClone(this.data.folders || []), entries: this.data.entries.map(({ password, ...e }) => ({ ...e, expired: e.expiryDays > 0 && Date.now() >= Date.parse(e.passwordChangedAt) + e.expiryDays * 86400000 })) }; }
   async mutate(change) {
     this.require(); const data = structuredClone(this.data), epoch = this.epoch; change(data); const content = seal(data, this.key, this.base); await write(this.file, content, this.hash);
     if (epoch !== this.epoch) throw Error('Vault locked during save. Reopen to see saved changes.'); this.data = data; this.hash = digest(content); return this.list();
@@ -79,6 +83,8 @@ class Vault {
   }
   secret(id) { this.require(); const found = this.data.entries.find(e => e.id === id); if (!found) throw Error('Login no longer exists.'); return found; }
   async remove(id) { return this.mutate(data => { const index = data.entries.findIndex(e => e.id === id); if (index < 0) throw Error('Login no longer exists.'); data.entries.splice(index, 1); }); }
+  async folder(value) { return this.mutate(data => { data.folders ??= []; const name = text(value.name, 80).trim(); if (!name) throw Error('Give the folder a name.'); if (data.folders.some(f => f.id !== value.id && f.name.toLowerCase() === name.toLowerCase())) throw Error('A folder with this name already exists.'); const old = value.id ? data.folders.find(f => f.id === value.id) : null; if (value.id && !old) throw Error('Folder no longer exists.'); if (old) old.name = name; else data.folders.push({ id: crypto.randomUUID(), name }); }); }
+  async removeFolder(id) { return this.mutate(data => { if (!(data.folders || []).some(f => f.id === id)) throw Error('Folder no longer exists.'); data.folders = data.folders.filter(f => f.id !== id); for (const e of data.entries) if (e.folderId === id) e.folderId = ''; }); }
   async import(values) { const entries = values.map(entry); return this.mutate(data => { for (const e of entries) { if (data.entries.some(v => v.url === e.url && v.username === e.username && v.password === e.password)) continue; const now = new Date().toISOString(); data.entries.push({ ...e, id: crypto.randomUUID(), updatedAt: now, passwordChangedAt: now }); } }); }
   async copy(destination) { this.require(); await write(destination, seal(this.data, this.key, this.base)); }
 }

@@ -8,6 +8,9 @@ const { Vault, generate, read } = require('./vault.cjs');
 const { parseCSV } = require('./import.cjs');
 const { startBridge } = require('./bridge.cjs');
 const os = require('node:os');
+const settings = require('./settings.cjs');
+const { createTray } = require('./tray.cjs');
+let preferences = { ...settings.defaults }, tray, quitting = false, settingsFile;
 let win, selected, keyPath, bridge, pendingImport, clipTimer, idleTimer, lastActivity = Date.now();
 const vault = new Vault(); let queue = Promise.resolve();
 const uiURL = pathToFileURL(path.join(__dirname, '../ui/index.html')).href;
@@ -15,6 +18,17 @@ const uiURL = pathToFileURL(path.join(__dirname, '../ui/index.html')).href;
 if (process.argv.includes('--smoke')) app.disableHardwareAcceleration();
 function clearClipboard() { if (clipTimer) { clearTimeout(clipTimer.timer); if (clipboard.readText() === clipTimer.text) clipboard.clear(); clipTimer = null; } }
 function lock() { vault.lock(); pendingImport = null; bridge?.close(); bridge = null; clearClipboard(); win?.webContents.send('locked'); }
+function restore() { if (!win) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+function syncTray() {
+  if (process.argv.includes('--smoke')) return;
+  if (!preferences.showTray) { restore(); tray?.destroy(); tray = null; return; }
+  if (!tray) tray = createTray({ open: restore, settings: () => { restore(); win.webContents.send('settings'); }, lock, exit: () => { quitting = true; app.quit(); } });
+}
+async function startup(enabled) {
+  if (!app.isPackaged) { if (enabled) throw Error('Startup is available in an installed build.'); return; }
+  if (process.platform === 'linux') { const config = process.env.XDG_CONFIG_HOME && path.isAbsolute(process.env.XDG_CONFIG_HOME) ? process.env.XDG_CONFIG_HOME : path.join(os.homedir(), '.config'); await settings.linuxStartup(path.join(config, 'autostart', 'tma-safe.desktop'), process.env.APPIMAGE || process.execPath, enabled); }
+  else app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath });
+}
 async function key() { if (!keyPath) return undefined; const handle = await fs.open(keyPath, 'r'); try { if ((await handle.stat()).size !== 32) throw Error('Expected a 32-byte TMA-Safe key file.'); return await handle.readFile(); } finally { await handle.close(); } }
 async function withKey(fn) { const bytes = await key(); try { return await fn(bytes); } finally { bytes?.fill(0); } }
 async function pick(save, extension, title) {
@@ -24,6 +38,9 @@ async function pick(save, extension, title) {
 }
 const actions = {
   state: () => vault.key ? vault.list() : null,
+  settings: async value => { if (value === undefined) return { ...preferences, startupSupported: app.isPackaged }; const next = settings.validate(value), previous = preferences; if (next.openAtLogin !== previous.openAtLogin) await startup(next.openAtLogin); try { preferences = await settings.save(settingsFile, next); syncTray(); } catch (e) { preferences = previous; await settings.save(settingsFile, previous).catch(() => {}); await startup(previous.openAtLogin).catch(() => {}); syncTray(); throw e; } return { ...preferences, startupSupported: app.isPackaged }; },
+  folder: value => vault.folder(value),
+  removeFolder: async id => { vault.require(); const result = await dialog.showMessageBox(win, { type: 'question', title: 'Delete folder?', message: 'Delete this folder?', detail: 'Its logins will remain in All logins. No passwords will be deleted.', buttons: ['Cancel', 'Delete folder'], defaultId: 0, cancelId: 0 }); if (result.response !== 1) return vault.list(); return vault.removeFolder(id); },
   chooseVault: async save => { if (vault.key) throw Error('Lock the current vault first.'); const file = await pick(save === true, 'tmasafe', save ? 'Create vault' : 'Open vault'); if (file) selected = file; return selected ? path.basename(selected) : null; },
   chooseKey: async () => { keyPath = await pick(false, 'tmakey', 'Choose your separate key file'); return keyPath ? path.basename(keyPath) : null; },
   createKey: async () => { const file = await pick(true, 'tmakey', 'Keep this key separate from your vault'); if (!file) return null; const bytes = crypto.randomBytes(32); try { await fs.writeFile(file, bytes, { flag: 'wx', mode: 0o600 }); keyPath = file; return path.basename(file); } finally { bytes.fill(0); } },
@@ -33,7 +50,7 @@ const actions = {
   put: async value => { if (value.id && value.password === null) value.password = vault.secret(value.id).password; return vault.put(value); },
   remove: async id => { vault.require(); const result = await dialog.showMessageBox(win, { type: 'warning', title: 'Delete login?', message: 'Delete this login from the vault?', detail: 'An encrypted .bak file retains the previous save.', buttons: ['Cancel', 'Delete login'], defaultId: 0, cancelId: 0 }); if (result.response !== 1) return vault.list(); return vault.remove(id); },
   reveal: id => vault.secret(id).password,
-  copy: value => { const e = vault.secret(value.id); if (!['username', 'password'].includes(value.field)) throw Error('Unsupported clipboard field.'); clearClipboard(); const text = e[value.field]; clipboard.writeText(text); clipTimer = { text, timer: setTimeout(clearClipboard, 20000) }; return true; },
+  copy: value => { const e = vault.secret(value.id); if (!['username', 'password'].includes(value.field)) throw Error('Unsupported clipboard field.'); clearClipboard(); const text = e[value.field]; clipboard.writeText(text); clipTimer = { text, timer: setTimeout(clearClipboard, preferences.clipboardSeconds * 1000) }; return { seconds: preferences.clipboardSeconds }; },
   generate: value => generate(value),
   previewImport: async () => { vault.require(); pendingImport = null; const result = await dialog.showOpenDialog(win, { title: 'Import a browser password CSV', properties: ['openFile'], filters: [{ name: 'Browser password export', extensions: ['csv'] }] }); if (result.canceled) return null; const bytes = await read(result.filePaths[0]); const parsed = parseCSV(bytes); pendingImport = parsed.entries; return { count: parsed.entries.length, skipped: parsed.skipped }; },
   import: async () => { vault.require(); if (!pendingImport) throw Error('Preview a CSV first.'); const values = pendingImport; const state = await vault.import(values); pendingImport = null; return state; },
@@ -51,9 +68,11 @@ const actions = {
 };
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', () => { win?.show(); win?.focus(); });
-  app.whenReady().then(() => {
+  app.on('second-instance', restore);
+  app.whenReady().then(async () => {
     app.setName('TMA-Safe');
+    settingsFile = path.join(app.getPath('userData'), 'settings.json');
+    if (!process.argv.includes('--smoke')) preferences = await settings.load(settingsFile);
     win = new BrowserWindow({ width: 1260, height: 850, minWidth: 900, minHeight: 680, backgroundColor: '#17191f', icon: path.join(__dirname, '../assets/icon.png'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, devTools: !app.isPackaged } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
@@ -61,7 +80,8 @@ else {
     win.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     win.webContents.session.setPermissionCheckHandler(() => false);
     win.webContents.on('render-process-gone', lock);
-    win.on('close', lock); win.on('closed', () => { win = null; app.quit(); });
+    win.on('close', event => { lock(); if (!quitting && preferences.closeToTray && tray) { event.preventDefault(); win.hide(); } }); win.on('closed', () => { win = null; app.quit(); });
+    try { syncTray(); } catch (e) { preferences.closeToTray = false; dialog.showErrorBox('Tray icon unavailable', e.message); }
     for (const [name, action] of Object.entries(actions)) ipcMain.handle('safe:' + name, (event, value) => {
       if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame || event.senderFrame.url !== uiURL) throw Error('Untrusted caller.');
       // Lock invalidates in-flight key derivation immediately; all other operations serialize.
@@ -69,7 +89,7 @@ else {
       const run = queue.then(async () => { lastActivity = Date.now(); try { return { ok: true, value: await action(value) }; } catch (e) { return { ok: false, error: e.message }; } }); queue = run.catch(() => {}); return run;
     });
     powerMonitor.on('suspend', lock); powerMonitor.on('lock-screen', lock);
-    idleTimer = setInterval(() => { if (vault.key && Date.now() - lastActivity >= 5 * 60000) lock(); }, 1000);
+    idleTimer = setInterval(() => { if (vault.key && Date.now() - lastActivity >= preferences.idleMinutes * 60000) lock(); }, 1000);
     const smokeIndex = process.argv.indexOf('--smoke');
     if (smokeIndex >= 0) {
       const target = process.argv[smokeIndex + 1];
@@ -78,9 +98,11 @@ else {
         try {
           if (!target) throw Error('Smoke output directory required.'); await fs.mkdir(target, { recursive: true });
           await new Promise(resolve => setTimeout(resolve, 250)); await fs.writeFile(path.join(target, 'locked.png'), (await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('create-mode').click()`); await new Promise(resolve => setTimeout(resolve, 150)); await fs.writeFile(path.join(target, 'create.png'), (await win.webContents.capturePage()).toPNG());
           folder = await fs.mkdtemp(path.join(os.tmpdir(), 'tma-safe-smoke-'));
           await vault.create(path.join(folder, 'Demo.tmasafe'), 'fictional smoke passphrase only');
-          for (const e of [{ title: 'Personal email', username: 'alex@example.com', url: 'https://mail.example.com', expiryDays: 90 }, { title: 'GitHub', username: 'alex-studio', url: 'https://github.com', expiryDays: 180 }, { title: 'Creative workspace', username: 'alex@example.com', url: 'https://workspace.example.com', expiryDays: 30 }]) await vault.put({ ...e, password: 'Fictional-demo-only!', notes: '' });
+          await vault.folder({ name: 'Personal' }); await vault.folder({ name: 'Work' });
+          for (const e of [{ title: 'Personal email', username: 'alex@example.com', url: 'https://mail.example.com', expiryDays: 90 }, { title: 'GitHub', username: 'alex-studio', url: 'https://github.com', expiryDays: 180 }, { title: 'Creative workspace', username: 'alex@example.com', url: 'https://workspace.example.com', expiryDays: 30 }]) await vault.put({ ...e, password: 'Fictional-demo-only!', notes: '', folderId: vault.data.folders[e.title === 'Personal email' ? 0 : 1].id });
           win.webContents.send('refresh');
           const deadline = Date.now() + 15000;
           while (!await win.webContents.executeJavaScript(`document.querySelectorAll('.login-card').length===3 && !document.getElementById('workspace').hidden`)) {
@@ -89,7 +111,17 @@ else {
           }
           const result = await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.login-card').length, unlocked:!document.getElementById('workspace').hidden, nodeAvailable:typeof require!=='undefined', passwordVisible:document.body.textContent.includes('Fictional-demo-only!')})`);
           if (result.cards !== 3 || !result.unlocked || result.nodeAvailable || result.passwordVisible) throw Error('Renderer isolation or smoke fixture failed.');
-          await fs.writeFile(path.join(target, 'vault.png'), (await win.webContents.capturePage()).toPNG()); lock(); await new Promise(resolve => setTimeout(resolve, 100));
+          await fs.writeFile(path.join(target, 'vault.png'), (await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('settings-button').click()`);
+          for (let i=0; i<100 && !await win.webContents.executeJavaScript(`document.getElementById('settings-dialog').open`); i++) await new Promise(resolve => setTimeout(resolve, 50));
+          if (!await win.webContents.executeJavaScript(`document.getElementById('settings-dialog').open`)) throw Error('Settings did not open.');
+          await fs.writeFile(path.join(target, 'settings.png'), (await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('settings-cancel').click(); document.getElementById('add-button').click()`);
+          await new Promise(resolve => setTimeout(resolve, 150));
+          await fs.writeFile(path.join(target, 'editor.png'), (await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('entry-cancel').click()`);
+          const menu = createTray({}, { preview: true }); try { if (menu.popup.webContents.isLoading()) await new Promise(resolve => menu.popup.webContents.once('did-finish-load', resolve)); menu.popup.showInactive(); await fs.writeFile(path.join(target, 'tray.png'), (await menu.popup.webContents.capturePage()).toPNG()); } finally { menu.destroy(); }
+          lock(); await new Promise(resolve => setTimeout(resolve, 100));
           if (!await win.webContents.executeJavaScript(`document.getElementById('workspace').hidden && document.querySelectorAll('.login-card').length===0`)) throw Error('Lock did not clear renderer.');
           await fs.writeFile(path.join(target, 'smoke.json'), JSON.stringify({ ok: true, platform: process.platform, arch: process.arch, ...result }, null, 2));
         } catch (e) { console.error(e.stack); process.exitCode = 1; if (target) await fs.writeFile(path.join(target, 'error.txt'), e.stack); }
@@ -98,5 +130,6 @@ else {
     }
     win.loadURL(uiURL);
   });
-  app.on('before-quit', () => { clearInterval(idleTimer); lock(); });
+  app.on('before-quit', () => { quitting = true; clearInterval(idleTimer); lock(); tray?.destroy(); tray = null; });
+  app.on('activate', restore);
 }

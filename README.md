@@ -1,6 +1,6 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a two-key icon follow TMApps Launcher and TMA-Mail. Version 0.1.0 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a bunch-of-keys icon follow TMApps Launcher and TMA-Mail. Version 0.2.0 is an unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
@@ -8,9 +8,19 @@ Create a `.tmasafe` vault and choose a master passphrase of at least 14 characte
 
 Optionally generate a separate `.tmakey` file when creating the vault. This adds a possession factor to encryption: **both** the master password and original key file are required. Keep it on a separate device/removable drive; storing it beside the vault loses the benefit. This release implements key-file two-factor protection. Authenticator TOTP and Windows Hello are not implemented. A local TOTP check alone would not protect a copied offline vault.
 
-Add, edit, search, copy or delete logins. Passwords remain hidden until revealed; reveal hides after 15 seconds. Clipboard contents clear after 20 seconds if unchanged. Automatic locking runs after five minutes without keyboard/pointer activity inside the app, on OS screen-lock events, suspend, close or renderer failure. OS event availability varies by desktop environment: verify Linux screen-lock behavior locally. Ctrl+L locks immediately.
+Add, edit, search, copy or delete logins. Passwords remain hidden until revealed; reveal hides after 15 seconds. Clipboard contents clear after 20 seconds if unchanged (configurable in Settings). Automatic locking defaults to five minutes without keyboard/pointer activity inside the app, on OS screen-lock events, suspend, close or renderer failure. OS event availability varies by desktop environment: verify Linux screen-lock behavior locally. Ctrl+L locks immediately.
 
 Generate 8–128 character passwords with lowercase, capitals, numbers, symbols and similar-character exclusion. Reminders accept 1–3650 days, appear in the due list and are mentioned when unlocking. They do not change website passwords or run while the app is closed. Editing notes does not restart a reminder; changing a password does.
+
+## Folders and settings
+
+Use the + beside **Folders** to create a folder. Select it to rename/delete it; choose a folder when adding or editing a login to move that login. Deleting a folder preserves all its passwords in All logins. Folder names and memberships are encrypted inside the portable vault. Existing vaults open with no folders and are upgraded on save.
+
+The eye buttons reveal master, confirmation and login passwords for up to 15 seconds. Click again to hide; leaving the app or locking also hides them.
+
+**Settings** is available from the locked screen, sidebar and tray menu. Options include open at sign-in, show the tray/menu-bar icon, close to tray, idle lock (1–30 minutes) and clipboard clearing (10–60 seconds). Startup is available in packaged builds: Windows/macOS use OS login items; Linux uses a user autostart desktop entry. Startup opens a locked app and never stores the master password. The startup executable must remain at the same installed location; moving an AppImage requires toggling startup off/on again. Use either the launcher's app-startup setting or the app's own setting to avoid duplicate registrations.
+
+Closing to tray always locks. The tray has Open TMA-Safe, Settings, Lock vault and Exit TMA-Safe, using TMA-Mail's rounded panel and bubble buttons in purple. Double-click restores the window; click/right-click opens the menu where supported by the desktop environment. Linux requires a tray/StatusNotifier implementation (GNOME may need an extension). Disabling the tray also disables close-to-tray and restores the window. Settings are device-local and stored separately from vaults; they contain no credentials or unlock keys.
 
 ## Portability and backups
 

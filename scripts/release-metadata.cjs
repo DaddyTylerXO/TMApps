@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
 const version = require('../package.json').version, directory = path.join(__dirname, '../dist'), platform = process.platform, arch = process.arch;
-const files = fs.readdirSync(directory).filter(name => name.startsWith('TMA-Safe-') && /\.(zip|dmg|AppImage|tar\.gz)$/.test(name));
+const files = fs.readdirSync(directory).filter(name => name.startsWith(`TMA-Safe-${version}-`) && /\.(zip|dmg|AppImage|tar\.gz)$/.test(name));
 if (!files.length) throw Error('No application packages found.');
 const artifacts = files.map(filename => { const sha256 = crypto.createHash('sha256').update(fs.readFileSync(path.join(directory, filename))).digest('hex'); fs.writeFileSync(path.join(directory, filename + '.sha256'), `${sha256}  ${filename}\n`); return { filename, sha256, url: `https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/${filename}` }; });
 const select = ending => { const artifact = artifacts.find(a => a.filename.endsWith(ending)); if (!artifact) throw Error('Missing expected package: ' + ending); return artifact; };
