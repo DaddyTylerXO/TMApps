@@ -3,3 +3,4 @@ dist/
 .test-output/
 *.log
 launcher-work/
+smoke/

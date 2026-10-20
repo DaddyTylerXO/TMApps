@@ -43,6 +43,19 @@ jobs:
           node node_modules/electron/install.js
           node node_modules/ffmpeg-static/install.js
       - run: pnpm test
+      - name: Verify desktop UI on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cut = Start-Process -FilePath node_modules/electron/dist/electron.exe -ArgumentList @('.', '--smoke', '"'+$PWD+'/smoke/report.json"') -WindowStyle Hidden -PassThru -Wait
+          if ($cut.ExitCode -ne 0) { throw 'Desktop smoke check failed' }
+          if (!(Get-Content smoke/report.json -Raw | ConvertFrom-Json).ok) { throw 'Desktop smoke report failed' }
+      - name: Verify desktop UI on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a pnpm exec electron . --no-sandbox --smoke "$PWD/smoke/report.json"
+      - name: Verify desktop UI on macOS
+        if: runner.os == 'macOS'
+        run: pnpm exec electron . --smoke "$PWD/smoke/report.json"
       - name: Package native application
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

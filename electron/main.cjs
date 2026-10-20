@@ -11,7 +11,7 @@ const {exportVideo}=require('./export.cjs');
 const exec=promisify(execFile), media=new Map(), page=pathToFileURL(path.join(__dirname,'../ui/index.html')).href, trayPage=pathToFileURL(path.join(__dirname,'../ui/tray.html')).href;
 let window,tray,trayWindow,quitting=false,controller,lastExport;
 const smokeIndex=process.argv.indexOf('--smoke');
-if(smokeIndex>=0)app.setPath('userData',path.join(path.dirname(path.resolve(process.argv[smokeIndex+1])),'smoke-profile-'+process.pid));
+if(smokeIndex>=0){app.disableHardwareAcceleration();app.setPath('userData',path.join(path.dirname(path.resolve(process.argv[smokeIndex+1])),'smoke-profile-'+process.pid));}
 const unpack=p=>p.replace(/app\.asar([\\/])/,'app.asar.unpacked$1');
 const ffmpeg=()=>process.env.TMA_CUT_FFMPEG || unpack(require('ffmpeg-static'));
 const ffprobe=()=>process.env.TMA_CUT_FFPROBE || unpack(require('ffprobe-static').path);
@@ -94,9 +94,9 @@ async function run(){
     // Linux StatusNotifier hosts use native DBus menus rather than right-click events.
     if(process.platform==='linux')tray.setContextMenu(Menu.buildFromTemplate([{label:'Open TMA-Cut',click:restore},{label:'Import videos',click:()=>{restore();window.webContents.send('command','import');}},{label:'Quit TMA-Cut',click:()=>window.close()}]));
   }catch{tray=null;}
-  const smoke=process.argv.indexOf('--smoke');if(smoke>=0){await new Promise(r=>setTimeout(r,600));const report=process.argv[smoke+1];await fs.mkdir(path.dirname(report),{recursive:true});await fs.writeFile(report,JSON.stringify(await window.webContents.executeJavaScript('window.cutSmoke()')));await fs.writeFile(report+'.png',(await window.webContents.capturePage()).toPNG());quitting=true;app.quit();}
+  const smoke=process.argv.indexOf('--smoke');if(smoke>=0){await new Promise(r=>setTimeout(r,600));const report=process.argv[smoke+1],result=await window.webContents.executeJavaScript('window.cutSmoke()');if(!result.ok||result.nodeAvailable)throw new Error('Desktop isolation or UI smoke check failed.');await fs.mkdir(path.dirname(report),{recursive:true});await fs.writeFile(report,JSON.stringify(result));await fs.writeFile(report+'.png',(await window.webContents.capturePage()).toPNG());quitting=true;app.quit();}
 }
-if(!app.requestSingleInstanceLock())app.quit();else{app.on('second-instance',()=>window&&restore());app.whenReady().then(run).catch(e=>{dialog.showErrorBox('TMA-Cut',e.message);app.quit();});app.on('activate',()=>window&&restore());}
+if(!app.requestSingleInstanceLock())app.quit();else{app.on('second-instance',()=>window&&restore());app.whenReady().then(run).catch(async e=>{if(smokeIndex>=0){const file=process.argv[smokeIndex+1];await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,JSON.stringify({ok:false,error:e.stack}));app.exit(1);}else{dialog.showErrorBox('TMA-Cut',e.message);quitting=true;app.quit();}});app.on('activate',()=>window&&restore());}
 app.on('before-quit',event=>{if(!quitting&&window){event.preventDefault();window.close();}});
 app.on('window-all-closed',()=>app.quit());
 app.on('will-quit',()=>{tray?.destroy();controller?.abort();});

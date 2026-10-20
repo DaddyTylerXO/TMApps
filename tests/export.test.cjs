@@ -35,5 +35,8 @@ test('real export joins trimmed audio + silent clips, renders captions, blurred 
     const hdr=path.join(root,'hdr.mp4');await exec(ffmpeg,['-v','error','-f','lavfi','-i','color=c=gray:s=160x90:r=24:d=0.2','-vf','format=yuv420p10le','-c:v','libx265','-x265-params','log-level=error','-color_primaries','bt2020','-color_trc','smpte2084','-colorspace','bt2020nc',hdr],{windowsHide:true});
     media.set('hdr',{kind:'video',path:hdr,duration:.2,audio:false,transfer:'smpte2084'});const hdrProject=validate({...sample(),clips:[{mediaId:'hdr',in:0,out:.1}],title:'',watermark:'',captions:[],overlay:null,settings:{...sample().settings,background:'solid'}},media);await exportVideo(ffmpeg,hdrProject,media,path.join(root,'sdr.mp4'),{tempRoot:root});
     const cancel=new AbortController();cancel.abort();await assert.rejects(exportVideo(ffmpeg,project,media,path.join(root,'cancel.mp4'),{tempRoot:root,signal:cancel.signal}));
+    const activeCancel=new AbortController(),timer=setTimeout(()=>activeCancel.abort(),30);
+    try{await assert.rejects(exportVideo(ffmpeg,{...high,clips:[{mediaId:'a',in:0,out:1}],duration:1},media,path.join(root,'active-cancel.mp4'),{tempRoot:root,signal:activeCancel.signal}));}finally{clearTimeout(timer);}
+    assert.equal((await fs.readdir(root)).filter(name=>name.startsWith('cut-export-')).length,0);
   }finally{await fs.rm(root,{recursive:true,force:true});}
 });
