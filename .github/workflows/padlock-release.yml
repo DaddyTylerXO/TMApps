@@ -1,0 +1,135 @@
+name: Test and publish TMA-Padlock
+on:
+  workflow_dispatch:
+  push:
+    branches: [TMA-Padlock]
+    paths: ['electron/**', 'ui/**', 'assets/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/padlock-release.yml']
+permissions:
+  contents: write
+concurrency:
+  group: tmapps-padlock-release
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: win32
+            arch: x64
+            args: --win zip --x64
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+            args: --mac dmg zip --x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+            args: --mac dmg zip --arm64
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+            args: --linux AppImage tar.gz --x64
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            args: --linux AppImage tar.gz --arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/.github/ISSUE_TEMPLATE/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.25.0'
+      - name: Restore pinned dependencies
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          node node_modules/electron/install.js
+          node -e "if(process.platform!=='${{ matrix.platform }}'||process.arch!=='${{ matrix.arch }}')throw Error('Wrong native build runner')"
+      - run: pnpm test
+      - name: Allow Chromium user namespaces on the ephemeral Linux runner
+        if: matrix.platform == 'linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Source smoke (Linux)
+        if: matrix.platform == 'linux'
+        run: xvfb-run -a pnpm exec electron . --smoke build/source-smoke
+      - name: Source smoke (Windows and macOS)
+        if: matrix.platform != 'linux'
+        run: pnpm exec electron . --smoke build/source-smoke
+      - name: Package application
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm exec electron-builder ${{ matrix.args }} --publish never
+      - name: Prepare macOS launcher archive
+        if: matrix.platform == 'darwin'
+        run: |
+          BUNDLE=$(find dist -maxdepth 2 -type d -name TMA-Padlock.app -print -quit)
+          test -n "$BUNDLE"
+          codesign --verify --deep --strict "$BUNDLE"
+          "$BUNDLE/Contents/MacOS/TMA-Padlock" --smoke build/packaged-smoke
+          VERSION=$(node -p "require('./package.json').version")
+          tar -czf "dist/TMA-Padlock-$VERSION-mac-${{ matrix.arch }}.tar.gz" -C "$(dirname "$BUNDLE")" TMA-Padlock.app
+      - name: Packaged smoke (Windows)
+        if: matrix.platform == 'win32'
+        run: dist/win-unpacked/TMA-Padlock.exe --smoke build/packaged-smoke
+      - name: Packaged smoke (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          APPIMAGE=$(find dist -maxdepth 1 -name '*.AppImage' -print -quit)
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a "$APPIMAGE" --smoke build/packaged-smoke
+      - run: node scripts/release-metadata.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: padlock-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.tar.gz
+            dist/*.sha256
+            dist/padlock-metadata-*.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checks-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            build/*smoke/*
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: tmapps-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: padlock-*
+          merge-multiple: true
+          path: published
+      - name: Prepare catalog with verified packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download tma-apps --repo "$GITHUB_REPOSITORY" --pattern catalog.json --dir prior
+          node scripts/publish-catalog.cjs published prior/catalog.json catalog.json
+          gh api "repos/$GITHUB_REPOSITORY/contents/desktop/electron/service.cjs?ref=TMApps-Launcher" --jq .content | base64 -d > launcher-service.cjs
+          grep -q "'tma-padlock'" launcher-service.cjs
+      - name: Publish packages before catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find published -maxdepth 1 -type f \( -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.tar.gz' -o -name '*.sha256' \) -print0 | xargs -0 gh release upload tma-apps --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload tma-apps catalog.json --repo "$GITHUB_REPOSITORY" --clobber
