@@ -1,6 +1,6 @@
 {
   "name": "tmapps-launcher",
-  "version": "1.12.2",
+  "version": "1.12.3",
   "private": true,
   "description": "Your TMApps library for macOS and Linux.",
   "author": "DaddyTylerXO",
@@ -28,6 +28,7 @@
       "ui/**/*",
       "assets/icon.png",
       "assets/TMA-Mail.png",
+      "assets/TMA-Padlock.png",
       "catalog.json",
       "package.json"
     ],

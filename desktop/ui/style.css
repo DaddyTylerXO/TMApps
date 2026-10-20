@@ -3,4 +3,4 @@
 .card.safe .card-head,.safe .status{color:#cba6f4}.safe .app-icon{background:#30203f;color:#cba6f4}
 
 .card.padlock .card-head,.padlock .status{color:#f09cbb}.padlock .app-icon{background:#39232f;color:#f09cbb}
-.mail-icon{background:transparent}.mail-icon img{display:block;width:100%;height:100%;object-fit:contain}
+.card .app-icon.app-image{background:transparent}.app-image img{display:block;width:100%;height:100%;object-fit:contain}
