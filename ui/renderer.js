@@ -33,7 +33,25 @@ function accounts(){
   c.append(el('h2','connection-heading','Find your people.'));const grid=el('div','platform-grid');for(const p of state.platforms){const card=el('div','panel platform-card');const head=el('div','head');const title=el('div');title.append(el('h3','',p.name),el('span','badge',p.id==='bluesky'?'No developer key needed':'Developer setup required'));head.append(mark(p.id),title);card.append(head,el('p','',p.help),button('＋ Connect '+p.name,()=>openConnect(p)));grid.append(card);}c.append(grid);
 }
 function field(label,id,type='text',hint=''){const wrapper=el('div','field');const l=el('label','',label);l.htmlFor=id;const input=el(type==='textarea'?'textarea':'input');input.id=id;if(type!=='textarea')input.type=type;wrapper.append(l,input);if(hint)wrapper.append(el('small','',hint));return wrapper;}
-function openConnect(p){selectedPlatform=p.id;$('#connect-title').textContent='Connect '+p.name;$('#connect-help').textContent=p.help;$('#connect-error').textContent='';const fields=$('#connect-fields');fields.replaceChildren();if(p.id==='bluesky'){fields.append(field('Your Bluesky handle','handle','text','For example: yourname.bsky.social'),field('App password','password','password','Create a dedicated password in Bluesky → Settings → Privacy and security → App passwords.'));}else{fields.append(field('User access token','token','password','Advanced setup: obtain this from your own registered provider app.'));if(['instagram','facebook'].includes(p.id))fields.append(field(p.id==='facebook'?'Page ID':'Professional account ID','accountId'));if(p.id==='twitch')fields.append(field('Client ID','clientId'));}fields.querySelectorAll('input').forEach(i=>{i.required=true;i.autocomplete='off';i.spellcheck=false;});$('#connect-dialog').showModal();}
+function openConnect(p){
+  selectedPlatform=p.id;$('#connect-title').textContent='Connect '+p.name;$('#connect-help').textContent=p.help;$('#connect-error').textContent='';
+  const fields=$('#connect-fields');fields.replaceChildren();
+  if(p.id==='bluesky'){
+    fields.append(field('Your Bluesky handle','handle','text','Type your username before .bsky.social, or paste your full handle.'),field('App password','password','password','Create a dedicated password in Bluesky → Settings → Privacy and security → App passwords.'));
+    const handle=$('#handle');handle.value='.bsky.social';
+    handle.addEventListener('paste',event=>{
+      const pasted=event.clipboardData?.getData('text').trim().replace(/^@/,'');
+      if(pasted?.includes('.')){event.preventDefault();handle.value=pasted;handle.dispatchEvent(new Event('input',{bubbles:true}));handle.setSelectionRange(pasted.length,pasted.length);}
+    });
+  }else{
+    fields.append(field('User access token','token','password','Advanced setup: obtain this from your own registered provider app.'));
+    if(['instagram','facebook'].includes(p.id))fields.append(field(p.id==='facebook'?'Page ID':'Professional account ID','accountId'));
+    if(p.id==='twitch')fields.append(field('Client ID','clientId'));
+  }
+  fields.querySelectorAll('input').forEach(i=>{i.required=true;i.autocomplete='off';i.spellcheck=false;});
+  $('#connect-dialog').showModal();
+  if(p.id==='bluesky'){$('#handle').focus();$('#handle').setSelectionRange(0,0);}
+}
 $('#connect-form').onsubmit=async e=>{e.preventDefault();if(busy)return;const input={platform:selectedPlatform};$('#connect-fields').querySelectorAll('input').forEach(i=>input[i.id]=i.value);await task(async()=>{try{state=await call('connect',input);$('#connect-dialog').close();$('#connect-fields').replaceChildren();render();notice('Account connected. Your first live snapshot is ready.');}catch(e){$('#connect-error').textContent=e.message;}});};
 $('#close-dialog').onclick=()=>$('#connect-dialog').close();$('#connect-dialog').addEventListener('close',()=>$('#connect-fields').replaceChildren());$('#provider-docs').onclick=()=>task(()=>call('openDocs',selectedPlatform));
 function editorValue(){return {id:draftId,text:$('#post-text').value,title:$('#post-title').value,subreddit:$('#post-subreddit').value,mediaUrl:$('#post-media').value,accountIds:[...document.querySelectorAll('input[name=target]:checked')].map(n=>n.value)};}

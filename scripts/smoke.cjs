@@ -8,7 +8,11 @@ module.exports=async function smoke({win,prefs,showTrayMenu,exit}){
   await fs.writeFile(path.join(out,'overview.png'),(await win.webContents.capturePage()).toPNG());
   await js("document.querySelector('[data-view=accounts]').click()");await until("document.querySelectorAll('.platform-card').length===9");
   await js("[...document.querySelectorAll('.platform-card')].find(n=>n.textContent.includes('No developer key')).querySelector('button').click()");
-  assert.equal(await js("document.querySelector('#connect-dialog').open"),true);assert.equal(await js("document.querySelector('#password').type"),'password');await js("document.querySelector('#close-dialog').click()");
+  assert.equal(await js("document.querySelector('#connect-dialog').open"),true);assert.equal(await js("document.querySelector('#password').type"),'password');
+  assert.equal(await js("document.querySelector('#handle').value"),'.bsky.social');assert.equal(await js("document.querySelector('#handle').selectionStart"),0);
+  await js("document.querySelector('#handle').setRangeText('alice',0,0,'end')");assert.equal(await js("document.querySelector('#handle').value"),'alice.bsky.social');
+  await js("const pasteData=new DataTransfer();pasteData.setData('text','@alice.example.com');document.querySelector('#handle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:pasteData,bubbles:true,cancelable:true}))");assert.equal(await js("document.querySelector('#handle').value"),'alice.example.com');
+  await js("document.querySelector('#close-dialog').click()");
   await js("document.querySelector('[data-view=compose]').click()");await until("document.querySelector('#post-text')!==null");
   await js("document.querySelector('#post-text').value='Smoke test draft';document.querySelector('#post-title').value='Draft verification';document.querySelector('#post-text').dispatchEvent(new Event('input'));[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft').click()");await until("!document.body.hasAttribute('aria-busy') && document.querySelector('#notice').textContent.includes('saved')");
   await js("document.querySelector('[data-view=drafts]').click()");await until("document.querySelector('.draft-item')!==null");assert.match(await js("document.querySelector('.draft-item').textContent"),/Smoke test draft/);
