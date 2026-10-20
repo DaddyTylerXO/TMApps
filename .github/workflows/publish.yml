@@ -31,6 +31,23 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '10'
+      - name: Preserve published TMA-Safe packages
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download tma-apps --pattern catalog.json --dir prior-catalog
+          if ($LASTEXITCODE -eq 0) {
+            $prior = Get-Content prior-catalog/catalog.json -Raw | ConvertFrom-Json
+            $safe = $prior.apps | Where-Object id -eq "tma-safe"
+            if ($safe -and $safe.downloadUrl) {
+              $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
+              $catalog.apps = @($catalog.apps | Where-Object id -ne "tma-safe") + @($safe)
+              $catalog | ConvertTo-Json -Depth 10 | Set-Content launcher/catalog.json -Encoding UTF8
+            }
+          }
+          $global:LASTEXITCODE=0
       - name: Verify launcher
         shell: powershell
         run: |
@@ -110,7 +127,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }
           gh release upload tma-apps published/launcher-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Launcher update manifest upload failed' }
-          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe for Windows, a mac-x64/mac-arm64 DMG for macOS, or a linux-x64/linux-arm64 AppImage for Linux. Both currently published apps are Windows-only; OS logos under each app show actual published support. macOS builds are ad-hoc signed and not notarized. The optional top-right profile shares your name and email suggestions locally with TMA-Mail 0.14.1 or later; app-specific credentials or provider sign-in remain required in Mail. Check for updates includes the launcher itself, with verified download, in-place update, and restart. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
+          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe for Windows, a mac-x64/mac-arm64 DMG for macOS, or a linux-x64/linux-arm64 AppImage for Linux. TMA-Safe is available after its application release workflow publishes verified packages. OS logos under each app show actual published support. macOS builds are ad-hoc signed and not notarized. The optional top-right profile shares your name and email suggestions locally with TMA-Mail 0.14.1 or later; app-specific credentials or provider sign-in remain required in Mail. Check for updates includes the launcher itself, with verified download, in-place update, and restart. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
           if ($LASTEXITCODE -ne 0) { throw 'Release description update failed' }
           $names = gh release view tma-apps --json assets --jq '.assets[].name'
           if ($LASTEXITCODE -ne 0) { throw 'Could not list old launcher assets' }

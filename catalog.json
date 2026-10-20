@@ -30,6 +30,17 @@
       "platforms": [
         "windows"
       ]
+    },
+    {
+      "id": "tma-safe",
+      "name": "TMA-Safe",
+      "category": "PRIVACY & SECURITY",
+      "description": "A calmer home for your passwords. Keep an encrypted, portable vault with a master password and optional separate key file.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Safe",
+      "executable": "TMA-Safe.exe",
+      "platforms": []
     }
   ]
 }

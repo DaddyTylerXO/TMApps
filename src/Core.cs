@@ -159,12 +159,12 @@ namespace TMApps {
         }
         public static Catalog ParseCatalog(string json) {
             var c = Json.Deserialize<Catalog>(json);
-            if (c == null || c.schemaVersion != 1 || c.apps == null || c.apps.Count != 2) throw new InvalidDataException("Unsupported application catalog.");
+            if (c == null || c.schemaVersion != 1 || c.apps == null || (c.apps.Count < 2 || c.apps.Count > 3)) throw new InvalidDataException("Unsupported application catalog.");
             var ids = new HashSet<string>();
             foreach (var a in c.apps) {
-                if (a == null || (a.id != "tma-mail" && a.id != "tma-agent-office") || !ids.Add(a.id)) throw new InvalidDataException("Unknown or duplicate application.");
-                bool validBranch=a.id=="tma-mail" ? a.branch=="TMA-Mail" : a.branch=="AI-Agent-Dashboard" || a.branch=="TMA-AgentOffice";
-                if (String.IsNullOrWhiteSpace(a.name) || String.IsNullOrWhiteSpace(a.description) || !Regex.IsMatch(a.version ?? "", @"^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$") || !validBranch || a.executable != (a.id == "tma-mail" ? "TMA-Mail.exe" : "Agent Office.exe")) throw new InvalidDataException("Invalid application metadata.");
+                if (a == null || (a.id != "tma-mail" && a.id != "tma-agent-office" && a.id != "tma-safe") || !ids.Add(a.id)) throw new InvalidDataException("Unknown or duplicate application.");
+                bool validBranch=a.id=="tma-mail" ? a.branch=="TMA-Mail" : a.id=="tma-safe" ? a.branch=="TMA-Safe" : a.branch=="AI-Agent-Dashboard" || a.branch=="TMA-AgentOffice";
+                if (String.IsNullOrWhiteSpace(a.name) || String.IsNullOrWhiteSpace(a.description) || !Regex.IsMatch(a.version ?? "", @"^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$") || !validBranch || a.executable != (a.id == "tma-mail" ? "TMA-Mail.exe" : a.id == "tma-safe" ? "TMA-Safe.exe" : "Agent Office.exe")) throw new InvalidDataException("Invalid application metadata.");
                 if(a.platforms!=null && (a.platforms.Distinct().Count()!=a.platforms.Length || a.platforms.Any(platform=>!new[]{"windows","macos","linux"}.Contains(platform)) || (a.Available && !a.platforms.Contains("windows")))) throw new InvalidDataException("Invalid OS support metadata.");
                 if (a.Available && (!TrustedUrl(a.downloadUrl) || !Regex.IsMatch(a.sha256 ?? "", "^[a-fA-F0-9]{64}$"))) throw new InvalidDataException("Invalid download location or checksum.");
             }
@@ -221,7 +221,7 @@ namespace TMApps {
                 try {
                     catalog=ParseCatalog(await ReadText(await Download(CatalogUrl+"?check="+DateTime.UtcNow.Ticks,timeout.Token),timeout.Token)); shared=true;
                     var saved=LoadCatalog();
-                    for(int i=0;i<catalog.apps.Count;i++) { var known=saved.apps.First(a=>a.id==catalog.apps[i].id); if(IsNewer(known.version,catalog.apps[i].version)) catalog.apps[i]=known; }
+                    for(int i=0;i<catalog.apps.Count;i++) { var known=saved.apps.FirstOrDefault(a=>a.id==catalog.apps[i].id); if(known!=null && IsNewer(known.version,catalog.apps[i].version)) catalog.apps[i]=known; }
                 }
                 catch(OperationCanceledException) { throw; } catch { catalog=LoadCatalog(); }
                 try {

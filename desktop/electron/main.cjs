@@ -97,7 +97,7 @@ async function run() {
     open: ({ id }) => library.open(id),
     uninstall: ({ id, deleteData }) => library.uninstall(id, deleteData === true),
     data: ({ id }) => library.dataLocations(id),
-    source: ({ id } = {}) => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/tree/' + (id === 'tma-mail' ? 'TMA-Mail' : id === 'tma-agent-office' ? 'TMA-AgentOffice' : 'TMApps-Launcher')),
+    source: ({ id } = {}) => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/tree/' + (id === 'tma-mail' ? 'TMA-Mail' : id === 'tma-agent-office' ? 'TMA-AgentOffice' : id === 'tma-safe' ? 'TMA-Safe' : 'TMApps-Launcher')),
     cancel: () => controller?.abort(),
     answer: ({ id, value }) => { const resolve = prompts.get(id); if (resolve) { prompts.delete(id); resolve(value === true); } },
     update: applyLauncherUpdate
@@ -116,7 +116,7 @@ async function run() {
   if (smokeReport) {
     try {
       const result = await window.webContents.executeJavaScript('window.launcherSmoke()');
-      if (!result.ok || result.nodeAvailable || result.cards !== 2 || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
+      if (!result.ok || result.nodeAvailable || result.cards !== 3 || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
       await fs.mkdir(path.dirname(smokeReport), { recursive: true }); await fs.writeFile(smokeReport, JSON.stringify({ ...result, version: metadata.version }));
       await new Promise(resolve=>setTimeout(resolve,350));
       await fs.writeFile(smokeReport + '.png', (await window.webContents.capturePage()).toPNG());

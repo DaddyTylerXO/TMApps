@@ -70,6 +70,7 @@ namespace TMApps {
             roaming=InstallationPaths.Normalize(roamingRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
         }
         public string[] Locations(AppInfo app) {
+            if(app.id=="tma-safe") return new string[0]; // User-chosen vaults are never removed by the launcher.
             if(app.id=="tma-mail") return new[]{Path.Combine(local,"TMA-Mail")};
             if(app.id=="tma-agent-office") return new[]{Path.Combine(roaming,"agent-office"),Path.Combine(roaming,"Agent Office")};
             throw new InvalidDataException("Unknown application profile.");

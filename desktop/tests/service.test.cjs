@@ -21,7 +21,7 @@ async function fixture(t, platform = 'linux', arch = 'x64') {
 }
 test('public catalogs advertise only published OS packages and legacy Windows support', () => {
   const catalog = parseCatalog(clone(bundled));
-  for (const app of catalog.apps) { assert.deepEqual(support(app), ['windows']); delete app.platforms; assert.deepEqual(support(app), ['windows']); }
+  for (const app of catalog.apps) { const expected=app.downloadUrl ? ['windows'] : []; assert.deepEqual(support(app), expected); delete app.platforms; assert.deepEqual(support(app), expected); }
   const app = catalog.apps[1]; app.platforms = ['windows', 'macos', 'linux'];
   assert.deepEqual(support(app), ['windows'], 'a claimed OS without a package is not advertised');
   app.packages = { 'linux-arm64': { url: 'https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/native.AppImage', sha256: 'a'.repeat(64), format: 'appimage', executable: 'Office.AppImage' } };
@@ -108,7 +108,7 @@ test('native launcher updates select the exact OS/CPU installer and require its 
 });
 test('a corrupted native cache falls back to the bundled catalog',async t=>{
   const f=await fixture(t); await atomic(path.join(f.library.root,'catalog.json'),{schemaVersion:999});
-  assert.equal((await f.library.load()).apps.length,2);
+  assert.equal((await f.library.load()).apps.length,3);
 });
 test('native close detection finds managed background processes and preserves other copies', {skip:process.platform==='win32'},async t=>{
   const f=await fixture(t,process.platform); const folder=crypto.randomUUID();

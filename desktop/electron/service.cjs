@@ -8,7 +8,7 @@ const { promisify } = require('node:util');
 const tar = require('tar');
 const exec = promisify(execFile);
 const RELEASE = 'https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/';
-const IDS = ['tma-mail', 'tma-agent-office'];
+const IDS = ['tma-mail', 'tma-agent-office', 'tma-safe'];
 const LABELS = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
 const osKey = platform => ({ win32: 'windows', darwin: 'macos', linux: 'linux' }[platform]);
 function inside(root, candidate) { const rel = path.relative(root, candidate); return rel !== '' && !rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel); }
@@ -23,7 +23,7 @@ function newer(a, b) {
 }
 function relative(value) { return typeof value === 'string' && value.length > 0 && !value.includes('\\') && !value.includes(':') && !value.startsWith('/') && value.split('/').every(p => p && p !== '.' && p !== '..'); }
 function parseCatalog(data) {
-  if (data?.schemaVersion !== 1 || !Array.isArray(data.apps) || data.apps.length !== 2 || new Set(data.apps.map(a => a.id)).size !== 2) throw new Error('Unsupported application catalog.');
+  if (data?.schemaVersion !== 1 || !Array.isArray(data.apps) || data.apps.length < 2 || data.apps.length > 3 || new Set(data.apps.map(a => a.id)).size !== data.apps.length) throw new Error('Unsupported application catalog.');
   for (const item of data.apps) {
     if (!IDS.includes(item.id) || typeof item.name !== 'string' || !item.name || typeof item.description !== 'string') throw new Error('Unknown application.');
     version(item.version);
@@ -187,7 +187,7 @@ class Library {
     const executable = path.join(state.root, state.folder, state.executable);
     await new Promise((resolve, reject) => { const child = spawn(executable, [], { cwd: path.dirname(executable), detached: true, stdio: 'ignore' }); child.once('error', reject); child.once('spawn', () => { child.unref(); resolve(); }); });
   }
-  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return id === 'tma-mail' ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
+  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return ['tma-mail','tma-safe'].includes(id) ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
   async uninstall(id, deleteData = false) {
     if (this.busy) throw new Error('Wait for the current operation.'); this.busy = true;
     try {
