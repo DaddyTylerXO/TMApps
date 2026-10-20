@@ -2,7 +2,7 @@
 
 ## 0.2.2
 
-- Simplified the app and tray icon to two white line keys on the existing purple background, matching TMA-Mail's minimal style.
+- Applied the selected Icon D: one horizontal white key on the existing purple background, matching TMA-Mail's minimal style.
 
 ## 0.2.1
 

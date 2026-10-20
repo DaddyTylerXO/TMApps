@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <rect x="3" y="3" width="94" height="94" rx="28" fill="#7048a4"/>
-  <!-- Two simple white keys, with the same even line weight as the Mail mark. -->
-  <g stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="33" cy="33" r="10"/>
-    <circle cx="67" cy="33" r="10"/>
-    <path d="M40 40 71 71 77 65M63 63 69 57"/>
-    <path d="M60 40 29 71 23 65M37 63 31 57"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><rect x="3" y="3" width="94" height="94" rx="28" fill="#7048a4"/><g stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="34" cy="48" r="12"/><path d="M46 48H78M65 48V59M76 48V59"/></g></svg>
