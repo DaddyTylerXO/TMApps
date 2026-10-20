@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.12.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.12.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.12.2.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.12.2.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -56,6 +56,7 @@ namespace TMApps {
     }
     public class LauncherApplication : Application {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
+        System.Windows.Controls.ContextMenu trayMenu;
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
         EventWaitHandle showEvent; RegisteredWaitHandle showRegistration;
         Func<AppInfo,AppInstallOptions> chooseInstallLocation;
@@ -125,11 +126,23 @@ namespace TMApps {
             using (var input = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) using (var icon = new System.Drawing.Icon(input)) {
                 tray = new System.Windows.Forms.NotifyIcon { Text = "TMApps Launcher", Icon = (System.Drawing.Icon)icon.Clone(), Visible = true };
             }
-            var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("Open launcher",null,(s,e) => Dispatcher.BeginInvoke(new Action(Restore)));
-            menu.Items.Add("Check for updates",null,(s,e) => Dispatcher.BeginInvoke(new Action(() => { Restore(); RefreshCatalog(); })));
-            menu.Items.Add("Quit",null,(s,e) => Dispatcher.BeginInvoke(new Action(() => { if (ConfirmExit()) { quitting = true; Shutdown(); } })));
-            tray.ContextMenuStrip = menu; tray.DoubleClick += (s,e) => Dispatcher.BeginInvoke(new Action(Restore));
+            trayMenu = CreateTrayMenu(Restore, () => { Restore(); RefreshCatalog(); }, () => { if (ConfirmExit()) { quitting = true; Shutdown(); } });
+            tray.MouseUp += (s,e) => { if (e.Button == System.Windows.Forms.MouseButtons.Right) Dispatcher.BeginInvoke(new Action(ShowTrayMenu)); };
+            tray.DoubleClick += (s,e) => Dispatcher.BeginInvoke(new Action(Restore));
+        }
+        internal static ContextMenu CreateTrayMenu(Action open, Action checkUpdates, Action quit) {
+            var menu = (ContextMenu)XamlReader.Parse("<ContextMenu xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' HasDropShadow='False' MinWidth='208'><ContextMenu.Template><ControlTemplate TargetType='ContextMenu'><Border Background='#412313' BorderBrush='#CC5500' BorderThickness='1' CornerRadius='14' Padding='8'><ItemsPresenter KeyboardNavigation.DirectionalNavigation='Cycle'/></Border></ControlTemplate></ContextMenu.Template><ContextMenu.Resources><Style TargetType='MenuItem'><Setter Property='Background' Value='#CC5500'/><Setter Property='Foreground' Value='White'/><Setter Property='FontSize' Value='12'/><Setter Property='Height' Value='38'/><Setter Property='Margin' Value='0,4'/><Setter Property='Cursor' Value='Hand'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='MenuItem'><Border x:Name='bubble' CornerRadius='19' Background='{TemplateBinding Background}' Padding='16,8'><ContentPresenter ContentSource='Header' VerticalAlignment='Center' RecognizesAccessKey='True'/></Border><ControlTemplate.Triggers><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='bubble' Property='Background' Value='#5B321E'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='bubble' Property='Opacity' Value='0.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ContextMenu.Resources></ContextMenu>");
+            string[] labels = { "Open launcher", "Check for updates", "Quit" };
+            Action[] actions = { open, checkUpdates, quit };
+            for (int i = 0; i < labels.Length; i++) {
+                var action = actions[i]; var item = new MenuItem { Header = labels[i] };
+                item.Click += (s,e) => { menu.IsOpen = false; action(); }; menu.Items.Add(item);
+            }
+            return menu;
+        }
+        void ShowTrayMenu() {
+            trayMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            trayMenu.IsOpen = true;
         }
         void Restore() { window.Show(); window.WindowState = WindowState.Normal; window.Activate(); }
         bool ConfirmExit() {
@@ -140,6 +153,7 @@ namespace TMApps {
         protected override void OnExit(ExitEventArgs e) {
             lifetime.Cancel(); if (apps != null) foreach(var a in apps) if(a.Cancellation != null) a.Cancellation.Cancel();
             if(showRegistration != null) showRegistration.Unregister(null); if(showEvent != null) showEvent.Dispose();
+            if(trayMenu != null) trayMenu.IsOpen = false;
             if(tray != null) { tray.Visible = false; var icon=tray.Icon; tray.Dispose(); if(icon != null) icon.Dispose(); }
             if(service != null) service.Dispose(); base.OnExit(e);
         }

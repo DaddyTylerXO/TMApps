@@ -34,7 +34,7 @@ namespace TMApps {
             public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
                 token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
-                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.12.1.exe\",\"id\":11}]}") });
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.12.2.exe\",\"id\":11}]}") });
                 bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
                 if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
                 Downloads++;
@@ -312,13 +312,13 @@ namespace TMApps {
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
                 byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
                 string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
-                var release=new LauncherRelease { schemaVersion=1,version="1.12.1",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.12.1.exe",sha256=setupHash };
+                var release=new LauncherRelease { schemaVersion=1,version="1.12.2",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.12.2.exe",sha256=setupHash };
                 var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
                 using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
-                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.12.1","Launcher check discovers a newer launcher independently of app catalog");
-                    Check(updater.CheckLauncherUpdate("1.12.1",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.12.2","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.12.2",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
                     string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
-                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.12.1.0","Launcher installer download verifies checksum and embedded product version");
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.12.2.0","Launcher installer download verifies checksum and embedded product version");
                     File.Delete(downloaded);
                     launcherHandler.Installer=new byte[]{1,2,3};
                     Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
@@ -383,6 +383,19 @@ namespace TMApps {
                     ((Image)window.FindName("BrandIcon")).Source = decoder.Frames.Last();
                 }
                 Check(System.Diagnostics.FileVersionInfo.GetVersionInfo(Path.Combine(args[0],"build","TMApps-Launcher.exe")).CompanyName == "DaddyTylerXO", "Executable company metadata uses GitHub username");
+                int trayOpen=0,trayUpdates=0,trayQuit=0;
+                var trayMenu=LauncherApplication.CreateTrayMenu(()=>trayOpen++,()=>trayUpdates++,()=>trayQuit++);
+                trayMenu.Placement=System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint; trayMenu.HorizontalOffset=100; trayMenu.VerticalOffset=100; trayMenu.IsOpen=true; trayMenu.UpdateLayout();
+                var trayChrome=System.Windows.Media.VisualTreeHelper.GetChild(trayMenu,0) as Border;
+                Check(trayChrome!=null && trayChrome.CornerRadius.TopLeft==14 && trayChrome.Background.ToString()=="#FF412313", "Tray menu matches Mail rounded shell in launcher orange");
+                foreach(MenuItem item in trayMenu.Items) {
+                    item.ApplyTemplate(); var bubble=item.Template.FindName("bubble",item) as Border;
+                    Check(bubble!=null && bubble.CornerRadius.TopLeft==19 && item.Background.ToString()=="#FFCC5500", "Tray action uses rounded burnt-orange bubble");
+                }
+                var trayBitmap=new RenderTargetBitmap((int)Math.Ceiling(trayMenu.ActualWidth),(int)Math.Ceiling(trayMenu.ActualHeight),96,96,PixelFormats.Pbgra32); trayBitmap.Render(trayMenu);
+                var trayEncoder=new PngBitmapEncoder(); trayEncoder.Frames.Add(BitmapFrame.Create(trayBitmap)); using(var output=File.Create(Path.Combine(args[0],"build","tray-menu-preview.png"))) trayEncoder.Save(output);
+                foreach(MenuItem item in trayMenu.Items) { trayMenu.IsOpen=true; item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent,item)); Check(!trayMenu.IsOpen,"Tray command dismisses its popup before invoking its action"); }
+                Check(trayOpen==1 && trayUpdates==1 && trayQuit==1,"Tray commands invoke Open, Check updates, and Quit exactly once");
                 var cards = (ItemsControl)window.FindName("Cards");
 
                 var content = (FrameworkElement)window.Content;
