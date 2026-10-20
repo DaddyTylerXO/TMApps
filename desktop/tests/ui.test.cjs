@@ -30,15 +30,16 @@ test('search and source menu work even when no native app packages are available
 
 test('Agent Office stays last and keeps its full library number when filtered', async t => {
   const v = await view(t);
+  const socials = v.state.apps.find(a => a.id === 'tma-socialsmanager');
   const office = v.state.apps.find(a => a.id === 'tma-agent-office');
   const mail = v.state.apps.find(a => a.id === 'tma-mail');
-  v.state.apps = [office, mail, { ...mail, id: 'new-app', name: 'New Tool', category: 'Tools' }, { ...mail, id: 'another-app', name: 'Another Tool', category: 'Tools' }];
+  v.state.apps = [office, socials, mail, { ...mail, id: 'new-app', name: 'New Tool', category: 'Tools' }, { ...mail, id: 'another-app', name: 'Another Tool', category: 'Tools' }];
   const search = v.document.getElementById('search');
   search.dispatchEvent(new v.window.Event('input'));
-  assert.deepEqual([...v.document.querySelectorAll('.card')].map(c => c.dataset.id), ['tma-mail', 'new-app', 'another-app', 'tma-agent-office']);
-  assert.equal(v.document.querySelector('.card:last-child .card-head').textContent, '04 / YOUR AI TEAM');
+  assert.deepEqual([...v.document.querySelectorAll('.card')].map(c => c.dataset.id), ['tma-mail', 'new-app', 'another-app', 'tma-socialsmanager', 'tma-agent-office']);
+  assert.equal(v.document.querySelector('.card:last-child .card-head').textContent, '05 / YOUR AI TEAM');
   search.value = 'Agent'; search.dispatchEvent(new v.window.Event('input'));
-  assert.equal(v.document.querySelector('.card-head').textContent, '04 / YOUR AI TEAM');
+  assert.equal(v.document.querySelector('.card-head').textContent, '05 / YOUR AI TEAM');
 });
 
 test('SocialsManager is a coming-soon placeholder with source access and no installer', async t => {

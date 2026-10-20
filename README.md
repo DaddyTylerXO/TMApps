@@ -9,10 +9,10 @@ A launcher for **TMA-Mail** and **TMA-Agent Office**, available on **Windows, ma
 | Launcher download | Architecture | Install |
 | --- | --- | --- |
 | [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
-| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.0-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
-| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.0-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
-| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.0-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
-| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.0-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.1-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.1-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.1-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.12.1-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
 
 **Launcher support and app support are separate.** The Windows, Apple, and Linux logos under each app show the operating systems with published app builds. Both current app packages (**TMA-Mail and TMA-Agent Office**) are **Windows-only**. The Mac/Linux launchers display the library, profiles, settings, support badges, and release checks, and block incompatible EXE installations. Porting the launcher does not port the Mail or Office applications. Native app installation becomes available when that app has a verified package for the user's OS and CPU architecture.
 
@@ -141,3 +141,5 @@ Padlock is the fourth app, styled pink with a lock icon. Its release workflow pu
 The library keeps TMA-Agent Office last. Its number follows the full library order (currently 05), including in filtered views. TMA-Mail uses its official app icon in both library layouts.
 
 TMA-SocialsManager appears as Coming soon with a question-mark icon and source link. It has no published version or install package and advertises no OS support.
+
+SocialsManager stays immediately before Agent Office as other applications are added. Other apps retain their catalog order.

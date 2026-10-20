@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.12.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.12.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.12.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.12.1.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -38,7 +38,7 @@ namespace TMApps {
         public Visibility IconVisibility { get { return Id == "tma-mail" ? Visibility.Visible : Visibility.Collapsed; } }
         public Visibility GlyphVisibility { get { return Id == "tma-mail" ? Visibility.Collapsed : Visibility.Visible; } }
         internal static List<AppView> OrderLibrary(IEnumerable<AppView> library) {
-            var ordered = library.OrderBy(a => a.Id == "tma-agent-office" ? 1 : 0).ToList();
+            var ordered = library.OrderBy(a => a.Id == "tma-agent-office" ? 2 : a.Id == "tma-socialsmanager" ? 1 : 0).ToList();
             for (int i = 0; i < ordered.Count; i++) ordered[i].Position = i + 1;
             return ordered;
         }

@@ -15,7 +15,8 @@
     $('shell').className = `edge-${state.settings.navigationEdge.toLowerCase()}`;
     $('all-count').textContent = state.apps.length; $('installed-count').textContent = state.apps.filter(a => a.installed).length; $('updates-count').textContent = state.apps.filter(a => a.installed && isNewer(a.version, a.installed.version)).length; $('notinstalled-count').textContent = state.apps.filter(a => !a.installed).length;
     document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
-    const ordered = [...state.apps].sort((a, b) => Number(a.id === 'tma-agent-office') - Number(b.id === 'tma-agent-office'));
+    const rank = app => app.id === 'tma-agent-office' ? 2 : app.id === 'tma-socialsmanager' ? 1 : 0;
+    const ordered = [...state.apps].sort((a, b) => rank(a) - rank(b));
     const term = $('search').value.toLowerCase(); const apps = ordered.filter(a => `${a.name} ${a.description}`.toLowerCase().includes(term)).filter(a => filter === 'all' || filter === 'installed' && a.installed || filter === 'notinstalled' && !a.installed || filter === 'updates' && a.installed && isNewer(a.version, a.installed.version));
     $('library').replaceChildren(); $('empty').hidden = apps.length > 0;
     for (const app of apps) {
