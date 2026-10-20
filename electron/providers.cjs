@@ -12,7 +12,7 @@ const PLATFORMS = [
 class ProviderError extends Error { constructor(message,ambiguous=false){super(message);this.name='ProviderError';this.ambiguous=ambiguous;} }
 async function request(url,{token,method='GET',body,headers={},form=false,fetcher=fetch}={}) {
   const response=await fetcher(url,{method,headers:{Accept:'application/json',...(token?{Authorization:`Bearer ${token}`} : {}),...(body?{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'}:{}),...headers},body:body?(form?new URLSearchParams(body).toString():JSON.stringify(body)):undefined,signal:AbortSignal.timeout(30000),redirect:'error'});
-  if(!response.ok) throw new ProviderError(response.status===401?'Sign-in expired. Reconnect this account.':response.status===429?'Rate limit reached. Try again later.':`Provider request failed (${response.status}). Check account permissions and setup.`,![400,401,403,404,422,429].includes(response.status));
+  if(!response.ok){const error=new ProviderError(response.status===401?'Sign-in expired. Reconnect this account.':response.status===429?'Rate limit reached. Automatic checks are paused for this account.':`Provider request failed (${response.status}). Check account permissions and setup.`,![400,401,403,404,422,429].includes(response.status));if(response.status===429){const raw=response.headers?.get('retry-after');const seconds=Number(raw)||((Date.parse(raw)-Date.now())/1000);error.retryAfter=Math.max(30,Math.min(86400,Number.isFinite(seconds)&&seconds>0?seconds:300));}throw error;}
   const data=await response.json();
   if((data.error&&data.error.code!=='ok') || data.json?.errors?.length) throw new ProviderError('The platform rejected this request. Check the account permissions and post requirements.');
   return data;

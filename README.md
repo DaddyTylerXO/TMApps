@@ -46,7 +46,7 @@ Settings includes launch at sign-in, tray icon visibility, close-to-tray, start 
 
 The Windows tray menu follows TMA-Mail's rounded container and pill buttons, recoloured yellow: **Open TMA-SocialsManager**, **Settings**, **Exit TMA-SocialsManager**. macOS and Linux use their native tray menus. Closing saves the active draft before hiding or exiting.
 
-Analytics settings offer manual refresh, live polling every 30 seconds, or a custom interval from 1 minute to 24 hours. Automatic modes check immediately when enabled and schedule their next check after the previous check finishes, without overlapping publishing or account operations. Checks continue in the tray and stop when the app exits. Every metric has a freshness indicator: green for successful recent automatic checks, amber for stale or failed checks, grey for manual or unavailable data. Live polling is not a provider push stream and remains subject to API quotas. No green indicator is shown for an account with a failed refresh.
+Analytics settings offer manual refresh, live polling every 30 seconds, or a custom interval from 1 minute to 24 hours. Automatic modes check immediately when enabled and schedule their next check after the previous check finishes, without overlapping publishing or account operations. Checks continue in the tray and stop when the app exits. Every metric has a freshness indicator: green for successful recent automatic checks, amber for stale or failed checks, grey for manual or unavailable data. Live polling is not a provider push stream and remains subject to API quotas. No green indicator is shown for an account with a failed refresh. HTTP 429 responses pause that account using the provider's Retry-After header, or five minutes by default.
 
 ## Security
 

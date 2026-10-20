@@ -7,7 +7,7 @@ function snapshot(){return {...service.snapshot(),refreshStatus:scheduler?.statu
 function sendData(){if(win&&!win.isDestroyed())win.webContents.send('socials:data',snapshot());}
 const page=pathToFileURL(path.join(__dirname,'../ui/index.html')).href;
 const trayPage=pathToFileURL(path.join(__dirname,'../ui/tray.html')).href;
-function restore(view){trayPopup?.hide();if(!win||win.isDestroyed())createWindow();win.show();if(win.isMinimized())win.restore();win.focus();if(view)win.webContents.send('socials:navigate',view);}
+function restore(view){trayPopup?.hide();const created=!win||win.isDestroyed();if(created)createWindow();win.show();if(win.isMinimized())win.restore();if(prefs.value.startMaximized)win.maximize();win.focus();if(view){if(created)win.webContents.once('did-finish-load',()=>win?.webContents.send('socials:navigate',view));else win.webContents.send('socials:navigate',view);}}
 function exit(){exiting=true;if(win&&!win.isDestroyed())win.close();else app.quit();}
 app.on('second-instance',()=>restore());
 function showTrayMenu(){
@@ -27,7 +27,7 @@ function createWindow(){
   closeReady=false;win=new BrowserWindow({width:1360,height:920,minWidth:920,minHeight:640,show:false,backgroundColor:'#17191f',title:'TMA-SocialsManager',icon:path.join(__dirname,'../assets/icon.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());win.webContents.session.setPermissionRequestHandler((_w,_p,cb)=>cb(false));
   win.on('close',e=>{if(closeReady)return;e.preventDefault();if(closePending)return;closePending=true;win.webContents.send('socials:prepareClose');});
-  win.on('closed',()=>win=null);win.once('ready-to-show',()=>{if(prefs.value.startMaximized)win.maximize();if(!(process.argv.includes('--startup')&&prefs.value.startMinimized&&tray))win.show();});win.loadURL(page);
+  win.on('closed',()=>win=null);win.once('ready-to-show',()=>{const atLogin=process.argv.includes('--startup')||(process.platform==='darwin'&&app.getLoginItemSettings().wasOpenedAtLogin);const hidden=atLogin&&prefs.value.startMinimized&&tray;if(!hidden){if(prefs.value.startMaximized)win.maximize();win.show();}});win.loadURL(page);
 }
 ipcMain.on('socials:readyClose',event=>{if(event.sender===win?.webContents&&closePending)finishClose();});
 ipcMain.on('socials:closeFailed',event=>{if(event.sender===win?.webContents){closePending=false;exiting=false;dialog.showErrorBox('Draft could not be saved','Your window is still open. Save your draft and try closing again.');}});
