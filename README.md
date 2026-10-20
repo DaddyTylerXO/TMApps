@@ -16,7 +16,7 @@ pnpm package
 
 Windows x64 ZIP, macOS x64/arm64 tar.gz and DMG, and Linux x64/arm64 AppImage packages are built on their native GitHub Actions runners. The release job verifies all five launcher packages, uploads them to the existing `tma-apps` release, and then merges this app into the latest launcher catalogue. Existing apps are retained. Builds are unsigned/ad-hoc signed, without macOS notarization.
 
-## Platform support in 0.1.0 beta
+## Platform support in 0.2.0 beta
 
 | Platform | Connect | Metrics | Publish |
 | --- | --- | --- | --- |
@@ -36,7 +36,17 @@ The setup guide button opens the official documentation for each provider. API p
 
 ## Analytics and publishing
 
-Select all accounts or one account in Overview. Unknown metrics are `—`, not zero. Audience sums are not deduplicated. Reddit karma and live viewers stay separate. Bluesky engagement covers at most 100 recent feed entries and excludes reposts of other authors. Only the latest snapshot is retained; historical graphs and date-range reports are not included.
+Select all accounts or one account in Overview. Unknown metrics are `—`, not zero. Audience sums are not deduplicated. Reddit karma and live viewers stay separate. Bluesky engagement covers at most 100 recent feed entries and excludes reposts of other authors.
+
+### Custom dashboards
+
+Open **Dashboards** to create multiple named dashboards, each with its own tabs. Add statistic cards with up/down arrows, line graphs, bar charts or pie charts. Choose a metric, all connected accounts or specific accounts, a standard/wide size, and an hour/day/week/month period. Rename dashboards and tabs, edit widgets, move them earlier/later, and remove them through their options menus. Layouts are saved locally. All-account widgets include future connections; specific-account widgets retain their selected scope.
+
+Statistic trends compare the latest value with the last observation at or before the period's start, or the first available observation if tracking started later. The actual comparison timestamp is shown. A group trend is withheld until every contributing account has two observations, so adding a new account cannot create an artificial increase. A zero baseline shows the absolute change without inventing a percentage. Unsupported statistics are excluded and each widget reports source coverage.
+
+Line graphs show recorded observations by account. Pie and bar charts compare the latest account values. Zero-only pie data and missing metrics have explicit empty states. Dense line history is reduced using actual minimum and maximum observations, preserving peaks and troughs. Chart legends and accessible labels identify accounts and values.
+
+Historical recording starts with the last known snapshot when upgrading and continues after successful checks. One observation per minute is retained for 48 hours, then one per hour for up to 90 days, capped at 5,200 observations per account. Counts only are stored in this history, without credentials. No earlier data is invented or fetched retroactively. Keep automatic refresh enabled for continuing graphs. Disconnecting removes credentials; recorded metrics and dashboard layouts remain local.
 
 Create a post, choose connected publishing accounts, then save a draft or publish. Platform validation runs before any target is called. A confirmation precedes publishing. Each destination records its own outcome. Successful, in-progress and uncertain attempts are not resent automatically. After an uncertain result, inspect the provider before creating another post. Editing and republishing a previously successful draft requires creating a new draft. Drafts save when navigating or closing the window; there is no timed autosave or background scheduling.
 
