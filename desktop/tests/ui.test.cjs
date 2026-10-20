@@ -9,14 +9,14 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 async function view(t, platform = 'darwin') {
   const dom = new JSDOM(fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8'), { runScripts: 'outside-only', url: 'file:///tmapps/index.html' }); t.after(() => dom.window.close());
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; }; dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
-  let state = { version: '1.9.0', platform, arch: 'arm64', os: platform === 'darwin' ? 'macos' : 'linux', smoke: true, settings: { libraryView: 'List', navigationEdge: 'Left', closeToTray: false, checkOnStartup: false }, profile: { schemaVersion: 1, displayName: '', emails: [], shareWithMail: false }, apps: catalog.apps.map(a => ({ ...structuredClone(a), support: ['windows'], package: null, installed: null })) };
+  let state = { version: '1.9.0', platform, arch: 'arm64', os: platform === 'darwin' ? 'macos' : 'linux', smoke: true, settings: { libraryView: 'List', navigationEdge: 'Left', closeToTray: false, checkOnStartup: false }, profile: { schemaVersion: 1, displayName: '', emails: [], shareWithMail: false }, apps: catalog.apps.map(a => ({ ...structuredClone(a), support: require('../electron/service.cjs').support(a), package: null, installed: null })) };
   const calls = [];
   dom.window.launcher = { snapshot: async () => state, settings: async v => { calls.push(['settings', v]); state.settings = v; return state; }, profile: async v => { calls.push(['profile', v]); state.profile = v; return state; }, source: async id => calls.push(['source', id]), refresh: async () => { calls.push(['refresh']); return { ...state, notice: 'Catalog checked.' }; }, onPrompt: () => () => {}, onNotice: () => () => {}, onProgress: () => () => {}, onRefresh: () => () => {} };
   dom.window.eval(fs.readFileSync(path.join(__dirname, '../ui/icons.js'), 'utf8')); dom.window.eval(fs.readFileSync(path.join(__dirname, '../ui/renderer.js'), 'utf8')); await dom.window.launcherReady;
   return { dom, window: dom.window, document: dom.window.document, calls, state };
 }
 test('Mac and Linux libraries render real support logos and disable incompatible installers', async t => {
-  for (const platform of ['darwin', 'linux']) { const v = await view(t, platform); assert.equal(v.document.querySelectorAll('.card').length, 4); assert.equal(v.document.querySelectorAll('.os-badge').length, 4); assert.equal(v.document.querySelectorAll('.os-badge svg').length, 4); assert.ok([...v.document.querySelectorAll('.os-badge')].every(b => b.textContent === 'Windows')); assert.ok([...v.document.querySelectorAll('.actions > button')].every(b => b.disabled)); const smoke = await v.window.launcherSmoke(); assert.equal(smoke.nodeAvailable, false); }
+  for (const platform of ['darwin', 'linux']) { const v = await view(t, platform); assert.equal(v.document.querySelectorAll('.card').length, 5); assert.equal(v.document.querySelectorAll('.os-badge').length, 2); assert.equal(v.document.querySelectorAll('.os-badge svg').length, 2); assert.ok([...v.document.querySelectorAll('.os-badge')].every(b => b.textContent === 'Windows')); assert.ok([...v.document.querySelectorAll('.actions > button')].every(b => b.disabled)); const smoke = await v.window.launcherSmoke(); assert.equal(smoke.nodeAvailable, false); }
 });
 test('list/grid and navigation choices persist through the actual controls', async t => {
   const v = await view(t); v.document.getElementById('grid').click(); await tick(); assert.equal(v.document.getElementById('library').className, 'grid'); v.document.getElementById('settings').click(); await tick(); const fields = v.document.querySelectorAll('dialog select'); fields[0].value = 'Right'; v.document.querySelector('dialog .primary').click(); await tick(); assert.equal(v.document.getElementById('shell').className, 'edge-right'); assert.equal(v.calls.at(-1)[1].navigationEdge, 'Right');
@@ -39,4 +39,15 @@ test('Agent Office stays last and keeps its full library number when filtered', 
   assert.equal(v.document.querySelector('.card:last-child .card-head').textContent, '04 / YOUR AI TEAM');
   search.value = 'Agent'; search.dispatchEvent(new v.window.Event('input'));
   assert.equal(v.document.querySelector('.card-head').textContent, '04 / YOUR AI TEAM');
+});
+
+test('SocialsManager is a coming-soon placeholder with source access and no installer', async t => {
+  const v = await view(t), card = v.document.querySelector('[data-id="tma-socialsmanager"]');
+  assert.equal(card.querySelector('.app-icon').textContent, '?');
+  assert.equal(card.querySelector('.status').textContent, 'COMING SOON');
+  assert.equal(card.querySelector('.actions > button').textContent, 'Coming soon');
+  assert.ok(card.querySelector('.actions > button').disabled);
+  assert.equal(card.querySelectorAll('.os-badge').length, 0);
+  [...card.querySelectorAll('.menu-items button')].find(b => b.textContent.includes('source')).click(); await tick();
+  assert.equal(v.calls.at(-1)[1], 'tma-socialsmanager');
 });

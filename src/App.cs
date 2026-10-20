@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.11.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.11.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.12.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.12.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -23,9 +23,10 @@ namespace TMApps {
         public string Category { get { return Info.category; } } public string Description { get { return Info.description; } }
         public string Accent { get { return Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
         public string PreviewBackground { get { return Id == "tma-mail" ? "Transparent" : Id == "tma-padlock" ? "#39232F" : "#2B253A"; } }
-        public string Glyph { get { return Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
+        public string Glyph { get { return Id == "tma-socialsmanager" ? "?" : Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
+        public string GlyphFont { get { return Id == "tma-socialsmanager" ? "Segoe UI" : "Segoe MDL2 Assets"; } }
         public int Position { get; set; }
-        public string Number { get { return Position.ToString("00") + " / " + (Id == "tma-mail" ? "MAIL & COMMUNICATION" : Id == "tma-padlock" ? "YOUR AUTHENTICATORS" : Id == "tma-safe" ? "YOUR PRIVATE SPACE" : Id == "tma-agent-office" ? "YOUR AI TEAM" : Category.ToUpperInvariant()); } }
+        public string Number { get { return Position.ToString("00") + " / " + (Id == "tma-mail" ? "MAIL & COMMUNICATION" : Id == "tma-socialsmanager" ? "COMING SOON" : Id == "tma-padlock" ? "YOUR AUTHENTICATORS" : Id == "tma-safe" ? "YOUR PRIVATE SPACE" : Id == "tma-agent-office" ? "YOUR AI TEAM" : Category.ToUpperInvariant()); } }
         static readonly ImageSource mailIcon = LoadMailIcon();
         static ImageSource LoadMailIcon() {
             using (var stream = typeof(AppView).Assembly.GetManifestResourceStream("TMApps.mail.png")) {
@@ -67,7 +68,7 @@ namespace TMApps {
                     var app = new Application();
                     var check = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml")));
                     var catalog = LauncherService.ParseCatalog(Bundled.Read("catalog.json"));
-                    if (check.FindName("Cards") == null || catalog.apps.Count != 4) throw new InvalidDataException("Invalid embedded library.");
+                    if (check.FindName("Cards") == null || catalog.apps.Count < 2) throw new InvalidDataException("Invalid embedded library.");
                     File.WriteAllText(args[1], "OK: standalone UI and catalog loaded; " + catalog.apps.Count + " applications"); check.Close(); app.Shutdown();
                 } catch (Exception ex) { File.WriteAllText(args[1], "FAIL: " + ex.Message); Environment.ExitCode = 1; }
                 return;
@@ -177,11 +178,11 @@ namespace TMApps {
                 var installed = service.GetInstalled(app.Info);
                 if (!app.Busy) {
                     bool update = installed != null && LauncherService.IsNewer(app.Info.version, installed.version);
-                    app.Status = installed == null ? (app.Info.Available ? "READY TO INSTALL" : "AWAITING FIRST RELEASE") : update ? "UPDATE AVAILABLE" : "INSTALLED · UP TO DATE";
+                    app.Status = installed == null ? (app.Info.Available ? "READY TO INSTALL" : "COMING SOON") : update ? "UPDATE AVAILABLE" : "INSTALLED · UP TO DATE";
                     app.Action = installed == null ? (app.Info.Available ? "↓  Install app" : "Coming soon") : update ? "↓  Update app" : "↗  Open app";
                     app.CanAct = !refreshing && (app.Info.Available || installed != null);
-                    app.VersionLabel = "v" + app.Info.version;
-                    if (String.IsNullOrEmpty(app.Detail)) app.Detail = installed != null ? "Installed v" + installed.version : app.Info.Available ? "Windows x64 · Beta" : "The publisher is preparing a Windows build.";
+                    app.VersionLabel = app.Id == "tma-socialsmanager" && !app.Info.Available ? "Version not published" : "v" + app.Info.version;
+                    if (String.IsNullOrEmpty(app.Detail)) app.Detail = installed != null ? "Installed v" + installed.version : app.Info.Available ? "Windows x64 · Beta" : "In development · Coming soon";
                 }
                 app.Changed();
             }

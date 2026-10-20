@@ -20,18 +20,18 @@
     $('library').replaceChildren(); $('empty').hidden = apps.length > 0;
     for (const app of apps) {
       const card = el('article', null, `card${app.id === 'tma-agent-office' ? ' office' : app.id === 'tma-safe' ? ' safe' : app.id === 'tma-padlock' ? ' padlock' : ''}`); card.dataset.id = app.id;
-      card.append(el('div', `${String(ordered.indexOf(app) + 1).padStart(2, '0')} / ${app.id === 'tma-mail' ? 'MAIL & COMMUNICATION' : app.id === 'tma-padlock' ? 'YOUR AUTHENTICATORS' : app.id === 'tma-safe' ? 'YOUR PRIVATE SPACE' : app.id === 'tma-agent-office' ? 'YOUR AI TEAM' : app.category.toUpperCase()}`, 'card-head'));
+      card.append(el('div', `${String(ordered.indexOf(app) + 1).padStart(2, '0')} / ${app.id === 'tma-mail' ? 'MAIL & COMMUNICATION' : app.id === 'tma-socialsmanager' ? 'COMING SOON' : app.id === 'tma-padlock' ? 'YOUR AUTHENTICATORS' : app.id === 'tma-safe' ? 'YOUR PRIVATE SPACE' : app.id === 'tma-agent-office' ? 'YOUR AI TEAM' : app.category.toUpperCase()}`, 'card-head'));
       const body = el('div', null, 'card-body'), info = el('div', null, 'app-info'), meta = el('div', null, 'app-meta');
-      const icon = el('div', app.id === 'tma-mail' ? null : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon');
+      const icon = el('div', app.id === 'tma-mail' ? null : app.id === 'tma-socialsmanager' ? '?' : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon');
       if (app.id === 'tma-mail') { icon.classList.add('mail-icon'); const image = el('img'); image.src = '../assets/TMA-Mail.png'; image.alt = 'TMA-Mail'; icon.append(image); }
       body.append(icon); info.append(el('h2', app.name), el('p', app.description));
       const badges = el('div', null, 'support'); badges.setAttribute('aria-label', 'Supported operating systems'); app.support.forEach(key => badges.append(osBadge(key))); if (!app.support.length) badges.append(el('small', 'No published packages yet')); info.append(badges); body.append(info);
-      const unavailable = !app.package && !app.installed;
-      const status = unavailable ? state.platform==='win32' ? 'USE THE NATIVE WINDOWS EDITION' : `NOT AVAILABLE FOR ${names[state.os].toUpperCase()} ${state.arch.toUpperCase()}` : app.installed ? (isNewer(app.version, app.installed.version) ? 'UPDATE AVAILABLE' : 'INSTALLED · UP TO DATE') : 'READY TO INSTALL';
-      meta.append(el('p', status, 'status'), el('p', `v${app.version}${app.installed ? ` · Installed v${app.installed.version}` : ''}`, 'version'));
+      const unavailable = !app.package && !app.installed, comingSoon = app.id === 'tma-socialsmanager' && unavailable;
+      const status = comingSoon ? 'COMING SOON' : unavailable ? state.platform==='win32' ? 'USE THE NATIVE WINDOWS EDITION' : `NOT AVAILABLE FOR ${names[state.os].toUpperCase()} ${state.arch.toUpperCase()}` : app.installed ? (isNewer(app.version, app.installed.version) ? 'UPDATE AVAILABLE' : 'INSTALLED · UP TO DATE') : 'READY TO INSTALL';
+      meta.append(el('p', status, 'status'), el('p', comingSoon ? 'Version not published' : `v${app.version}${app.installed ? ` · Installed v${app.installed.version}` : ''}`, 'version'));
       const date = new Date(app.updatedAt); meta.append(el('p', `Updated ${isNaN(date) ? 'date not published' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, 'version'));
-      const actions = el('div', null, 'actions'); const primary = button(unavailable ? 'Not available on this OS' : app.installed ? (isNewer(app.version, app.installed.version) ? '↓ Update app' : '↗ Open app') : '↓ Install app', () => app.installed && !isNewer(app.version, app.installed.version) ? api.open(app.id) : install(app), true); primary.disabled = busy || unavailable;
-      if (unavailable) primary.title = 'No compatible package has been published. The icons show which operating systems currently have builds.';
+      const actions = el('div', null, 'actions'); const primary = button(comingSoon ? 'Coming soon' : unavailable ? 'Not available on this OS' : app.installed ? (isNewer(app.version, app.installed.version) ? '↓ Update app' : '↗ Open app') : '↓ Install app', () => app.installed && !isNewer(app.version, app.installed.version) ? api.open(app.id) : install(app), true); primary.disabled = busy || unavailable;
+      if (comingSoon) primary.title = 'This application is in development.'; else if (unavailable) primary.title = 'No compatible package has been published. The icons show which operating systems currently have builds.';
       actions.append(primary);
       const menu = el('details'), summary = el('summary', '•••'); summary.setAttribute('aria-label', `${app.name} options`); const items = el('div', null, 'menu-items');
       const open = button('Open application', () => api.open(app.id)); open.disabled = busy || !app.installed; items.append(open, button('View source on GitHub ↗', () => api.source(app.id)));

@@ -52,6 +52,16 @@
       "branch": "TMA-Padlock",
       "executable": "TMA-Padlock.exe",
       "platforms": []
+    },
+    {
+      "id": "tma-socialsmanager",
+      "name": "TMA-SocialsManager",
+      "category": "SOCIAL MEDIA",
+      "description": "Your social workspace is on its way. More details coming soon.",
+      "version": "0.0.0",
+      "branch": "TMA-SocialsManager",
+      "executable": "TMA-SocialsManager.exe",
+      "platforms": []
     }
   ]
 }
