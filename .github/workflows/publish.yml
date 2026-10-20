@@ -43,8 +43,7 @@ jobs:
             $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock") -and $_.downloadUrl })
             if ($securityApps.Count -gt 0) {
               $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
-              $ids = @($securityApps | ForEach-Object { $_.id })
-              $catalog.apps = @($catalog.apps | Where-Object { $_.id -notin $ids }) + $securityApps
+              $catalog.apps = @($catalog.apps | ForEach-Object { $current = $_; $published = $securityApps | Where-Object id -eq $current.id; if ($published) { $published } else { $current } })
               $catalog | ConvertTo-Json -Depth 10 | Set-Content launcher/catalog.json -Encoding UTF8
             }
           }
