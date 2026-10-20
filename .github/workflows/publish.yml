@@ -34,7 +34,11 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '10'
-      - name: Preserve published security and social app packages
+      - name: Verify launcher source and bundled catalog
+        shell: powershell
+        run: |
+          ./launcher/test.ps1
+      - name: Preserve published security, social and video app packages
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,10 +55,6 @@ jobs:
             }
           }
           $global:LASTEXITCODE=0
-      - name: Verify launcher
-        shell: powershell
-        run: |
-          ./launcher/test.ps1
       - name: Build Agent Office from its application branch
         working-directory: office
         shell: powershell
