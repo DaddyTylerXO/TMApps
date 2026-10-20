@@ -1,0 +1,80 @@
+name: Verify and publish Socials Manager
+on:
+  push:
+    branches: [TMA-SocialsManager]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: socialsmanager-release
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, platform: win, arch: x64}
+          - {os: macos-15-intel, platform: mac, arch: x64}
+          - {os: macos-latest, platform: mac, arch: arm64}
+          - {os: ubuntu-latest, platform: linux, arch: x64}
+          - {os: ubuntu-24.04-arm, platform: linux, arch: arm64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - run: pnpm install --frozen-lockfile
+      - run: node node_modules/electron/install.js
+      - run: pnpm test
+      - run: node scripts/check-secrets.cjs
+      - run: node scripts/icons.cjs
+      - run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/release-metadata.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: socials-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.sha256
+            dist/metadata-*.json
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: tmapps-shared-catalog
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: socials-*
+          path: release-artifacts
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Merge verified packages into current launcher catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download tma-apps --pattern catalog.json --dir prior-catalog
+          node scripts/publish-catalog.cjs
+      - name: Upload packages before catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find release-artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.sha256' \) -print0 | xargs -0 gh release upload tma-apps --clobber
+          gh release upload tma-apps socialsmanager-release.json --clobber
+          gh release upload tma-apps catalog.json --clobber

@@ -1,0 +1,1 @@
+document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>window.trayActions.run(button.dataset.action)));document.addEventListener('keydown',e=>{if(e.key==='Escape')window.trayActions.run('dismiss');});

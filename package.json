@@ -1,0 +1,26 @@
+{
+  "name": "tma-socialsmanager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A calmer home for your socials. Analytics and publishing for the TMApps suite.",
+  "author": "DaddyTylerXO",
+  "license": "UNLICENSED",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "icons": "node scripts/icons.cjs",
+    "package": "electron-builder --publish never"
+  },
+  "devDependencies": { "electron": "44.8.0", "electron-builder": "26.15.3", "pngjs": "7.0.0" },
+  "build": {
+    "appId": "com.tmapps.socialsmanager",
+    "productName": "TMA-SocialsManager",
+    "artifactName": "TMA-SocialsManager-${version}-${os}-${arch}.${ext}",
+    "files": ["electron/**/*", "ui/**/*", "assets/**/*", "package.json"],
+    "directories": { "output": "dist" },
+    "win": { "target": ["zip"], "icon": "assets/icon.ico", "executableName": "TMA-SocialsManager" },
+    "mac": { "target": ["tar.gz", "dmg"], "icon": "assets/icon.png", "category": "public.app-category.social-networking", "identity": "-", "hardenedRuntime": false },
+    "linux": { "target": ["AppImage"], "icon": "assets/icon.png", "category": "Network", "executableName": "tma-socialsmanager", "maintainer": "DaddyTylerXO" }
+  }
+}

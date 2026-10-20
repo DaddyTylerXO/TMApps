@@ -1,0 +1,2 @@
+.preference-row{display:flex;align-items:center;justify-content:space-between;gap:25px;padding:15px 0;border-bottom:1px solid var(--line);margin:0}.preference-row strong{font-weight:500;font-size:12px}.preference-row small{display:block;margin-top:5px;line-height:1.8}.preference-row input{width:18px;height:18px;accent-color:var(--yellow);flex:none}.preference-row input:disabled{opacity:.4}.preference-row:last-of-type{margin-bottom:23px}
+aside{height:100vh;position:sticky;top:0}.sidebar-bottom{padding-top:30px}

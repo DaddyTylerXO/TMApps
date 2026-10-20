@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+artifacts/
+*.log
+.env
+provider-settings.json
+!provider-settings.example.json
