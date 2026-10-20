@@ -34,7 +34,7 @@ namespace TMApps {
             public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
                 token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
-                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.12.6.exe\",\"id\":11}]}") });
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.13.0.exe\",\"id\":11}]}") });
                 bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
                 if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
                 Downloads++;
@@ -315,13 +315,13 @@ namespace TMApps {
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
                 byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
                 string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
-                var release=new LauncherRelease { schemaVersion=1,version="1.12.6",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.12.6.exe",sha256=setupHash };
+                var release=new LauncherRelease { schemaVersion=1,version="1.13.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.13.0.exe",sha256=setupHash };
                 var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
                 using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
-                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.12.6","Launcher check discovers a newer launcher independently of app catalog");
-                    Check(updater.CheckLauncherUpdate("1.12.6",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.13.0","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.13.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
                     string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
-                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.12.6.0","Launcher installer download verifies checksum and embedded product version");
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.13.0.0","Launcher installer download verifies checksum and embedded product version");
                     File.Delete(downloaded);
                     launcherHandler.Installer=new byte[]{1,2,3};
                     Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
@@ -371,6 +371,13 @@ namespace TMApps {
                 Check(!File.ReadAllText(sharedPath).Contains("password") && !File.ReadAllText(sharedPath).Contains("token"),"Shared profile contract contains no passwords or auth tokens");
                 var application = new LauncherApplication();
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
+                Check(TMAppsShared.SuiteProfileStore.Validate(new TMAppsShared.SuiteProfile()).socialAccounts.Count==0 && !new TMAppsShared.SuiteProfile().shareWithSocialApps,"Legacy profiles have no social entries and sharing defaults off");
+                var socialFixture=new TMAppsShared.SuiteProfile { socialAccounts=new System.Collections.Generic.List<TMAppsShared.SocialAccount> { new TMAppsShared.SocialAccount { platform=" Instagram ",account=" @example " },new TMAppsShared.SocialAccount { platform="instagram",account="@EXAMPLE" },new TMAppsShared.SocialAccount { platform="YouTube",account="https://www.youtube.com/@example" } },shareWithSocialApps=true };
+                var socialPath=Path.Combine(root,"social-profile.json"); TMAppsShared.SuiteProfileStore.Save(socialPath,socialFixture);
+                var socialReload=TMAppsShared.SuiteProfileStore.Load(socialPath);
+                Check(socialReload.socialAccounts.Count==2 && socialReload.socialAccounts[0].platform=="Instagram" && socialReload.socialAccounts[0].account=="@example" && socialReload.shareWithSocialApps,"Social account sharing round-trips, trims values, and deduplicates accounts");
+                foreach(var invalidSocial in new[]{"http://example.com/user","https://user:secret@example.com/user","https://example.com/user?token=secret","https://example.com/user#secret","bad\nname"}) Reject(()=>TMAppsShared.SuiteProfileStore.Save(socialPath,new TMAppsShared.SuiteProfile { socialAccounts=new System.Collections.Generic.List<TMAppsShared.SocialAccount> { new TMAppsShared.SocialAccount { platform="Example",account=invalidSocial } } }),"Invalid or credential-bearing social entry is rejected before writing");
+                Check(TMAppsShared.SuiteProfileStore.Load(socialPath).revision==socialReload.revision,"Rejected social edits preserve the last saved profile");
                 string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
                 var uiCatalog=LauncherService.ParseCatalog(original);
                 using(var sha=SHA256.Create()) uiCatalog.apps[0].sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
@@ -470,19 +477,30 @@ namespace TMApps {
                     var popup=application.Windows.OfType<ThemedDialog>().Single();
                     popup.Body.Children.OfType<TextBox>().First().Text="Example User";
                     popup.Body.Children.OfType<TextBox>().Last().Text="first@example.com\nsecond@example.org";
+                    var socialShare=popup.Body.Children.OfType<CheckBox>().Single(c=>c.Name=="ShareWithSocialApps"); Check(socialShare.IsChecked==false,"Social app sharing requires explicit opt-in");
+                    popup.Body.Children.OfType<Button>().Single(b=>b.Name=="AddSocialAccount").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    var socialRows=popup.Body.Children.OfType<StackPanel>().Single(p=>p.Name=="SocialAccounts");
+                    var socialRow=(StackPanel)socialRows.Children[0]; socialRow.Children.OfType<TextBox>().First().Text="Instagram"; socialRow.Children.OfType<TextBox>().Last().Text="@example"; socialShare.IsChecked=true;
                     SaveDialog(popup,Path.Combine(args[0],"build","profile-preview.png"));
+                    var profileScroll=popup.Body.Parent as ScrollViewer;
+                    if(profileScroll!=null) { profileScroll.ScrollToEnd(); popup.UpdateLayout(); SaveDialog(popup,Path.Combine(args[0],"build","social-profile-preview.png")); }
+
                     popup.Actions.Children.OfType<Button>().Last().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 }));
                 var profileButton=(Button)window.FindName("ProfileButton"); profileButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,profileButton));
                 var savedProfile=TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json"));
                 Check(savedProfile.displayName=="Example User" && savedProfile.emails.Count==2 && savedProfile.shareWithMail,"Real profile icon opens optional editor and saves the shared profile");
+                Check(savedProfile.socialAccounts.Count==1 && savedProfile.socialAccounts[0].account=="@example" && savedProfile.shareWithSocialApps,"Real profile editor saves optional social accounts and sharing consent");
                 Check(((TextBlock)window.FindName("ProfileInitial")).Text=="E","Top-right profile avatar shows the saved name initial");
                 System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
                     var popup=application.Windows.OfType<ThemedDialog>().Single(); popup.Body.Children.OfType<TextBox>().First().Text="Cancelled edit";
+                    var socialRows=popup.Body.Children.OfType<StackPanel>().Single(p=>p.Name=="SocialAccounts");
+                    ((StackPanel)socialRows.Children[0]).Children.OfType<Button>().Single().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Check(socialRows.Children.Count==0,"Social account Remove control updates the editor");
                     popup.Actions.Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 }));
                 profileButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,profileButton));
-                Check(TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).revision==savedProfile.revision,"Cancelling profile edits leaves sync state unchanged");
+                Check(TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).revision==savedProfile.revision && TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).socialAccounts.Count==1,"Cancelling profile edits leaves sync state unchanged");
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -8,7 +8,7 @@ namespace TMApps {
     public class ThemedDialog : Window {
         public readonly StackPanel Body,Actions;
         public ThemedDialog(Window owner,string title,string message) {
-            Title=title; Width=600; SizeToContent=SizeToContent.Height; MaxHeight=800; ResizeMode=ResizeMode.NoResize;
+            Title=title; Width=600; SizeToContent=SizeToContent.Height; MaxHeight=Math.Min(800,SystemParameters.WorkArea.Height-40); ResizeMode=ResizeMode.NoResize;
             WindowStyle=WindowStyle.None; AllowsTransparency=true; Background=Brushes.Transparent; Foreground=(Brush)new BrushConverter().ConvertFromString("#ECEEF3"); FontFamily=new FontFamily("Segoe UI");
             WindowStartupLocation=WindowStartupLocation.CenterScreen;
             if(owner!=null && owner.IsLoaded) { Owner=owner; WindowStartupLocation=WindowStartupLocation.CenterOwner; Icon=owner.Icon; }
@@ -24,7 +24,7 @@ namespace TMApps {
             var row=new DockPanel(); header.Child=row; layout.Children.Add(header);
             var close=new Button { Content="×",Padding=new Thickness(10,4,10,4),ToolTip="Cancel",IsCancel=true }; close.Click+=(s,e)=>Close(); DockPanel.SetDock(close,Dock.Right); row.Children.Add(close);
             row.Children.Add(new TextBlock { Text=title,FontSize=22,FontWeight=FontWeights.SemiBold,VerticalAlignment=VerticalAlignment.Center,TextWrapping=TextWrapping.Wrap });
-            Body=new StackPanel { Margin=new Thickness(24,20,24,10) }; layout.Children.Add(Body);
+            Body=new StackPanel { Margin=new Thickness(24,20,24,10) }; layout.Children.Add(new ScrollViewer { Content=Body,MaxHeight=Math.Max(200,MaxHeight-175),VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled });
             Body.Children.Add(new TextBlock { Text=message,Foreground=(Brush)new BrushConverter().ConvertFromString("#BBC2CE"),TextWrapping=TextWrapping.Wrap,LineHeight=21,Margin=new Thickness(0,0,0,12) });
             Actions=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(16,12,24,22) }; layout.Children.Add(Actions);
         }

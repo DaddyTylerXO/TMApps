@@ -52,3 +52,18 @@ test('SocialsManager is a coming-soon placeholder with source access and no inst
   [...card.querySelectorAll('.menu-items button')].find(b => b.textContent.includes('source')).click(); await tick();
   assert.equal(v.calls.at(-1)[1], 'tma-socialsmanager');
 });
+
+test('profile social account controls add, remove, save, and cancel without signing in', async t => {
+  const v = await view(t); v.document.getElementById('profile').click(); await tick();
+  let dialog = v.document.querySelector('dialog');
+  assert.match(dialog.textContent, /TMA-SocialsManager and TMA-Cut/); assert.match(dialog.textContent, /does not connect or sign in/);
+  assert.equal(dialog.querySelectorAll('input[type=checkbox]')[1].checked, false);
+  dialog.querySelector('[data-action=add-social-account]').click(); await tick();
+  let row = dialog.querySelector('.social-account-row'); row.querySelectorAll('input')[0].value = 'YouTube'; row.querySelectorAll('input')[1].value = 'https://www.youtube.com/@example';
+  dialog.querySelector('[data-action=add-social-account]').click(); await tick(); dialog.querySelectorAll('.social-account-row')[1].querySelector('button').click(); await tick();
+  assert.equal(dialog.querySelectorAll('.social-account-row').length, 1);
+  dialog.querySelectorAll('input[type=checkbox]')[1].checked = true; dialog.querySelector('.dialog-actions .primary').click(); await tick();
+  assert.equal(v.calls.at(-1)[1].socialAccounts[0].platform, 'YouTube'); assert.equal(v.calls.at(-1)[1].shareWithSocialApps, true);
+  v.document.getElementById('profile').click(); await tick(); dialog = v.document.querySelector('dialog'); row = dialog.querySelector('.social-account-row'); assert.equal(row.querySelectorAll('input')[1].value, 'https://www.youtube.com/@example');
+  row.querySelector('button').click(); await tick(); const count = v.calls.length; dialog.querySelector('.dialog-actions button').click(); await tick(); assert.equal(v.calls.length, count); assert.equal(v.state.profile.socialAccounts.length, 1);
+});

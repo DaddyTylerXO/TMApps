@@ -132,3 +132,14 @@ test('Linux x86_64 builder names normalize to the exact x64 update URL',async t=
   assert.equal(release.filename,'TMApps-Launcher-1.9.0-linux-x64.AppImage');assert.equal(release.sha256,hash(f.payload));
   assert.ok(await fs.stat(path.join(f.root,release.filename)));await assert.rejects(fs.stat(path.join(f.root,name)),{code:'ENOENT'});
 });
+
+test('social profiles remain optional, normalize accounts, and never persist extra credentials', async t => {
+  const f = await fixture(t), base = { schemaVersion: 1, displayName: 'Example', emails: [] };
+  assert.deepEqual(profile(base).socialAccounts, []); assert.equal(profile(base).shareWithSocialApps, false);
+  const snapshot = await f.library.saveProfile({ ...base, shareWithSocialApps: true, socialAccounts: [{ platform: ' Instagram ', account: ' @example ', token: 'secret' }, { platform: 'instagram', account: '@EXAMPLE' }, { platform: 'YouTube', account: 'https://www.youtube.com/@example' }] });
+  assert.equal(snapshot.profile.socialAccounts.length, 2); assert.equal(snapshot.profile.socialAccounts[0].platform, 'Instagram'); assert.equal(snapshot.profile.shareWithSocialApps, true);
+  assert.equal((await fs.readFile(f.library.shared, 'utf8')).includes('secret'), false);
+  for (const account of ['http://example.com/user', 'https://user:secret@example.com/user', 'https://example.com/user?token=secret', 'https://example.com/user#secret', 'bad\nname']) await assert.rejects(f.library.saveProfile({ ...base, socialAccounts: [{ platform: 'Example', account }] }));
+  assert.equal((await readJSON(f.library.shared)).revision, snapshot.profile.revision);
+  assert.throws(() => profile({ ...base, socialAccounts: Array(21).fill({ platform: 'Example', account: '@user' }) }));
+});

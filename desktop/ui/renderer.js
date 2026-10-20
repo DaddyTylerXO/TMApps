@@ -81,11 +81,26 @@
     if (approved) await operation(`Uninstalling ${app.name}`, () => api.uninstall(app.id, deleteData),false);
   }
   async function profile() {
-    await modal('Your TMApps profile', 'Optional. Save a name and up to 20 email addresses, one per line.', 'Save profile', body => {
-      const name = field(body, 'Your name', state.profile.displayName), emails = field(body, 'Email addresses', state.profile.emails.join('\n'), 'textarea'); name.maxLength = 100;
+    await modal('Your TMApps profile', 'Optional. Save your name, email addresses, and social accounts for your apps on this device.', 'Save profile', body => {
+      const name = field(body, 'Your name', state.profile.displayName), emails = field(body, 'Email addresses (one per line)', state.profile.emails.join('\n'), 'textarea'); name.maxLength = 100;
+      const mailShare = check(body, 'Sync name and emails to TMA-Mail when supported on this device', state.profile.shareWithMail);
       body.append(el('p', 'TMA-Mail is currently Windows-only. Its name/email sync works on Windows with a compatible Mail version. A profile does not connect accounts: app-specific passwords/keys or provider sign-in are still required in Mail. Never enter credentials here.'));
-      return { name, emails };
-    }, async fields => { state = await api.profile({ schemaVersion: 1, displayName: fields.name.value, emails: fields.emails.value.split(/\r?\n/).filter(Boolean), shareWithMail: state.profile.shareWithMail === true }); render(); notice('Optional profile saved locally for this user.'); });
+      body.append(el('h3', 'Social accounts (optional)'), el('p', 'Save usernames or public profile URLs for later use in TMA-SocialsManager and TMA-Cut. This does not connect or sign in to an account. Integration will be available when those apps support it; you will approve sign-in inside each app. Do not enter passwords, API keys, or access tokens here.'));
+      const rows = el('div', null, 'social-accounts'), entries = [];
+      const add = button('+ Add social account', () => addRow({})); add.dataset.action = 'add-social-account';
+      function addRow(value) {
+        if (entries.length >= 20) return;
+        const row = el('div', null, 'social-account-row');
+        const platform = field(row, 'Platform (for example, Instagram, YouTube, or TikTok)', value.platform), account = field(row, 'Username or profile URL', value.account); platform.maxLength = 40; account.maxLength = 300;
+        const entry = { platform, account }; entries.push(entry);
+        row.append(button('Remove account', () => { entries.splice(entries.indexOf(entry), 1); row.remove(); add.disabled = false; })); rows.append(row); add.disabled = entries.length >= 20;
+      }
+      (state.profile.socialAccounts || []).forEach(addRow); body.append(rows, add);
+      const socialShare = check(body, 'Make social accounts available to TMA-SocialsManager and TMA-Cut when supported', state.profile.shareWithSocialApps);
+      body.append(el('p', 'Saved locally for this user. Sharing is optional and does not send data to a social network. Turning it off stops future sharing; it does not disconnect accounts already connected inside another app.'));
+      if (state.profile.warning) body.append(el('p', state.profile.warning, 'dialog-error'));
+      return { name, emails, mailShare, socialShare, entries };
+    }, async fields => { state = await api.profile({ schemaVersion: 1, displayName: fields.name.value, emails: fields.emails.value.split(/\r?\n/).filter(Boolean), shareWithMail: fields.mailShare.checked, socialAccounts: fields.entries.map(e => ({ platform: e.platform.value, account: e.account.value })), shareWithSocialApps: fields.socialShare.checked }); render(); notice('Optional profile saved locally. Future social app linking will require sign-in inside each app.'); });
   }
   async function settings() {
     await modal('Your workspace', 'Choose where navigation appears and how the launcher starts.', 'Save changes', body => {

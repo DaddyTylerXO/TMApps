@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.12.6.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.12.6.0")]
+[assembly: System.Reflection.AssemblyVersion("1.13.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.13.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -384,11 +384,31 @@ namespace TMApps {
             var share=new CheckBox { Name="ShareWithMail",Content="Sync this profile to TMA-Mail on this PC",IsChecked=suiteProfile.revision==null || suiteProfile.shareWithMail,Margin=new Thickness(0,18,0,12) }; dialog.Body.Children.Add(share);
             dialog.Body.Children.Add(new TextBlock { Text="This shares only your name and email addresses with TMA-Mail for this Windows user. It does not sign in or connect accounts. TMA-Mail still requires an app-specific password/key for providers such as iCloud, or the provider's own sign-in. Enter those credentials in TMA-Mail, never here.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=12 });
             dialog.Body.Children.Add(new TextBlock { Text="Requires TMA-Mail 0.14.1 or later. Changes appear when Mail opens or shortly afterward while it is running. Disabling sync stops future sharing; it does not disconnect mail accounts or erase an existing Mail profile.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11,Margin=new Thickness(0,10,0,0) });
+            label("Social accounts (optional)");
+            dialog.Body.Children.Add(new TextBlock { Text="Save usernames or public profile URLs for later use in TMA-SocialsManager and TMA-Cut. This does not connect or sign in to an account. Integration will be available when those apps support it; you will approve sign-in inside each app. Do not enter passwords, API keys, or access tokens here.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=12 });
+            var socialRows=new StackPanel { Name="SocialAccounts" }; dialog.Body.Children.Add(socialRows);
+            var socialFields=new List<Func<TMAppsShared.SocialAccount>>();
+            var add=new Button { Name="AddSocialAccount",Content="+ Add social account",HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,12,0,6) };
+            Action<TMAppsShared.SocialAccount> addSocial=account=> {
+                var row=new StackPanel { Margin=new Thickness(0,12,0,4) };
+                row.Children.Add(new TextBlock { Text="Platform (for example, Instagram, YouTube, or TikTok)",FontSize=12,Margin=new Thickness(0,0,0,6) });
+                var platform=new TextBox { Text=account.platform ?? "",MaxLength=40,Name="SocialPlatform" }; row.Children.Add(platform);
+                row.Children.Add(new TextBlock { Text="Username or profile URL",FontSize=12,Margin=new Thickness(0,8,0,6) });
+                var handle=new TextBox { Text=account.account ?? "",MaxLength=300,Name="SocialAccount" }; row.Children.Add(handle);
+                Func<TMAppsShared.SocialAccount> read=()=>new TMAppsShared.SocialAccount { platform=platform.Text,account=handle.Text }; socialFields.Add(read);
+                var remove=new Button { Content="Remove account",HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,8,0,0) };
+                remove.Click+=(s,e)=>{ socialFields.Remove(read); socialRows.Children.Remove(row); add.IsEnabled=true; }; row.Children.Add(remove); socialRows.Children.Add(row); add.IsEnabled=socialFields.Count<20;
+            };
+            foreach(var account in suiteProfile.socialAccounts) addSocial(account);
+
+            add.Click+=(s,e)=>{ if(socialFields.Count<20) addSocial(new TMAppsShared.SocialAccount()); }; dialog.Body.Children.Add(add);
+            var socialShare=new CheckBox { Name="ShareWithSocialApps",IsChecked=suiteProfile.shareWithSocialApps,Margin=new Thickness(0,12,0,10),Content=new TextBlock { Text="Make social accounts available to TMA-SocialsManager and TMA-Cut when supported",TextWrapping=TextWrapping.Wrap,MaxWidth=470 } }; dialog.Body.Children.Add(socialShare);
+            dialog.Body.Children.Add(new TextBlock { Text="Saved locally for this user. Sharing is optional and does not send data to a social network. Turning it off stops future sharing; it does not disconnect accounts already connected inside another app.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11 });
             var error=new TextBlock { Text=suiteProfileWarning,TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightSalmon,Margin=new Thickness(0,8,0,0) }; dialog.Body.Children.Add(error);
             dialog.AddAction("Cancel",false,()=>dialog.Close(),"CancelAction").IsCancel=true;
             dialog.AddAction("Save profile",true,()=> {
                 try {
-                    var selected=new TMAppsShared.SuiteProfile { displayName=name.Text,emails=emails.Text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).ToList(),shareWithMail=share.IsChecked==true };
+                    var selected=new TMAppsShared.SuiteProfile { displayName=name.Text,emails=emails.Text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).ToList(),shareWithMail=share.IsChecked==true,socialAccounts=socialFields.Select(read=>read()).ToList(),shareWithSocialApps=socialShare.IsChecked==true };
                     suiteProfile=TMAppsShared.SuiteProfileStore.Save(suiteProfilePath,selected); suiteProfileWarning=null; UpdateProfileAvatar(); dialog.DialogResult=true;
                     Notice(suiteProfile.shareWithMail ? "Profile saved. Compatible TMA-Mail versions will sync your name and account suggestions. Credentials are still required in Mail." : "Profile saved. Sync to TMA-Mail is off.");
                 } catch(Exception ex) { error.Text=ex.Message; }

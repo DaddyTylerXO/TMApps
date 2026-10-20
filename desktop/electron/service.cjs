@@ -55,7 +55,21 @@ function profile(value) {
   if (name.length > 100 || /[\x00-\x1f\x7f]/.test(name) || value.emails.length > 20) throw new Error('Use a name of up to 100 characters and up to 20 email addresses.');
   const emails = [];
   for (const raw of value.emails) { const email = String(raw).trim(); if (!email) continue; if (email.length > 254 || !/^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(email)) throw new Error('Enter one valid email address per line.'); if (!emails.some(e => e.toLowerCase() === email.toLowerCase())) emails.push(email); }
-  return { schemaVersion: 1, revision: typeof value.revision === 'string' ? value.revision.slice(0, 80) : null, displayName: name, emails, shareWithMail: value.shareWithMail === true };
+  const accounts = value.socialAccounts ?? [];
+  if (!Array.isArray(accounts) || accounts.length > 20) throw new Error('You can save up to 20 social accounts.');
+  const socialAccounts = [];
+  for (const item of accounts) {
+    if (!item || typeof item.platform !== 'string' || typeof item.account !== 'string') throw new Error('Enter a platform and username or profile URL for each social account.');
+    const platform = item.platform.trim(), account = item.account.trim();
+    if (!platform && !account) continue;
+    if (!platform || platform.length > 40 || !account || account.length > 300 || /[\x00-\x1f\x7f-\x9f]/.test(platform + account)) throw new Error('Enter a platform (up to 40 characters) and username or profile URL (up to 300 characters) on one line.');
+    if (account.includes('://')) {
+      let url; try { url = new URL(account); } catch { throw new Error('Enter a valid HTTPS profile URL or just your username.'); }
+      if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw new Error('Use an HTTPS profile URL without passwords, query parameters, or fragments, or enter just your username.');
+    }
+    if (!socialAccounts.some(a => a.platform.toLowerCase() === platform.toLowerCase() && a.account.toLowerCase() === account.toLowerCase())) socialAccounts.push({ platform, account });
+  }
+  return { schemaVersion: 1, revision: typeof value.revision === 'string' ? value.revision.slice(0, 80) : null, displayName: name, emails, shareWithMail: value.shareWithMail === true, socialAccounts, shareWithSocialApps: value.shareWithSocialApps === true };
 }
 async function readJSON(file, fallback = null) { try { const info = await fs.stat(file); if (info.size > 1024 * 1024) throw new Error('Metadata too large.'); return JSON.parse((await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '')); } catch { return fallback; } }
 async function atomic(file, data) {
