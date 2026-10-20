@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.5
+
+- Give Socials Manager its yellow chat bubble icon and updated workspace description on every desktop.
+- Preserve verified Socials Manager packages when republishing the shared application catalogue.
+- Serialize catalogue publishing with the Socials Manager release workflow.
+
 ## 1.9.0
 
 - Added macOS DMG and Linux AppImage launcher builds for x64 and ARM64, alongside the native Windows installer.

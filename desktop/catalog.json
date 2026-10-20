@@ -57,11 +57,12 @@
       "id": "tma-socialsmanager",
       "name": "TMA-SocialsManager",
       "category": "SOCIAL MEDIA",
-      "description": "Your social workspace is on its way. More details coming soon.",
-      "version": "0.0.0",
+      "description": "A calmer home for your socials. Bring account metrics together, save ideas, and publish to supported platforms.",
+      "version": "0.1.0",
       "branch": "TMA-SocialsManager",
       "executable": "TMA-SocialsManager.exe",
-      "platforms": []
+      "platforms": [],
+      "updatedAt": "2026-10-20T00:00:00Z"
     }
   ]
 }

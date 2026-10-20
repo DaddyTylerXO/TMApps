@@ -44,7 +44,7 @@ test('Agent Office stays last and keeps its full library number when filtered', 
 
 test('SocialsManager is a coming-soon placeholder with source access and no installer', async t => {
   const v = await view(t), card = v.document.querySelector('[data-id="tma-socialsmanager"]');
-  assert.equal(card.querySelector('.app-icon').textContent, '?');
+  assert.equal(card.querySelector('.app-icon img').getAttribute('src'), '../assets/TMA-SocialsManager.png');
   assert.equal(card.querySelector('.status').textContent, 'COMING SOON');
   assert.equal(card.querySelector('.actions > button').textContent, 'Coming soon');
   assert.ok(card.querySelector('.actions > button').disabled);

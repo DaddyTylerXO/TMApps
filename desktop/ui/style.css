@@ -4,3 +4,5 @@
 
 .card.padlock .card-head,.padlock .status{color:#f09cbb}.padlock .app-icon{background:#39232f;color:#f09cbb}
 .card .app-icon.app-image{background:transparent}.app-image img{display:block;width:100%;height:100%;object-fit:contain}
+
+.card.socials .card-head,.socials .status{color:#e5b92f}.socials .app-icon{background:transparent;color:#e5b92f}

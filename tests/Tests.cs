@@ -106,7 +106,7 @@ namespace TMApps {
                 var catalog = LauncherService.ParseCatalog(File.ReadAllText(Path.Combine(args[0], "catalog.json")));
                 var socials = catalog.apps.First(a => a.id=="tma-socialsmanager");
                 var socialsView = new AppView { Info=socials };
-                Check(!socials.Available && socials.branch=="TMA-SocialsManager" && socialsView.Glyph=="?" && socialsView.GlyphFont=="Segoe UI" && socialsView.WindowsSupport==Visibility.Collapsed && socialsView.MacSupport==Visibility.Collapsed && socialsView.LinuxSupport==Visibility.Collapsed, "SocialsManager placeholder has question-mark icon, correct source, and no advertised installers");
+                Check(!socials.Available && socials.branch=="TMA-SocialsManager" && socialsView.Icon!=null && socialsView.IconVisibility==Visibility.Visible && socialsView.Accent=="#E5B92F" && socialsView.WindowsSupport==Visibility.Collapsed && socialsView.MacSupport==Visibility.Collapsed && socialsView.LinuxSupport==Visibility.Collapsed, "SocialsManager has a yellow chat icon, correct source, and no unverified installers");
                 Check(catalog.apps.Count == 5 && catalog.apps.Take(2).All(a => a.Available) && catalog.apps[2].id=="tma-safe", "Both real app packages bundled in catalog");
                 var ordered = AppView.OrderLibrary(catalog.apps.Select(a => new AppView { Info = a }));
                 Check(ordered.Last().Id=="tma-agent-office" && ordered.Last().Number=="05 / YOUR AI TEAM" && ordered[1].Id=="tma-safe", "Agent Office follows Mail and Safe with a dynamic number");

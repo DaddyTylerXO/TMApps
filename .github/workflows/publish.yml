@@ -11,6 +11,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    concurrency:
+      group: tmapps-shared-catalog
+      cancel-in-progress: false
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +34,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '10'
-      - name: Preserve published security app packages
+      - name: Preserve published security and social app packages
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,7 +43,7 @@ jobs:
           gh release download tma-apps --pattern catalog.json --dir prior-catalog
           if ($LASTEXITCODE -eq 0) {
             $prior = Get-Content prior-catalog/catalog.json -Raw | ConvertFrom-Json
-            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock") -and $_.downloadUrl })
+            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock", "tma-socialsmanager") -and $_.downloadUrl })
             if ($securityApps.Count -gt 0) {
               $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
               $catalog.apps = @($catalog.apps | ForEach-Object { $current = $_; $published = $securityApps | Where-Object id -eq $current.id; if ($published) { $published } else { $current } })
