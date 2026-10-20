@@ -187,7 +187,7 @@ class Library {
     const executable = path.join(state.root, state.folder, state.executable);
     await new Promise((resolve, reject) => { const child = spawn(executable, [], { cwd: path.dirname(executable), detached: true, stdio: 'ignore' }); child.once('error', reject); child.once('spawn', () => { child.unref(); resolve(); }); });
   }
-  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return ['tma-mail','tma-safe','tma-padlock','tma-socialsmanager'].includes(id) ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
+  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return ['tma-cut','tma-mail','tma-safe','tma-padlock','tma-socialsmanager'].includes(id) ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
   async uninstall(id, deleteData = false) {
     if (this.busy) throw new Error('Wait for the current operation.'); this.busy = true;
     try {

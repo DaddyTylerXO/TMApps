@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.12.6
+
+- Add TMA-Cut to Windows, macOS, and Linux launcher catalogs, validation, source links, and app tiles with its red camera icon.
+- Preserve verified Cut downloads when publishing launcher updates. Packages become installable after TMA-Cut's release workflow publishes them.
+
 ## 1.12.5
 
 - Give Socials Manager its yellow chat bubble icon and updated workspace description on every desktop.
@@ -87,8 +92,3 @@
 - GitHub Actions packaging and publishing for the launcher and both applications.
 - Installation safety checks and real WPF rendering verification.
 - Private GitHub downloads using a user-supplied token encrypted with Windows DPAPI.
-# 1.12.6
-
-- Add TMA-Cut to Windows, macOS, and Linux launcher catalogs, validation, source links, and app tiles with its red camera icon.
-- Preserve verified Cut downloads when publishing launcher updates. Packages become installable after TMA-Cut's release workflow publishes them.
-

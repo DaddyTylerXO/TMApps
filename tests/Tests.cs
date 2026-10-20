@@ -113,6 +113,7 @@ namespace TMApps {
                 ordered = AppView.OrderLibrary(ordered.Concat(new[] { new AppView { Info = new AppInfo { id="future-app", category="Tools" } } }));
                 Check(ordered.Last().Number=="07 / YOUR AI TEAM" && ordered[4].Id=="future-app" && ordered[5].Id=="tma-socialsmanager", "New apps move Agent Office down without changing other app order");
                 var cut = catalog.apps.First(a => a.id=="tma-cut");
+                Check(new WindowsAppData().Locations(cut).Length==0, "Cut projects are preserved when uninstalling the app");
                 Check(cut.branch=="TMA-Cut" && cut.executable=="TMA-Cut.exe" && new AppView {Info=cut}.Icon!=null && new AppView {Info=cut}.Accent=="#F39AA5", "Cut has a red camera tile and its own application branch");
 
                 Check(catalog.apps.Take(2).All(a=>new AppView {Info=a}.WindowsSupport==Visibility.Visible && new AppView {Info=a}.MacSupport==Visibility.Collapsed && new AppView {Info=a}.LinuxSupport==Visibility.Collapsed),"OS badges advertise only the published Windows app builds");
