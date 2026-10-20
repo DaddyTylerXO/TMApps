@@ -9,7 +9,7 @@
     "files":["electron/**","ui/**","assets/**","README.md","SECURITY.md"],
     "directories":{"output":"dist"}, "artifactName":"TMA-Padlock-${version}-${os}-${arch}.${ext}",
     "win":{"target":["zip"],"icon":"assets/icon.ico","signExecutable":false},
-    "mac":{"target":["dmg","zip"],"icon":"assets/icon.png","category":"public.app-category.utilities","identity":"-"},
+    "mac":{"target":["dmg","zip"],"icon":"assets/icon.png","category":"public.app-category.utilities","identity":"-","hardenedRuntime":false},
     "dmg":{"sign":false},
     "linux":{"target":["AppImage","tar.gz"],"icon":"assets/icon.png","category":"Utility","maintainer":"DaddyTylerXO"}
   }
