@@ -10,7 +10,10 @@ fill.onclick = async () => {
     const [tab] = await api.tabs.query({ active: true, currentWindow: true }); const url = new URL(tab.url);
     if (url.protocol !== 'https:') throw Error('Open an HTTPS login page first.');
     await api.storage.session.set({ token: token.value }); status.textContent = 'Approve the request in TMA-Safe…';
-    const response = await fetch('http://127.0.0.1:19473/fill', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token.value }, body: JSON.stringify({ origin: url.origin }), signal: AbortSignal.timeout(120000) });
+    const extension = new URL(api.runtime.getURL('')).origin;
+    // URL.origin may be "null" for nonstandard extension schemes in some engines.
+    const identity = extension === 'null' ? api.runtime.getURL('').replace(/\/$/, '') : extension;
+    const response = await fetch('http://127.0.0.1:19473/fill', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token.value, 'X-TMA-Extension': identity }, body: JSON.stringify({ origin: url.origin }), signal: AbortSignal.timeout(120000) });
     const login = await response.json(); if (!response.ok) throw Error(login.error); if (login.origin !== url.origin) throw Error('Website changed.');
     const results = await api.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, func: (value, expected) => {
       if (location.origin !== expected || document.visibilityState !== 'visible') return false;

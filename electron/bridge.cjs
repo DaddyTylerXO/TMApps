@@ -6,10 +6,13 @@ function startBridge({ approve, unlocked, port = 19473 }) {
   const token = crypto.randomBytes(32).toString('hex'); let busy = false, closed = false; const controller = new AbortController();
   const server = http.createServer(async (req, res) => {
     const send = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); };
-    const ext = req.headers.origin || '';
-    if (!/^(chrome-extension:\/\/[a-p]{32}|moz-extension:\/\/[a-zA-Z0-9-]{1,80})$/.test(ext) || req.headers.host !== `127.0.0.1:${server.address()?.port}`) { send(403, { error: 'Extension origin required.' }); return; }
+    // Privileged extension fetches can omit Origin (notably Firefox). Require an
+    // explicit extension identity and reject any conflicting browser Origin.
+    // This header is not local-process attestation; the token and approval remain required.
+    const ext = req.headers['x-tma-extension'] || req.headers.origin || '';
+    if (!/^(chrome-extension:\/\/[a-p]{32}|moz-extension:\/\/[a-zA-Z0-9-]{1,80})$/.test(ext) || req.headers.origin && req.headers.origin !== ext || req.headers.host !== `127.0.0.1:${server.address()?.port}`) { send(403, { error: 'Extension origin required.' }); return; }
     res.setHeader('Access-Control-Allow-Origin', ext); res.setHeader('Vary', 'Origin');
-    if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'POST'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); send(204, {}); return; }
+    if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'POST'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-TMA-Extension'); send(204, {}); return; }
     const supplied = Buffer.from(req.headers.authorization || ''), expected = Buffer.from('Bearer ' + token);
     if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) { send(401, { error: 'Pair this browser again from TMA-Safe.' }); return; }
     if (req.method !== 'POST' || req.url !== '/fill' || !unlocked() || closed) { send(403, { error: 'Unlock TMA-Safe and enable browser filling.' }); return; }

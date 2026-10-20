@@ -8,6 +8,9 @@ test('browser bridge fails closed on websites, missing tokens, locked vaults and
   assert.equal((await send(ext, bridge.token, 'https://example.com/login')).status, 403); assert.equal((await send(ext, bridge.token, 'http://example.com')).status, 403);
   const good = await send(ext, bridge.token); assert.equal(good.status, 200); assert.equal(good.headers.get('access-control-allow-origin'), ext); assert.equal((await good.json()).origin, 'https://example.com'); assert.equal(calls, 1);
   unlocked = false; assert.equal((await send(ext, bridge.token)).status, 403); assert.equal(calls, 1);
+  unlocked = true;
+  const privileged = await fetch(url, { method: 'POST', headers: { 'X-TMA-Extension': 'moz-extension://test-browser-id', Authorization: 'Bearer ' + bridge.token }, body: JSON.stringify({ origin: 'https://example.com' }) }); assert.equal(privileged.status, 200);
+  const spoofed = await fetch(url, { method: 'POST', headers: { Origin: 'https://evil.example', 'X-TMA-Extension': ext, Authorization: 'Bearer ' + bridge.token }, body: JSON.stringify({ origin: 'https://example.com' }) }); assert.equal(spoofed.status, 403);
 });
 test('locking revokes an in-flight approved fill', async t => {
   let release, started; const waiting = new Promise(resolve => { started = resolve; }); const bridge = await startBridge({ port: 0, unlocked: () => true, approve: async () => { started(); await new Promise(resolve => { release = resolve; }); return { password: 'must not escape' }; } }); t.after(() => bridge.close());

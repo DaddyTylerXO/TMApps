@@ -6,7 +6,7 @@ test('extension fills only the expected HTTPS top-level login, never submits, an
     const page = new JSDOM('<form><input autocomplete="username"><input type="password"><button>Sign in</button></form>', { url: actualOrigin, runScripts: 'outside-only', pretendToBeVisual: true });
     let submitted = false; page.window.document.querySelector('form').onsubmit = () => { submitted = true; };
     page.window.HTMLInputElement.prototype.getClientRects = () => [{}];
-    popup.window.chrome = { storage: { session: { get: async () => ({}), set: async () => {} } }, tabs: { query: async () => [{ id: 1, url: 'https://example.com/login' }] }, scripting: { executeScript: async spec => [{ result: page.window.eval('(' + spec.func.toString() + ')')(...spec.args) }] } };
+    popup.window.chrome = { runtime: { getURL: () => 'chrome-extension://' + 'a'.repeat(32) + '/' }, storage: { session: { get: async () => ({}), set: async () => {} } }, tabs: { query: async () => [{ id: 1, url: 'https://example.com/login' }] }, scripting: { executeScript: async spec => [{ result: page.window.eval('(' + spec.func.toString() + ')')(...spec.args) }] } };
     popup.window.AbortSignal = AbortSignal;
     popup.window.fetch = async (_url, options) => { assert.equal(JSON.parse(options.body).origin, 'https://example.com'); return { ok: true, json: async () => ({ origin: 'https://example.com', username: 'fictional-user', password: 'fictional-secret' }) }; };
     popup.window.eval(fs.readFileSync(path.join(__dirname, '../browser-extension/popup.js'), 'utf8')); await new Promise(resolve => setImmediate(resolve));
