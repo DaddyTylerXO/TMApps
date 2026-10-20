@@ -1,19 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
   <rect x="3" y="3" width="94" height="94" rx="28" fill="#7048a4"/>
-  <!-- A shared ring with three distinct key heads and toothed blades. -->
-  <ellipse cx="55" cy="28" rx="20" ry="18" stroke="#fff" stroke-width="4.5"/>
-  <g fill="#fff" stroke="#492b70" stroke-width="3" stroke-linejoin="round">
-    <path d="M29 28 36 26 49 35 50 43 39 56 33 54 17 83 10 79 14 70 18 71 21 65 18 63 27 47 21 43 20 38Z"/>
-    <path d="M43 57H55V65L59 68 55 72 59 76 55 80 59 84 51 91 44 86Z"/>
-    <path d="M64 55 76 52 88 81 85 88 77 85 72 76 74 72 68 69 69 65 64 63Z"/>
-    <path d="M62 44C62 34 55 29 47 30 36 31 31 39 32 48 33 58 40 63 49 62H59L64 55Z"/>
-    <path d="M80 43C80 33 73 27 64 28 54 29 48 36 48 46 48 55 54 61 64 61L79 54C81 51 81 47 80 43Z"/>
-    <path d="M41 61H59V66H42Z"/>
-    <path d="M61 59 79 51 82 56 64 64Z"/>
+  <!-- Two simple white keys, with the same even line weight as the Mail mark. -->
+  <g stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="33" cy="33" r="10"/>
+    <circle cx="67" cy="33" r="10"/>
+    <path d="M40 40 71 71 77 65M63 63 69 57"/>
+    <path d="M60 40 29 71 23 65M37 63 31 57"/>
   </g>
-  <path d="m30 37 5-4 6 4-4 5Z" fill="#7048a4"/>
-  <circle cx="45" cy="43" r="4" fill="#7048a4"/>
-  <circle cx="64" cy="41" r="5" fill="#7048a4"/>
-  <path d="M75 25C76 32 72 38 65 41" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
-  <path d="m31 52-15 26M49 68v16M74 62l9 20" stroke="#7048a4" stroke-width="1.8" stroke-linecap="round"/>
 </svg>

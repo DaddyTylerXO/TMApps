@@ -1,6 +1,6 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a bunch-of-keys icon follow TMApps Launcher and TMA-Mail. Version 0.2.1 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Version 0.2.2 is an unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
