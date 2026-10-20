@@ -15,13 +15,16 @@
     $('shell').className = `edge-${state.settings.navigationEdge.toLowerCase()}`;
     $('all-count').textContent = state.apps.length; $('installed-count').textContent = state.apps.filter(a => a.installed).length; $('updates-count').textContent = state.apps.filter(a => a.installed && isNewer(a.version, a.installed.version)).length; $('notinstalled-count').textContent = state.apps.filter(a => !a.installed).length;
     document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
-    const term = $('search').value.toLowerCase(); const apps = state.apps.filter(a => `${a.name} ${a.description}`.toLowerCase().includes(term)).filter(a => filter === 'all' || filter === 'installed' && a.installed || filter === 'notinstalled' && !a.installed || filter === 'updates' && a.installed && isNewer(a.version, a.installed.version));
+    const ordered = [...state.apps].sort((a, b) => Number(a.id === 'tma-agent-office') - Number(b.id === 'tma-agent-office'));
+    const term = $('search').value.toLowerCase(); const apps = ordered.filter(a => `${a.name} ${a.description}`.toLowerCase().includes(term)).filter(a => filter === 'all' || filter === 'installed' && a.installed || filter === 'notinstalled' && !a.installed || filter === 'updates' && a.installed && isNewer(a.version, a.installed.version));
     $('library').replaceChildren(); $('empty').hidden = apps.length > 0;
     for (const app of apps) {
       const card = el('article', null, `card${app.id === 'tma-agent-office' ? ' office' : app.id === 'tma-safe' ? ' safe' : app.id === 'tma-padlock' ? ' padlock' : ''}`); card.dataset.id = app.id;
-      card.append(el('div', app.id === 'tma-mail' ? '01 / MAIL & COMMUNICATION' : app.id === 'tma-padlock' ? '04 / YOUR AUTHENTICATORS' : app.id === 'tma-safe' ? '03 / YOUR PRIVATE SPACE' : '02 / YOUR AI TEAM', 'card-head'));
+      card.append(el('div', `${String(ordered.indexOf(app) + 1).padStart(2, '0')} / ${app.id === 'tma-mail' ? 'MAIL & COMMUNICATION' : app.id === 'tma-padlock' ? 'YOUR AUTHENTICATORS' : app.id === 'tma-safe' ? 'YOUR PRIVATE SPACE' : app.id === 'tma-agent-office' ? 'YOUR AI TEAM' : app.category.toUpperCase()}`, 'card-head'));
       const body = el('div', null, 'card-body'), info = el('div', null, 'app-info'), meta = el('div', null, 'app-meta');
-      body.append(el('div', app.id === 'tma-mail' ? '✉' : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon')); info.append(el('h2', app.name), el('p', app.description));
+      const icon = el('div', app.id === 'tma-mail' ? null : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon');
+      if (app.id === 'tma-mail') { icon.classList.add('mail-icon'); const image = el('img'); image.src = '../assets/TMA-Mail.png'; image.alt = 'TMA-Mail'; icon.append(image); }
+      body.append(icon); info.append(el('h2', app.name), el('p', app.description));
       const badges = el('div', null, 'support'); badges.setAttribute('aria-label', 'Supported operating systems'); app.support.forEach(key => badges.append(osBadge(key))); if (!app.support.length) badges.append(el('small', 'No published packages yet')); info.append(badges); body.append(info);
       const unavailable = !app.package && !app.installed;
       const status = unavailable ? state.platform==='win32' ? 'USE THE NATIVE WINDOWS EDITION' : `NOT AVAILABLE FOR ${names[state.os].toUpperCase()} ${state.arch.toUpperCase()}` : app.installed ? (isNewer(app.version, app.installed.version) ? 'UPDATE AVAILABLE' : 'INSTALLED · UP TO DATE') : 'READY TO INSTALL';

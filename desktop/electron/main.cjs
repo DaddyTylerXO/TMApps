@@ -116,7 +116,7 @@ async function run() {
   if (smokeReport) {
     try {
       const result = await window.webContents.executeJavaScript('window.launcherSmoke()');
-      if (!result.ok || result.nodeAvailable || result.cards !== 4 || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
+      if (!result.ok || result.nodeAvailable || result.cards !== require('../catalog.json').apps.length || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
       await fs.mkdir(path.dirname(smokeReport), { recursive: true }); await fs.writeFile(smokeReport, JSON.stringify({ ...result, version: metadata.version }));
       await new Promise(resolve=>setTimeout(resolve,350));
       await fs.writeFile(smokeReport + '.png', (await window.webContents.capturePage()).toPNG());

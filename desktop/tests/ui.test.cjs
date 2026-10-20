@@ -27,3 +27,16 @@ test('optional profile editor documents credentials and saves addresses without 
 test('search and source menu work even when no native app packages are available', async t => {
   const v = await view(t); const search = v.document.getElementById('search'); search.value = 'Mail'; search.dispatchEvent(new v.window.Event('input')); assert.equal(v.document.querySelectorAll('.card').length, 1); const buttons = [...v.document.querySelectorAll('.menu-items button')]; buttons.find(b => b.textContent.includes('source')).click(); await tick(); assert.equal(v.calls.at(-1)[1], 'tma-mail');
 });
+
+test('Agent Office stays last and keeps its full library number when filtered', async t => {
+  const v = await view(t);
+  const office = v.state.apps.find(a => a.id === 'tma-agent-office');
+  const mail = v.state.apps.find(a => a.id === 'tma-mail');
+  v.state.apps = [office, mail, { ...mail, id: 'new-app', name: 'New Tool', category: 'Tools' }, { ...mail, id: 'another-app', name: 'Another Tool', category: 'Tools' }];
+  const search = v.document.getElementById('search');
+  search.dispatchEvent(new v.window.Event('input'));
+  assert.deepEqual([...v.document.querySelectorAll('.card')].map(c => c.dataset.id), ['tma-mail', 'new-app', 'another-app', 'tma-agent-office']);
+  assert.equal(v.document.querySelector('.card:last-child .card-head').textContent, '04 / YOUR AI TEAM');
+  search.value = 'Agent'; search.dispatchEvent(new v.window.Event('input'));
+  assert.equal(v.document.querySelector('.card-head').textContent, '04 / YOUR AI TEAM');
+});

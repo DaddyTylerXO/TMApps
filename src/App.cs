@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.11.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.11.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.11.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.11.1.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -22,9 +22,25 @@ namespace TMApps {
         public string Id { get { return Info.id; } } public string Name { get { return Info.name; } }
         public string Category { get { return Info.category; } } public string Description { get { return Info.description; } }
         public string Accent { get { return Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
-        public string PreviewBackground { get { return Id == "tma-mail" ? "#203425" : Id == "tma-padlock" ? "#39232F" : "#2B253A"; } }
+        public string PreviewBackground { get { return Id == "tma-mail" ? "Transparent" : Id == "tma-padlock" ? "#39232F" : "#2B253A"; } }
         public string Glyph { get { return Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
-        public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : Id == "tma-padlock" ? "04 / YOUR AUTHENTICATORS" : Id == "tma-safe" ? "03 / YOUR PRIVATE SPACE" : "02 / YOUR AI TEAM"; } }
+        public int Position { get; set; }
+        public string Number { get { return Position.ToString("00") + " / " + (Id == "tma-mail" ? "MAIL & COMMUNICATION" : Id == "tma-padlock" ? "YOUR AUTHENTICATORS" : Id == "tma-safe" ? "YOUR PRIVATE SPACE" : Id == "tma-agent-office" ? "YOUR AI TEAM" : Category.ToUpperInvariant()); } }
+        static readonly ImageSource mailIcon = LoadMailIcon();
+        static ImageSource LoadMailIcon() {
+            using (var stream = typeof(AppView).Assembly.GetManifestResourceStream("TMApps.mail.png")) {
+                var image = new System.Windows.Media.Imaging.BitmapImage();
+                image.BeginInit(); image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); return image;
+            }
+        }
+        public ImageSource Icon { get { return Id == "tma-mail" ? mailIcon : null; } }
+        public Visibility IconVisibility { get { return Id == "tma-mail" ? Visibility.Visible : Visibility.Collapsed; } }
+        public Visibility GlyphVisibility { get { return Id == "tma-mail" ? Visibility.Collapsed : Visibility.Visible; } }
+        internal static List<AppView> OrderLibrary(IEnumerable<AppView> library) {
+            var ordered = library.OrderBy(a => a.Id == "tma-agent-office" ? 1 : 0).ToList();
+            for (int i = 0; i < ordered.Count; i++) ordered[i].Position = i + 1;
+            return ordered;
+        }
         public string UpdatedLabel { get { DateTimeOffset date; return DateTimeOffset.TryParse(Info.updatedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out date) ? date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Date not published"; } }
         bool Supports(string platform) { return Info.platforms==null ? platform=="windows" && Info.Available : Info.platforms.Contains(platform); }
         public Visibility WindowsSupport { get { return Supports("windows") ? Visibility.Visible : Visibility.Collapsed; } }
@@ -84,7 +100,7 @@ namespace TMApps {
             Find<System.Windows.Controls.Image>("BrandIcon").Source = window.Icon;
             window.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, new RoutedEventHandler(HandleButton), true);
             Find<TextBox>("Search").TextChanged += (s, ev) => Render();
-            apps = service.LoadCatalog().apps.Select(a => new AppView { Info = a }).ToList();
+            apps = AppView.OrderLibrary(service.LoadCatalog().apps.Select(a => new AppView { Info = a }));
             ApplyNavigation(window, preferences); ApplyView(window, preferences.libraryView); listView = preferences.libraryView == "List";
             UpdateProfileAvatar();
             Render(); Notice("Choose an application to install. Downloads and installation happen here.");
@@ -193,7 +209,7 @@ namespace TMApps {
             try {
                 try {
                     var catalog = await service.Refresh(lifetime.Token);
-                    foreach (var a in apps) { a.Info = catalog.apps.First(i => i.id == a.Id); a.Detail = null; }
+                    apps = AppView.OrderLibrary(catalog.apps.Select(info => { var existing = apps.FirstOrDefault(a => a.Id == info.id); if (existing == null) existing = new AppView(); existing.Info = info; existing.Detail = null; return existing; }));
                     appNotice=service.LastRefreshNotice;
                 } catch(Exception) { appNotice="Application update check could not complete. Your saved library is still available."; }
                 try {
