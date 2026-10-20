@@ -10,6 +10,8 @@ Your codes, kept close. A local desktop authenticator in the TMApps family, with
 - Automatic code refresh, search, hide/show codes, copy, rename, and confirmed deletion. HOTP counters advance only when you choose Next code, with the new counter saved before it appears.
 - AES-256-GCM encrypted vault with optional master password (recommended), or an OS-protected device key.
 - Lock button, five-minute inactivity lock, screen-lock/suspend lock, and clipboard clearing after 20 seconds.
+- Eye buttons reveal the master password, its confirmation, and new setup keys independently; saving, cancelling setup, or locking masks them again.
+- A Settings page controls launch at sign-in, tray visibility, close-to-tray, minimized startup, and auto-lock timing (1, 5, 15, or 30 minutes).
 - Portable encrypted backups and fresh-install restore for master-password vaults.
 
 ## Get the app
@@ -27,6 +29,14 @@ Choose **Add authenticator**, paste the service's manual setup key or `otpauth:/
 For HOTP, copy the current code, use it, then choose Next code. Advancing too far can require resynchronization at the service.
 
 Use Encrypted backup after changes. To restore, open a fresh installation before creating a vault, choose Restore encrypted backup, then enter its original master password. Restore never overwrites an existing vault. Launcher uninstall retains your vault; deleting a whole OS profile may remove it.
+
+## Settings and tray
+
+Open **Settings** from the sidebar or tray menu. Startup is available in the packaged app on Windows, macOS, and Linux. It never unlocks the vault automatically. Linux uses a managed XDG autostart entry; Windows and macOS use native login-item registration. If you move a portable installation, save the startup choice again from its new location.
+
+The tray icon is enabled by default. **Close to tray** and **Start minimized to tray** are optional and require the icon to remain enabled. Closing to the tray locks the vault first. Disabling the tray icon restores the main window and disables those dependent options. Use **Exit TMA-Padlock** in the tray menu to fully quit.
+
+The pink tray menu follows TMA-Mail's rounded panel and bubble buttons, with Open, Settings, Lock vault, and Exit. Double-click the tray icon to restore the app. Linux desktop environments that only expose a native StatusNotifier menu use the same actions in the system menu. The Settings page includes a tray preview.
 
 ## Development
 

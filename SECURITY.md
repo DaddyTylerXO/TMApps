@@ -14,7 +14,9 @@ A random 256-bit data key is wrapped using Electron safeStorage: DPAPI on Window
 
 The sandboxed renderer has no Node access. Context isolation, an IPC allowlist, sender/frame/URL checks, denied navigation and permissions, and a network-blocking CSP reduce exposure. Stored setup secrets are never returned to the renderer. Setup fields clear after saving, cancelling, or locking. Codes and account names are visible while unlocked.
 
-The app locks on request, screen lock, suspend, renderer failure, exit, or five minutes without keyboard/pointer activity. Polling does not reset inactivity. Lock invalidates in-flight password derivation. Clipboard codes clear after 20 seconds or on lock if the clipboard still contains the copied code; another app's newer value is preserved. Clipboard managers may retain history.
+The app locks on request, screen lock, suspend, renderer failure, exit, close-to-tray, or the selected inactivity limit (1, 5, 15, or 30 minutes; five by default). Polling does not reset inactivity. Startup and tray options never unlock the vault automatically. Lock invalidates in-flight password derivation. Clipboard codes clear after 20 seconds or on lock if the clipboard still contains the copied code; another app's newer value is preserved. Clipboard managers may retain history.
+
+Eye buttons reveal only the password or setup key currently being entered. They do not fetch stored setup secrets. Revealed inputs are masked again after saving, cancelling setup, or locking. Preferences contain no vault passwords or authenticator secrets. The tray window has a separate sandboxed preload exposing only Open, Settings, Lock, and Exit, with its own sender/frame/URL checks.
 
 Key buffers are zeroed on lock. JavaScript strings, garbage-collected copies, swap, crash dumps, screenshots, and privileged processes cannot be reliably erased or excluded. Use OS disk encryption and a trustworthy device. A compromised unlocked session can expose codes. No independent security audit has been performed.
 

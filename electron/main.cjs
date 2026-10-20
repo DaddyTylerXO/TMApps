@@ -1,14 +1,19 @@
 'use strict';
 const {app,BrowserWindow,ipcMain,safeStorage,clipboard,dialog,powerMonitor}=require('electron');
-const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{pathToFileURL}=require('node:url'),{Vault}=require('./vault.cjs'),{entry,code}=require('./otp.cjs');
-let win,vault,queue=Promise.resolve(),activity=Date.now(),copied,timer;
+const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{pathToFileURL}=require('node:url'),{Vault}=require('./vault.cjs'),{entry,code}=require('./otp.cjs'),{Settings,startup,hideOnClose}=require('./settings.cjs'),{TrayUI}=require('./tray.cjs');
+let win,vault,preferences,trayUI,quitting=false,startupError,queue=Promise.resolve(),activity=Date.now(),copied,timer;
 const url=pathToFileURL(path.join(__dirname,'../ui/index.html')).href;
 // Smoke fixtures use only passwords and must not trigger interactive OS keychain prompts.
 const storage=process.argv.includes('--smoke')?null:safeStorage;
-if(process.argv.includes('--smoke'))app.disableHardwareAcceleration();
+if(process.argv.includes('--smoke')){app.disableHardwareAcceleration();app.setPath('userData',path.resolve(process.argv[process.argv.indexOf('--smoke')+1],'smoke-profile-'+process.pid));}
+function restore(){if(!win)return;if(win.isMinimized())win.restore();win.show();win.focus();}
+function openSettings(){restore();win.webContents.send('padlock:settings');}
+function applyTray(){if(!process.argv.includes('--smoke'))trayUI.setVisible(preferences.value.showTray);if(!preferences.value.showTray)restore();}
 function clearClipboard(){clearTimeout(timer);if(copied && clipboard.readText()===copied)clipboard.clear();copied=null;}
 function lock(){vault?.lock();clearClipboard();win?.webContents.send('padlock:locked');}
 const actions={
+  preferences:()=>({...preferences.value,startupSupported:app.isPackaged,warning:startupError||preferences.warning||''}),
+  savePreferences:async value=>{const saved=await preferences.save(value);applyTray();return saved;},
   status:()=>vault.status(),unlock:v=>vault.unlock(v||''),create:v=>{if(v.mode==='password'&&v.password!==v.confirm)throw Error('Passwords do not match.');return vault.create(v.password||'',v.mode);},
   list:()=>vault.list(),lock:()=>{lock();return true;},verify:v=>{vault.require();const e=entry(v);return{code:code(e),name:e.name,type:e.type};},add:v=>vault.add(v),rename:v=>vault.rename(v.id,v.name),
   remove:async id=>{vault.find(id);const r=await dialog.showMessageBox(win,{type:'warning',message:'Delete this authenticator?',detail:'Keep the service recovery codes before deleting. This cannot be undone.',buttons:['Cancel','Delete'],defaultId:0,cancelId:0});return r.response===1?vault.remove(id):vault.list();},
@@ -18,8 +23,12 @@ const actions={
   activity:()=>{activity=Date.now();return true;}
 };
 if(!app.requestSingleInstanceLock())app.quit();
-else{app.on('second-instance',()=>{win?.show();win?.focus();});app.whenReady().then(async()=>{
-  app.setName('TMA-Padlock');vault=new Vault(path.join(app.getPath('userData'),'vault.tmapadlock'),storage);
+else{app.on('second-instance',restore);app.on('activate',restore);app.on('before-quit',()=>{quitting=true;lock();});app.on('will-quit',()=>trayUI?.destroy());app.whenReady().then(async()=>{
+  app.setName('TMA-Padlock');
+  preferences=new Settings(path.join(app.getPath('userData'),'settings.json'),async(next,rollback)=>{if(rollback||next.openAtLogin!==preferences.value.openAtLogin)await startup(next.openAtLogin,{app});});await preferences.load();
+  if(preferences.value.openAtLogin&&app.isPackaged&&!process.argv.includes('--smoke'))try{await startup(true,{app});}catch(e){startupError=e.message;}
+  trayUI=new TrayUI({open:restore,settings:openSettings,lock,quit:()=>app.quit()});
+  vault=new Vault(path.join(app.getPath('userData'),'vault.tmapadlock'),storage);
   win=new BrowserWindow({width:1180,height:820,minWidth:800,minHeight:650,backgroundColor:'#17191f',icon:path.join(__dirname,'../assets/icon.png'),autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,devTools:!app.isPackaged}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());win.webContents.on('will-attach-webview',e=>e.preventDefault());win.webContents.session.setPermissionRequestHandler((_w,_p,cb)=>cb(false));win.webContents.session.setPermissionCheckHandler(()=>false);
   for(const [name,action]of Object.entries(actions))ipcMain.handle('padlock:'+name,(event,value)=>{
@@ -27,9 +36,11 @@ else{app.on('second-instance',()=>{win?.show();win?.focus();});app.whenReady().t
     if(name==='lock'){lock();return{ok:true,value:true};}if(name==='activity')return{ok:true,value:actions.activity()};
     const epoch=vault.epoch;const job=queue.then(async()=>{if(!['list','status'].includes(name))activity=Date.now();try{if(['unlock','create'].includes(name)&&epoch!==vault.epoch)throw Error('Vault locked. Try again.');return{ok:true,value:await action(value)};}catch(e){return{ok:false,error:e.message};}});queue=job.catch(()=>{});return job;
   });
-  powerMonitor.on('suspend',lock);powerMonitor.on('lock-screen',lock);win.webContents.on('render-process-gone',lock);win.on('close',lock);win.on('closed',()=>{win=null;app.quit();});
-  const idle=setInterval(()=>{if(vault.key&&Date.now()-activity>5*60000)lock();},1000);app.on('will-quit',()=>clearInterval(idle));
+  powerMonitor.on('suspend',lock);powerMonitor.on('lock-screen',lock);win.webContents.on('render-process-gone',lock);win.on('close',event=>{lock();if(hideOnClose(preferences.value,!!trayUI.icon,quitting,process.argv.includes('--smoke'))){event.preventDefault();win.hide();}});win.on('closed',()=>{win=null;app.quit();});
+  const idle=setInterval(()=>{if(vault.key&&Date.now()-activity>preferences.value.autoLockMinutes*60000)lock();},1000);app.on('will-quit',()=>clearInterval(idle));
   if(process.argv.includes('--smoke')){setTimeout(()=>{console.error('Smoke test timed out waiting for the packaged renderer.');app.exit(1);},45000).unref();win.webContents.on('did-fail-load',(_e,code,description)=>{console.error('Smoke load failure',code,description);app.exit(1);});win.webContents.on('render-process-gone',(_e,details)=>{console.error('Smoke renderer failure',details);app.exit(1);});}
-  if(process.argv.includes('--smoke'))win.webContents.once('did-finish-load',async()=>{let folder;try{const target=process.argv[process.argv.indexOf('--smoke')+1];await fs.mkdir(target,{recursive:true});await new Promise(r=>setTimeout(r,400));await fs.writeFile(path.join(target,'locked.png'),(await win.webContents.capturePage()).toPNG());folder=await fs.mkdtemp(path.join(os.tmpdir(),'padlock-smoke-'));vault=new Vault(path.join(folder,'demo'),storage);await vault.create('Fictional demo password','password');for(const name of ['Google · alex@example.com','GitHub · alex-studio','Microsoft · Work'])await vault.add({name,secret:'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'});await win.webContents.executeJavaScript('window.refreshPadlock()');await new Promise(r=>setTimeout(r,500));const check=await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.auth-card').length,node:typeof require,secret:document.body.textContent.includes('GEZDGNBV')})`);if(check.cards!==3||check.node!=='undefined'||check.secret)throw Error('Smoke verification failed.');await fs.writeFile(path.join(target,'vault.png'),(await win.webContents.capturePage()).toPNG());console.log(JSON.stringify(check));lock();if(folder)await fs.rm(folder,{recursive:true,force:true});app.exit(0);}catch(e){console.error(e);app.exit(1);}});
+  if(process.argv.includes('--smoke'))win.webContents.once('did-finish-load',async()=>{let folder;try{const target=process.argv[process.argv.indexOf('--smoke')+1];await fs.mkdir(target,{recursive:true});await new Promise(r=>setTimeout(r,400));await fs.writeFile(path.join(target,'locked.png'),(await win.webContents.capturePage()).toPNG());folder=await fs.mkdtemp(path.join(os.tmpdir(),'padlock-smoke-'));vault=new Vault(path.join(folder,'demo'),storage);await vault.create('Fictional demo password','password');for(const name of ['Google · alex@example.com','GitHub · alex-studio','Microsoft · Work'])await vault.add({name,secret:'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'});await win.webContents.executeJavaScript('window.refreshPadlock()');await new Promise(r=>setTimeout(r,500));const check=await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.auth-card').length,node:typeof require,secret:document.body.textContent.includes('GEZDGNBV')})`);if(check.cards!==3||check.node!=='undefined'||check.secret)throw Error('Smoke verification failed.');await fs.writeFile(path.join(target,'vault.png'),(await win.webContents.capturePage()).toPNG());await win.webContents.executeJavaScript("document.getElementById('settings').click()");await new Promise(r=>setTimeout(r,200));await fs.writeFile(path.join(target,'settings.png'),(await win.webContents.capturePage()).toPNG());await trayUI.menu({x:win.getBounds().x+300,y:win.getBounds().y+100,width:24,height:24});await fs.writeFile(path.join(target,'tray.png'),(await trayUI.popup.webContents.capturePage()).toPNG());const trayCheck=await trayUI.popup.webContents.executeJavaScript("({buttons:document.querySelectorAll('button').length,node:typeof require})");if(trayCheck.buttons!==4||trayCheck.node!=='undefined')throw Error('Tray smoke failed.');trayUI.popup.hide();console.log(JSON.stringify({...check,tray:trayCheck}));lock();if(folder)await fs.rm(folder,{recursive:true,force:true});app.exit(0);}catch(e){console.error(e);app.exit(1);}});
   await win.loadFile(path.join(__dirname,'../ui/index.html'));
+  try{applyTray();}catch(e){dialog.showErrorBox('Tray icon unavailable',e.message);}
+  if(preferences.value.startMinimized&&trayUI.icon&&!process.argv.includes('--smoke'))win.hide();
 });}
