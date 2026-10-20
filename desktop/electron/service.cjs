@@ -8,7 +8,7 @@ const { promisify } = require('node:util');
 const tar = require('tar');
 const exec = promisify(execFile);
 const RELEASE = 'https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/';
-const IDS = ['tma-mail', 'tma-agent-office', 'tma-safe', 'tma-padlock', 'tma-socialsmanager'];
+const IDS = ['tma-mail', 'tma-agent-office', 'tma-safe', 'tma-padlock', 'tma-socialsmanager', 'tma-cut'];
 const LABELS = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
 const osKey = platform => ({ win32: 'windows', darwin: 'macos', linux: 'linux' }[platform]);
 function inside(root, candidate) { const rel = path.relative(root, candidate); return rel !== '' && !rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel); }

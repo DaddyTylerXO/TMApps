@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.12.5.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.12.5.0")]
+[assembly: System.Reflection.AssemblyVersion("1.12.6.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.12.6.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -21,12 +21,13 @@ namespace TMApps {
         public AppInfo Info;
         public string Id { get { return Info.id; } } public string Name { get { return Info.name; } }
         public string Category { get { return Info.category; } } public string Description { get { return Info.description; } }
-        public string Accent { get { return Id == "tma-socialsmanager" ? "#E5B92F" : Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
+        public string Accent { get { return Id == "tma-cut" ? "#F39AA5" : Id == "tma-socialsmanager" ? "#E5B92F" : Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
         public string PreviewBackground { get { return Icon != null ? "Transparent" : "#2B253A"; } }
         public string Glyph { get { return Id == "tma-socialsmanager" ? "\uE8F2" : Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
         public string GlyphFont { get { return Id == "tma-socialsmanager" ? "Segoe UI" : "Segoe MDL2 Assets"; } }
         public int Position { get; set; }
         public string Number { get { return Position.ToString("00") + " / " + (Id == "tma-mail" ? "MAIL & COMMUNICATION" : Id == "tma-socialsmanager" ? "YOUR SOCIAL WORKSPACE" : Id == "tma-padlock" ? "YOUR AUTHENTICATORS" : Id == "tma-safe" ? "YOUR PRIVATE SPACE" : Id == "tma-agent-office" ? "YOUR AI TEAM" : Category.ToUpperInvariant()); } }
+        static readonly ImageSource cutIcon = LoadAppIcon("TMApps.cut.png");
         static readonly ImageSource mailIcon = LoadAppIcon("TMApps.mail.png");
         static readonly ImageSource padlockIcon = LoadAppIcon("TMApps.padlock.png");
         static readonly ImageSource safeIcon = LoadAppIcon("TMApps.safe.png");
@@ -37,7 +38,7 @@ namespace TMApps {
                 image.BeginInit(); image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); return image;
             }
         }
-        public ImageSource Icon { get { return Id == "tma-mail" ? mailIcon : Id == "tma-padlock" ? padlockIcon : Id == "tma-safe" ? safeIcon : Id == "tma-socialsmanager" ? socialsIcon : null; } }
+        public ImageSource Icon { get { return Id == "tma-cut" ? cutIcon : Id == "tma-mail" ? mailIcon : Id == "tma-padlock" ? padlockIcon : Id == "tma-safe" ? safeIcon : Id == "tma-socialsmanager" ? socialsIcon : null; } }
         public Visibility IconVisibility { get { return Icon != null ? Visibility.Visible : Visibility.Collapsed; } }
         public Visibility GlyphVisibility { get { return Icon != null ? Visibility.Collapsed : Visibility.Visible; } }
         internal static List<AppView> OrderLibrary(IEnumerable<AppView> library) {

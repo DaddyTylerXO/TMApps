@@ -1,6 +1,6 @@
 {
   "name": "tmapps-launcher",
-  "version": "1.12.5",
+  "version": "1.12.6",
   "private": true,
   "description": "Your TMApps library for macOS and Linux.",
   "author": "DaddyTylerXO",
@@ -32,7 +32,8 @@
       "assets/TMA-Safe.png",
       "catalog.json",
       "package.json",
-      "assets/TMA-SocialsManager.png"
+      "assets/TMA-SocialsManager.png",
+      "assets/TMA-Cut.png"
     ],
     "directories": {
       "output": "dist"

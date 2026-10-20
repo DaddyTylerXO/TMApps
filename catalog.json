@@ -63,6 +63,17 @@
       "executable": "TMA-SocialsManager.exe",
       "platforms": [],
       "updatedAt": "2026-10-20T00:00:00Z"
+    },
+    {
+      "id": "tma-cut",
+      "name": "TMA-Cut",
+      "category": "VIDEO & CREATIVITY",
+      "description": "Your clips, your style. Trim videos, add captions and branding, and export your next story.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Cut",
+      "executable": "TMA-Cut.exe",
+      "platforms": []
     }
   ]
 }

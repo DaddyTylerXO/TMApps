@@ -6,3 +6,5 @@
 .card .app-icon.app-image{background:transparent}.app-image img{display:block;width:100%;height:100%;object-fit:contain}
 
 .card.socials .card-head,.socials .status{color:#e5b92f}.socials .app-icon{background:transparent;color:#e5b92f}
+
+.card.cut .card-head,.cut .status{color:#f39aa5}.cut .app-icon{background:transparent;color:#f39aa5}
