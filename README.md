@@ -128,6 +128,11 @@ Preferences, the cached catalog, and app installation records live in `%LOCALAPP
 Install and uninstall work for the current Windows user without administrator access, using writable destination folders. Drive roots and unrelated nonempty folders are rejected. Updates remove only the previously recorded version folder, and app uninstall removes only the active recorded version, preserving other files and folders at the chosen location. An interrupted installation can leave an inactive staging folder. If an app cannot be closed through its permission popup, close it manually before retrying locked-file errors. Update the launcher through Check for updates, or re-run setup for repair/manual upgrades. Uninstall it through Windows Apps or its installed `Uninstall.exe`, including from custom locations; launcher-managed applications and profile data are kept.
 
 
-## TMA-Safe integration (1.10.0)
+## TMA-Safe integration (1.11.0)
 
 TMA-Safe is the third app in the library, with purple styling and a key icon. The catalog advertises only published, checksummed OS packages. Its own release workflow publishes Windows, macOS and Linux packages and updates the shared catalog. Existing two-app caches remain readable; refresh accepts the third app. Launcher uninstall never deletes user-selected password vaults or key files. Update older launchers before using the three-app catalog.
+
+
+## TMA-Padlock integration (1.11.0)
+
+Padlock is the fourth app, styled pink with a lock icon. Its release workflow publishes checksummed packages for Windows x64, macOS x64/arm64, and Linux x64/arm64. Until those builds pass, it appears without an install package. Uninstall preserves its encrypted vault in the OS application-data folder. Refresh accepts legacy catalogs and four-app catalogs.

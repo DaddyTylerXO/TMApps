@@ -41,6 +41,17 @@
       "branch": "TMA-Safe",
       "executable": "TMA-Safe.exe",
       "platforms": []
+    },
+    {
+      "id": "tma-padlock",
+      "name": "TMA-Padlock",
+      "category": "PRIVACY & SECURITY",
+      "description": "Your codes, kept close. Encrypted TOTP and HOTP authenticators with optional master-password protection.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Padlock",
+      "executable": "TMA-Padlock.exe",
+      "platforms": []
     }
   ]
 }

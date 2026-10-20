@@ -83,7 +83,7 @@
     <TextBlock x:Name="Empty" Text="No applications match this view." Foreground="#A9B0C0" Visibility="Collapsed" Margin="0,25"/>
     <TextBlock x:Name="Notice" Text="Choose an application to install." Foreground="#A9B0C0" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,0"/>
    </StackPanel></ScrollViewer>
-   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.10.0 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
+   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.11.0 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
   </Grid>
  </DockPanel>
 </Window>

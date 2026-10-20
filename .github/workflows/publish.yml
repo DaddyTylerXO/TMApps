@@ -31,7 +31,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '10'
-      - name: Preserve published TMA-Safe packages
+      - name: Preserve published security app packages
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,10 +40,11 @@ jobs:
           gh release download tma-apps --pattern catalog.json --dir prior-catalog
           if ($LASTEXITCODE -eq 0) {
             $prior = Get-Content prior-catalog/catalog.json -Raw | ConvertFrom-Json
-            $safe = $prior.apps | Where-Object id -eq "tma-safe"
-            if ($safe -and $safe.downloadUrl) {
+            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock") -and $_.downloadUrl })
+            if ($securityApps.Count -gt 0) {
               $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
-              $catalog.apps = @($catalog.apps | Where-Object id -ne "tma-safe") + @($safe)
+              $ids = @($securityApps | ForEach-Object { $_.id })
+              $catalog.apps = @($catalog.apps | Where-Object { $_.id -notin $ids }) + $securityApps
               $catalog | ConvertTo-Json -Depth 10 | Set-Content launcher/catalog.json -Encoding UTF8
             }
           }

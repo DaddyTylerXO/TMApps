@@ -18,10 +18,10 @@
     const term = $('search').value.toLowerCase(); const apps = state.apps.filter(a => `${a.name} ${a.description}`.toLowerCase().includes(term)).filter(a => filter === 'all' || filter === 'installed' && a.installed || filter === 'notinstalled' && !a.installed || filter === 'updates' && a.installed && isNewer(a.version, a.installed.version));
     $('library').replaceChildren(); $('empty').hidden = apps.length > 0;
     for (const app of apps) {
-      const card = el('article', null, `card${app.id === 'tma-agent-office' ? ' office' : app.id === 'tma-safe' ? ' safe' : ''}`); card.dataset.id = app.id;
-      card.append(el('div', app.id === 'tma-mail' ? '01 / MAIL & COMMUNICATION' : app.id === 'tma-safe' ? '03 / YOUR PRIVATE SPACE' : '02 / YOUR AI TEAM', 'card-head'));
+      const card = el('article', null, `card${app.id === 'tma-agent-office' ? ' office' : app.id === 'tma-safe' ? ' safe' : app.id === 'tma-padlock' ? ' padlock' : ''}`); card.dataset.id = app.id;
+      card.append(el('div', app.id === 'tma-mail' ? '01 / MAIL & COMMUNICATION' : app.id === 'tma-padlock' ? '04 / YOUR AUTHENTICATORS' : app.id === 'tma-safe' ? '03 / YOUR PRIVATE SPACE' : '02 / YOUR AI TEAM', 'card-head'));
       const body = el('div', null, 'card-body'), info = el('div', null, 'app-info'), meta = el('div', null, 'app-meta');
-      body.append(el('div', app.id === 'tma-mail' ? '✉' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon')); info.append(el('h2', app.name), el('p', app.description));
+      body.append(el('div', app.id === 'tma-mail' ? '✉' : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon')); info.append(el('h2', app.name), el('p', app.description));
       const badges = el('div', null, 'support'); badges.setAttribute('aria-label', 'Supported operating systems'); app.support.forEach(key => badges.append(osBadge(key))); if (!app.support.length) badges.append(el('small', 'No published packages yet')); info.append(badges); body.append(info);
       const unavailable = !app.package && !app.installed;
       const status = unavailable ? state.platform==='win32' ? 'USE THE NATIVE WINDOWS EDITION' : `NOT AVAILABLE FOR ${names[state.os].toUpperCase()} ${state.arch.toUpperCase()}` : app.installed ? (isNewer(app.version, app.installed.version) ? 'UPDATE AVAILABLE' : 'INSTALLED · UP TO DATE') : 'READY TO INSTALL';

@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.10.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.10.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.11.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.11.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -21,10 +21,10 @@ namespace TMApps {
         public AppInfo Info;
         public string Id { get { return Info.id; } } public string Name { get { return Info.name; } }
         public string Category { get { return Info.category; } } public string Description { get { return Info.description; } }
-        public string Accent { get { return Id == "tma-mail" ? "#BEF18A" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
-        public string PreviewBackground { get { return Id == "tma-mail" ? "#203425" : "#2B253A"; } }
-        public string Glyph { get { return Id == "tma-mail" ? "\uE715" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
-        public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : Id == "tma-safe" ? "03 / YOUR PRIVATE SPACE" : "02 / YOUR AI TEAM"; } }
+        public string Accent { get { return Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
+        public string PreviewBackground { get { return Id == "tma-mail" ? "#203425" : Id == "tma-padlock" ? "#39232F" : "#2B253A"; } }
+        public string Glyph { get { return Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
+        public string Number { get { return Id == "tma-mail" ? "01 / MAIL & COMMUNICATION" : Id == "tma-padlock" ? "04 / YOUR AUTHENTICATORS" : Id == "tma-safe" ? "03 / YOUR PRIVATE SPACE" : "02 / YOUR AI TEAM"; } }
         public string UpdatedLabel { get { DateTimeOffset date; return DateTimeOffset.TryParse(Info.updatedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out date) ? date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Date not published"; } }
         bool Supports(string platform) { return Info.platforms==null ? platform=="windows" && Info.Available : Info.platforms.Contains(platform); }
         public Visibility WindowsSupport { get { return Supports("windows") ? Visibility.Visible : Visibility.Collapsed; } }
@@ -51,7 +51,7 @@ namespace TMApps {
                     var app = new Application();
                     var check = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml")));
                     var catalog = LauncherService.ParseCatalog(Bundled.Read("catalog.json"));
-                    if (check.FindName("Cards") == null || catalog.apps.Count != 3) throw new InvalidDataException("Invalid embedded library.");
+                    if (check.FindName("Cards") == null || catalog.apps.Count != 4) throw new InvalidDataException("Invalid embedded library.");
                     File.WriteAllText(args[1], "OK: standalone UI and catalog loaded; " + catalog.apps.Count + " applications"); check.Close(); app.Shutdown();
                 } catch (Exception ex) { File.WriteAllText(args[1], "FAIL: " + ex.Message); Environment.ExitCode = 1; }
                 return;
