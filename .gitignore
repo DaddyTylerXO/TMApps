@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+.integration/
+*.tmasafe
+*.tmasafe.*
+*.tmakey
+*.csv
+!tests/fixtures/*.csv
