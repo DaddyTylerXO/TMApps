@@ -18,7 +18,9 @@ def render(element, inherited):
     elif tag in ('circle','ellipse'):
         x,y=[float(attrs[k])*scale for k in ('cx','cy')]
         rx=float(attrs.get('r',attrs.get('rx',0)))*scale; ry=float(attrs.get('r',attrs.get('ry',0)))*scale
-        draw.ellipse((x-rx,y-ry,x+rx,y+ry),fill=fill,outline=stroke,width=width)
+        # SVG strokes straddle the ellipse boundary; Pillow draws them inward.
+        edge=width/2 if stroke else 0
+        draw.ellipse((x-rx-edge,y-ry-edge,x+rx+edge,y+ry+edge),fill=fill,outline=stroke,width=width)
     elif tag=='path':
         tokens=re.findall(r'[MLHVCZmlhvcz]|-?\d*\.?\d+',attrs['d']); i=0; command=None; current=(0,0); points=[]; paths=[]
         while i<len(tokens):
