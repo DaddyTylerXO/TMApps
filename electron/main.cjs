@@ -85,7 +85,7 @@ else {
           await fs.writeFile(path.join(target, 'vault.png'), (await win.webContents.capturePage()).toPNG()); lock(); await new Promise(resolve => setTimeout(resolve, 100));
           if (!await win.webContents.executeJavaScript(`document.getElementById('workspace').hidden && document.querySelectorAll('.login-card').length===0`)) throw Error('Lock did not clear renderer.');
           await fs.writeFile(path.join(target, 'smoke.json'), JSON.stringify({ ok: true, platform: process.platform, arch: process.arch, ...result }, null, 2));
-        } catch (e) { process.exitCode = 1; if (target) await fs.writeFile(path.join(target, 'error.txt'), e.stack); }
+        } catch (e) { console.error(e.stack); process.exitCode = 1; if (target) await fs.writeFile(path.join(target, 'error.txt'), e.stack); }
         finally { lock(); if (folder) await fs.rm(folder, { recursive: true, force: true }); app.exit(process.exitCode || 0); }
       });
     }

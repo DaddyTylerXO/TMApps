@@ -45,6 +45,8 @@ pnpm exec electron-builder --win zip --x64 --publish never
 
 Use `--mac dmg zip --x64` or `--arm64` on macOS; `--linux AppImage tar.gz --x64` or `--arm64` on Linux. Run packaging on the target OS. Linux CI smoke tests use `xvfb-run -a`. Packages are unsigned/ad-hoc signed; macOS is not notarized. Do not disable the sandbox routinely.
 
+Linux requires working unprivileged user namespaces for Chromium's sandbox. Some distributions, including Ubuntu with restrictive AppArmor policy, require an administrator to permit them for the application. The CI workflow configures only its ephemeral runner; it does not change end-user machines.
+
 The release workflow tests and packages Windows x64, macOS x64/arm64 and Linux x64/arm64 before updating the launcher's shared catalog with checksummed packages. Older launchers accept exactly two applications and need the updated launcher release before seeing TMA-Safe. Platform support is verified by native CI, not inferred from a Windows build. See workflow results for actual successful targets.
 
 ## References

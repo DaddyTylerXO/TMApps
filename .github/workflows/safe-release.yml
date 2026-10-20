@@ -59,6 +59,9 @@ jobs:
           node node_modules/electron/install.js
           node -e "if(process.platform!=='${{ matrix.platform }}'||process.arch!=='${{ matrix.arch }}')throw Error('Wrong native build runner')"
       - run: pnpm test
+      - name: Allow Chromium user namespaces on the ephemeral Linux runner
+        if: matrix.platform == 'linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Source smoke (Linux)
         if: matrix.platform == 'linux'
         run: xvfb-run -a pnpm exec electron . --smoke build/source-smoke
@@ -98,6 +101,7 @@ jobs:
             dist/*.sha256
             dist/safe-metadata-*.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: checks-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
