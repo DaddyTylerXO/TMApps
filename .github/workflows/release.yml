@@ -1,0 +1,88 @@
+name: Build and publish TMA-Cut
+on:
+  workflow_dispatch:
+  push:
+    branches: [TMA-Cut]
+    paths: ['electron/**', 'ui/**', 'assets/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/release.yml']
+permissions:
+  contents: read
+concurrency:
+  group: tma-cut-release
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: win
+            arch: x64
+          - runner: macos-15-intel
+            platform: mac
+            arch: x64
+          - runner: macos-15
+            platform: mac
+            arch: arm64
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Download host media tools and Electron
+        run: |
+          node node_modules/electron/install.js
+          node node_modules/ffmpeg-static/install.js
+      - run: pnpm test
+      - name: Package native application
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cut-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.dmg
+            dist/*.AppImage
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: tmapps-shared-catalog
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cut-*
+          merge-multiple: true
+          path: release-output
+      - name: Merge verified packages into current launcher catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download tma-apps --repo "$GITHUB_REPOSITORY" --pattern catalog.json --dir release-output
+          node scripts/release-metadata.cjs release-output
+      - name: Publish binaries before catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find release-output -maxdepth 1 -type f ! -name catalog.json -print0 | xargs -0 gh release upload tma-apps --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload tma-apps release-output/catalog.json --repo "$GITHUB_REPOSITORY" --clobber
