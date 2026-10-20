@@ -11,6 +11,8 @@ const os = require('node:os');
 let win, selected, keyPath, bridge, pendingImport, clipTimer, idleTimer, lastActivity = Date.now();
 const vault = new Vault(); let queue = Promise.resolve();
 const uiURL = pathToFileURL(path.join(__dirname, '../ui/index.html')).href;
+// Hosted CI machines may have no usable GPU. This affects smoke runs only.
+if (process.argv.includes('--smoke')) app.disableHardwareAcceleration();
 function clearClipboard() { if (clipTimer) { clearTimeout(clipTimer.timer); if (clipboard.readText() === clipTimer.text) clipboard.clear(); clipTimer = null; } }
 function lock() { vault.lock(); pendingImport = null; bridge?.close(); bridge = null; clearClipboard(); win?.webContents.send('locked'); }
 async function key() { if (!keyPath) return undefined; const handle = await fs.open(keyPath, 'r'); try { if ((await handle.stat()).size !== 32) throw Error('Expected a 32-byte TMA-Safe key file.'); return await handle.readFile(); } finally { await handle.close(); } }
@@ -79,7 +81,12 @@ else {
           folder = await fs.mkdtemp(path.join(os.tmpdir(), 'tma-safe-smoke-'));
           await vault.create(path.join(folder, 'Demo.tmasafe'), 'fictional smoke passphrase only');
           for (const e of [{ title: 'Personal email', username: 'alex@example.com', url: 'https://mail.example.com', expiryDays: 90 }, { title: 'GitHub', username: 'alex-studio', url: 'https://github.com', expiryDays: 180 }, { title: 'Creative workspace', username: 'alex@example.com', url: 'https://workspace.example.com', expiryDays: 30 }]) await vault.put({ ...e, password: 'Fictional-demo-only!', notes: '' });
-          win.webContents.send('refresh'); await new Promise(resolve => setTimeout(resolve, 350));
+          win.webContents.send('refresh');
+          const deadline = Date.now() + 15000;
+          while (!await win.webContents.executeJavaScript(`document.querySelectorAll('.login-card').length===3 && !document.getElementById('workspace').hidden`)) {
+            if (Date.now() > deadline) throw Error('Timed out waiting for the demo vault to render.');
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
           const result = await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.login-card').length, unlocked:!document.getElementById('workspace').hidden, nodeAvailable:typeof require!=='undefined', passwordVisible:document.body.textContent.includes('Fictional-demo-only!')})`);
           if (result.cards !== 3 || !result.unlocked || result.nodeAvailable || result.passwordVisible) throw Error('Renderer isolation or smoke fixture failed.');
           await fs.writeFile(path.join(target, 'vault.png'), (await win.webContents.capturePage()).toPNG()); lock(); await new Promise(resolve => setTimeout(resolve, 100));
