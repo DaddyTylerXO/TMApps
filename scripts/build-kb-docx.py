@@ -65,6 +65,9 @@ normal.paragraph_format.line_spacing = 1.12
 for name in ['Title', 'Heading 1', 'Heading 2']:
     doc.styles[name].font.name = 'Calibri'
     doc.styles[name].font.color.rgb = RGBColor(0, 0, 0)
+for style in doc.styles:
+    for border in style.element.xpath('.//w:pBdr'):
+        border.getparent().remove(border)
 doc.add_paragraph('TMA Socials Manager KB Library', 'Title')
 doc.add_paragraph('User guides and setup information for version 0.4.0')
 doc.add_paragraph('Use this library to configure connections, work with dashboards and drafts, adjust performance and appearance, and report issues safely. Each Socials KB number matches an article in the app. Credentials belong only in encrypted local settings; never include them in a public report.')
