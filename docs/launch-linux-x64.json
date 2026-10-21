@@ -1,0 +1,16 @@
+{
+  "version": "0.4.0",
+  "packaged": true,
+  "platform": "linux",
+  "arch": "x64",
+  "startupMs": 741,
+  "idleCpuPercent": 0.49925112331502786,
+  "workingSetMiB": 433.26953125,
+  "budgets": {
+    "startupMs": 15000,
+    "idleCpuPercent": 25,
+    "workingSetMiB": 700
+  },
+  "notes": "Empty workspace, visible window, manual refresh. CPU is the sum across app processes over two seconds; memory sums reported working sets and may double-count shared pages.",
+  "ok": true
+}

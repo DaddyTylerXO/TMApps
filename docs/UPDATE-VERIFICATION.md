@@ -25,3 +25,9 @@ This update implements the user's requested `Socials-KB` numbering. Those IDs ar
 - X is metered; Reddit commercial access needs agreement. The cost guide distinguishes documented quotas from fees that could not be confirmed.
 
 The launcher already orders Socials Manager before Agent Office in both Windows and native UI code. Publication merges only this app's verified packages into the current shared catalogue and preserves other entries.
+
+## Final observations
+
+All five native packaged launch/resource checks passed for the 0.4.0 application source. The `launch-*.json` records in this directory contain per-run measurements and budgets; `performance-windows-0.4.0.json` is the separate local Windows check. The illustrated Word library was rendered on the isolated Linux runner, all 13 pages were inspected, the inherited title border was corrected, and the final bookmarks/screenshots checks passed. Article pages 2–13 were byte-identical after that formatting correction.
+
+Documentation and policy-only paths are excluded from automatic app publication. Explicit workflow dispatch remains available. App code updates continue to run regression and native package checks.

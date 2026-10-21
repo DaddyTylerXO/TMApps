@@ -2,6 +2,8 @@
 
 User guides and setup information for version 0.4.0.
 
+[Download the illustrated Word KB Library](KB%20Library.docx)
+
 ## Socials-KB1 Getting started and the demo tour
 
 TMA-SocialsManager keeps a local workspace for connected social accounts, analytics, drafts and dashboards. Open Social accounts to choose an integration. Bluesky uses a revocable app password. YouTube, Twitch and Kick use browser sign-in after a local developer registration is configured. LinkedIn and Pinterest currently use advanced access-token connections. API approval and permissions still apply.

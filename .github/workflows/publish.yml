@@ -2,7 +2,19 @@ name: Verify and publish Socials Manager
 on:
   push:
     branches: [TMA-SocialsManager]
-    paths-ignore: ['docs/**']
+    paths-ignore:
+      - 'docs/**'
+      - '.cursor/**'
+      - 'AGENTS.md'
+      - 'APP-STANDARDS.md'
+      - 'README.md'
+      - 'OAUTH-SETUP.md'
+      - 'CHANGELOG.md'
+      - 'scripts/build-kb*'
+      - 'scripts/check-kb.py'
+      - 'scripts/render_docx.py'
+      - '.github/workflows/verify-kb.yml'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch:
 permissions:
   contents: read
