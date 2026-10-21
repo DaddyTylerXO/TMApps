@@ -1,53 +1,55 @@
 # TMA-Libraries
 
-TMA-Libraries is a planned TMApps desktop workspace for documents, notebooks, checklists, projects, PDFs, presentations, spreadsheets, portfolios, databases, and creative boards.
+Offline Electron desktop application using React and TypeScript, with Leather Brown `#97572B`, cream controls and white document pages. Local editing requires no server, account, CDN or paid service.
 
-- Brand colour: **Leather Brown `#97572B`**.
-- Icon: **white folder on a brown background**.
-- Intended repository: [DaddyTylerXO/TMApps](https://github.com/DaddyTylerXO/TMApps).
-- Intended branch: [`TMA-Libraries`](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries).
+## Development preview 0.2.0-dev.1
 
-## Current status
+Ten document choices: General Document, Book, Check List, AD, Newsletter, CV, Cover Letter, PDF, Slide Show and Spreadsheet. SuperDoc supplies rich editing, Univer community components supply spreadsheets, MuPDF supplies PDF tools, and slides use a local scene model. This preview does not claim complete Office fidelity or completion of the full specification.
 
-Version 0.1.0 is an initial **native Windows desktop application**, built with Windows Forms and .NET Framework 4.8. It is not a website, browser wrapper or hosted service. No account, package download or paid service is needed to build or use the app on a compatible Windows machine.
-
-Implemented: offline plain-text notes and checklists, optional checklist progress, folders, favourites, coloured tags, search, recent documents, side notes, configurable autosave, previous-save recovery, native workspace import/export, first-run accessibility choices, a replayable tour, Light/Grey/Black appearance, and release notes in Settings.
-
-This is a foundation build. Advanced editors, encryption, history, TMApps integrations, notifications, tray/connection patterns, support forms and Launcher registration remain pending. This branch contains source and build instructions; no installer or signed application package is published. The branded Word KB draft is retained locally and excluded from this publication because it has not passed visual rendering verification; the master KB destination is unconfirmed.
+The shell includes folders, favourites, recent work, tags, search, tabs, side notes, autosave, revisions, reusable templates, settings search, setup accessibility choices and a replayable tour. Trash and Restore are the default deletion behavior; permanent deletion asks for confirmation. Imported source files remain untouched.
 
 ## Build and run
 
-On Windows with .NET Framework 4.8, run from this folder in PowerShell:
+Use current Node.js and pnpm on Windows:
 
 ```powershell
+pnpm install --frozen-lockfile
 ./build.ps1 -Test
-./build/TMA-Libraries.exe
+pnpm start
 ```
 
-The build uses the compiler supplied with Windows .NET Framework. It requires no .NET SDK or NuGet dependencies. The executable, configuration and docs folder together form the local build. Build output is ignored by Git; it is not an installer or signed release. Run as a normal Windows user.
+`./build.ps1 -Package` prepares an unsigned Windows x64 ZIP. For an unpacked build, use `pnpm exec electron-builder --win --x64 --dir --publish never`, then run `release/win-unpacked/TMA-Libraries.exe` with its entire directory present. The older `build/TMA-Libraries.exe` is the legacy Windows Forms app; its build procedure remains in `scripts/build-legacy.ps1`.
 
-## Storage and recovery
+Installation of build dependencies requires internet access. Packaged editing is local; external support links require connectivity. macOS/Linux publication awaits matching-runner verification. No Launcher release or public package URL is claimed.
 
-The app stores its workspace under `%LOCALAPPDATA%\TMApps\TMA-Libraries\workspace.json`. Saves use a flushed temporary file and atomic replacement; `.bak` retains the previous committed save. Startup recovers a readable backup if necessary and reports recovery. If neither copy is readable, startup aborts without creating an empty workspace. Export dated `.tmalibrary` copies for longer retention. Only one app instance can write at a time within a Windows session; multiple simultaneous Windows sessions are not supported.
+## Storage and preservation
 
-The workspace and exports are **unencrypted**. Save metadata, document text and side notes remain in the Windows user profile; do not add them to Git or attach them to public issues. There is no telemetry or automatic crash submission.
+SQLite and managed assets reside in Electron's user-data directory, normally `%APPDATA%/TMA-Libraries/library-v2`. Legacy `%LOCALAPPDATA%/TMApps/TMA-Libraries/workspace.json` remains untouched. Migration accepts schema-1 exports, preserves metadata and prevents repeated migration from duplicating records. Close the legacy app before migrating.
 
-Only the app's `.tmalibrary` interchange format is supported and round-trip tested. Imports merge documents with new IDs, preserve existing app settings, and validate the complete merge before mutation. DOCX, PDF, spreadsheet and presentation compatibility is not claimed. Maximum workspace size: 16 MiB. Large workspaces may pause the UI during saving/search; see the verification record for measured limits.
+Transactional saves retain revisions and a database recovery copy. Versioned `.tmalibrary` exports include payloads and assets; retain independent dated copies. Storage and exports are **unencrypted**. Historical revisions and copies may retain content removed from newer documents, including pre-redaction content. Redaction creates rewritten PDF output; it does not erase independent copies.
 
-Local editing, setup, settings, tour, recovery, imports/exports and KB viewing work offline. Opening GitHub requires connectivity. A free DOCX viewer is required to open the KB draft.
+The preferred SQLite binding is better-sqlite3. Where its compatible native binary is unavailable, the packaged Electron runtime's built-in SQLite adapter is used. This environment lacks the C++ toolchain needed to rebuild better-sqlite3 for Electron 44; the fallback is covered by storage and desktop checks.
 
-## Verification and documentation
+## Compatibility and remaining work
 
-- [Verification record](docs/VERIFICATION-0.1.0.md): storage/workflow checks, performance observations, contrast, security review and remaining validation.
-- [Version notes](docs/RELEASE-NOTES.md): changes by version.
-- `docs/TMA-Libraries KB Library.docx`: generated locally, not uploaded in this source publication. Branded Word KB draft, Libraries-KB1 through Libraries-KB4. **Visual QA and publication pending** because the renderer lacks LibreOffice and the master KB document link is unconfirmed.
-- `scripts/create_kb.py`: reproducible KB builder using the Codex bundled Python runtime, python-docx and Pillow. The screenshot input is produced by `build.ps1 -Test`. These tools are documentation development dependencies only.
+Rich documents share editable templates. Local XLSX supports values, formulas, basic formatting, merges and worksheets; complex charts, macros and advanced content are limited. PPTX import is bounded and reports unsupported objects. Books use Libraries sections/pages, not Microsoft `.one`/`.onepkg` files. Originals are not silently overwritten.
 
-## Project documents
+PDF tools include viewing/search, page operations, merge/extract, annotations, text form values, drawn signatures and applied redaction. Drawn signatures are not certificate signatures. OCR/scanning, certificate signing and advanced object editing remain pending.
 
-- [TMApps standards](docs/TMAPPS-STANDARDS.md): mandatory requirements shared by all TMApps.
-- [TMA-Libraries specification](docs/TMA-LIBRARIES-SPEC.md): application features and settings.
-- [Delivery plan](docs/DELIVERY-PLAN.md): suggested implementation order and outstanding dependencies.
-- [Development guidance](AGENTS.md): instructions for future work.
+Full TMApps compliance remains open, including TMA-Mail tray/connection parity, complete notifications, accessibility/high-DPI verification, advanced editor features, encryption, integrations, master KB linkage, visually verified Word KB publication, Launcher registration and platform releases. Measured idle memory after exercising all editors exceeds the 500 MiB target. See [verification](docs/VERIFICATION-0.2.0.md).
 
-The full requested scope is retained in these specifications. Checkboxes only cover implemented and appropriately verified behaviour; partial and external deliverables remain unchecked.
+## Requirements and documentation
+
+- [Version notes](docs/RELEASE-NOTES.md)
+- [TMApps requirements](docs/TMAPPS-STANDARDS.md)
+- [Libraries specification](docs/TMA-LIBRARIES-SPEC.md)
+- [Shared application standards](APP-STANDARDS.md)
+- [Development guidance](AGENTS.md)
+
+Original requirements remain visible; pending items remain unchecked. The Word KB draft stays local until its master reference and rendered pages can be verified. Markdown does not replace that deliverable.
+
+Libraries rebuild source is AGPL-3.0-only; see LICENSE and THIRD-PARTY-NOTICES.md. Sibling application licences are unchanged.
+
+## Existing legacy Launcher distribution
+
+The branch's existing distribution record identifies Launcher 1.14.2 or later and the unsigned Windows Forms 0.1.0 ZIP at https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip. That record reports isolated install/launch/uninstall and checksum verification, with Launcher-KB14 in the launcher KB. This rebuild does not replace that catalog entry or imply the 0.2 preview has passed Launcher verification.

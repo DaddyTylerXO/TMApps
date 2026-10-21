@@ -1,5 +1,8 @@
-"""Build the versioned Word KB using the bundled Python runtime (python-docx)."""
+"""Generate the local Word KB draft from the in-app offline articles.
+The result must be rendered/inspected and master-linked before publication.
+"""
 from pathlib import Path
+import re
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.oxml import OxmlElement
@@ -7,97 +10,65 @@ from docx.oxml.ns import qn
 from PIL import Image, ImageDraw
 
 root = Path(__file__).resolve().parents[1]
-qa = root / 'artifacts' / 'kb'
+qa = root / '.qa' / 'kb'
 qa.mkdir(parents=True, exist_ok=True)
 logo = Image.new('RGB', (96, 96), '#97572B')
 draw = ImageDraw.Draw(logo)
 draw.rectangle((18, 27, 45, 42), fill='white')
 draw.rectangle((18, 36, 78, 75), fill='white')
 logo.save(qa / 'logo.png')
+articles = re.findall(r'id: "(Libraries-KB\d+)",\s+title: "([^"]+)",\s+text: "([^"]+)"', (root / 'app/Help.tsx').read_text(encoding='utf-8'))
+assert len(articles) == 7
 
 d = Document()
 s = d.sections[0]
 s.page_width, s.page_height = Inches(8.27), Inches(11.69)
-s.top_margin, s.bottom_margin = Inches(.8), Inches(.7)
+s.top_margin = s.bottom_margin = Inches(.75)
 s.left_margin = s.right_margin = Inches(.8)
-s.header_distance = s.footer_distance = Inches(.35)
-for style in ['Normal', 'Title', 'Subtitle', 'Heading 1', 'Heading 2']:
-    d.styles[style].font.name = 'Calibri'
-    d.styles[style].font.color.rgb = RGBColor(0, 0, 0)
+s.header_distance = s.footer_distance = Inches(.3)
+for name in ['Normal', 'Title', 'Heading 1', 'Heading 2']:
+    d.styles[name].font.name = 'Calibri'
+    d.styles[name].font.color.rgb = RGBColor(0, 0, 0)
 d.styles['Normal'].font.size = Pt(11)
-d.styles['Normal'].paragraph_format.space_after = Pt(7)
-d.styles['Title'].font.size = Pt(25)
-d.styles['Heading 1'].font.size = Pt(19)
-d.styles['Heading 2'].font.size = Pt(13)
-header = s.header.paragraphs[0]
-header.add_run().add_picture(str(qa / 'logo.png'), width=Inches(.28))
-header.add_run('  TMA-Libraries').bold = True
-footer = s.footer.paragraphs[0]
-footer.add_run('TMA-Libraries  |  0.1.0  |  Libraries-KB1 to Libraries-KB4  |  Page ')
-field = OxmlElement('w:fldSimple'); field.set(qn('w:instr'), 'PAGE'); footer._p.append(field)
+s.header.paragraphs[0].add_run().add_picture(str(qa / 'logo.png'), width=Inches(.27))
+s.header.paragraphs[0].add_run('  TMA-Libraries').bold = True
+s.footer.paragraphs[0].add_run('TMA-Libraries  |  0.2.0 development draft  |  Page ')
+f = OxmlElement('w:fldSimple'); f.set(qn('w:instr'), 'PAGE'); s.footer.paragraphs[0]._p.append(f)
 
-def p(text): d.add_paragraph(text)
-def h(text): d.add_heading(text, 2)
-def article(code, title):
-    d.add_heading(code + '  ' + title, 1)
+def bookmark(p, name, number):
+    a = OxmlElement('w:bookmarkStart'); a.set(qn('w:id'), str(number)); a.set(qn('w:name'), name)
+    b = OxmlElement('w:bookmarkEnd'); b.set(qn('w:id'), str(number))
+    p._p.insert(0, a); p._p.append(b)
 
-d.add_paragraph('TMA-Libraries KB Library', 'Title')
-p('Windows desktop edition 0.1.0 • 21 October 2026')
-p('This library explains the first desktop build: offline notes, checklists, organisation, saving, recovery and settings. Advanced document editors are still in development.')
-p('Master KB reference: the TMApps master KB document location has not yet been confirmed. Use the main repository for project information: https://github.com/DaddyTylerXO/TMApps. The master KB document link and publication remain pending.')
-article('Libraries-KB1', 'Start and organise your work')
-p('Run TMA-Libraries.exe from the build folder on Windows with .NET Framework 4.8. First-time setup offers larger text, high contrast and a feature tour. The optional text and contrast settings start off. No account or paid subscription is required.')
-d.add_picture(str(root / 'build' / 'desktop-smoke.png'), width=Inches(6.6))
-p('Choose New document, then Create note or Create checklist. Use New folder to create a folder, then choose it in the document editor. Select Favourite for quick access. Enter comma-separated tags to add coloured labels. Search finds titles, note text, checklist text and tags.')
-p('Recent documents lists the last 30 opened documents. Side notes stores extra comments separately from the main text. A checklist has individual completion boxes and an optional progress indicator. Use Tab and Shift+Tab to move between controls and Space to toggle a focused checkbox.')
+def link(text, anchor):
+    p = d.add_paragraph(); h = OxmlElement('w:hyperlink'); h.set(qn('w:anchor'), anchor)
+    r = OxmlElement('w:r'); t = OxmlElement('w:t'); t.text = text; r.append(t); h.append(r); p._p.append(h)
 
-d.add_page_break()
-article('Libraries-KB2', 'Save export and work offline')
-h('Local storage and autosave')
-p('Notes, checklists, folders, favourites, tags, recent documents, side notes, appearance settings, saving, importing, exporting and the feature tour work offline. The Word KB opens offline when a DOCX viewer is installed. Visiting GitHub requires an internet connection.')
-p('The live workspace is stored under %LOCALAPPDATA%\\TMApps\\TMA-Libraries\\workspace.json in your Windows user profile. This build has no account login, cloud sync, telemetry or background network checks. Workspace files and exports are unencrypted. Use Windows account protection and keep copies private.')
-p('Press Ctrl+S to save immediately. Autosave is on by default and saves changed work every 5 seconds. In Settings, change the interval from 2 to 300 seconds or turn autosave off. Closing the window attempts to save changes; if saving fails, closing is cancelled so you can retry or export.')
-h('Recovery and longer retention')
-p('A completed save replaces the primary file atomically. workspace.json.bak retains the previous saved workspace. A partial temporary write does not replace the committed file. When the primary cannot be read, Libraries tries the backup and displays a recovery notice. Changes after the previous save may be lost. If both copies fail, startup stops; it does not start with an empty replacement.')
-p('The previous-save backup is not long-term version history. Repeated saves replace it. Use Export copy regularly and keep separate dated copies on a private disk. This build does not offer encryption, timed backup retention or document version history.')
-h('Import and export')
-p('Export copy writes all documents, folders and basic settings to a .tmalibrary file. It includes unsaved changes currently in memory. Open from location imports documents and folders from a .tmalibrary copy. Imported documents receive new IDs; existing documents are preserved. Existing app settings are retained. Importing the same copy twice creates duplicate documents.')
-p('The complete import is validated before being added. Conflicting folder names differing only by case are rejected. Exporting and importing .tmalibrary files has a representative exact round-trip check. This is the only supported interchange format in 0.1.0; DOCX, XLSX, PDF, PPTX and plain-text file import/export are not supported.')
-h('Limits')
-p('Workspace files are limited to 16 MiB, 10,000 documents and 1,000 folders. Notes allow up to 2,000,000 characters, side notes 200,000 characters and checklists 10,000 items. These validation limits are safeguards, not a claim that the desktop UI has been tested at every limit. The measured workload used 1,000 synthetic 4 KiB notes.')
-
-d.add_page_break()
-article('Libraries-KB3', 'Resolve errors and recover safely')
-h('E001  Startup or workspace recovery failed')
-p('Close other Libraries windows. Check free disk space and your Windows user access to the local storage folder in Libraries-KB2. Before attempting repairs, copy workspace.json and workspace.json.bak to a private recovery folder. Do not delete the originals or replace them with a blank workspace. If the app recovers the previous save automatically, review documents for missing recent changes.')
-h('E002  Save failed')
-p('Keep the application open so changes remain in memory. Check disk space and folder access, then press Ctrl+S again. Another program may have locked the saved file. Export a copy to another private writable location if the main save still fails. Do not close the app until you have a verified save or export.')
-h('E003  Import failed')
-p('Use a .tmalibrary export from the same app version. Check that it is no larger than 16 MiB and can be read from its current location. A corrupt file, unsupported schema, invalid document or case-conflicting folder can prevent import. No documents are added by a validation failure. Keep the source copy for recovery; do not hand-edit its data.')
-h('E004  Export failed')
-p('Choose a writable local folder with enough free space. Avoid files locked by another program. Retry Export copy, then verify the saved copy by importing into a separate test Windows profile if needed. Importing into your active workspace will add duplicate copies of the exported documents.')
-h('KB viewer unavailable')
-p('Install a free DOCX viewer, such as LibreOffice, if Windows has no app associated with Word documents. Keep the docs folder beside the executable; rebuild the application if the Word KB file is missing.')
-h('Report a persistent problem')
-p('Record the error code, app version 0.1.0, Windows version and steps to reproduce using synthetic text. Do not include passwords, document contents, private paths or workspace files. The app sends no crash report automatically. App-specific GitHub form destinations are awaiting verification; use the confirmed repository branch for project information until those settings buttons are implemented. Review any public issue text and attachments yourself before submitting.')
-
-d.add_page_break()
-article('Libraries-KB4', 'Settings performance and release notes')
-h('Appearance and accessibility')
-p('Settings offers Light, Grey and Black themes, larger text and high contrast. Optional adjustments are offered during setup and can be changed later. Baseline labelled controls and keyboard access remain available. Screen reader behaviour and full magnification support need further verification. Scheduled gradual colour transitions are not implemented.')
-h('Performance controls')
-p('Short autosave intervals increase disk and CPU use because each save serialises the complete workspace. A longer interval reduces save frequency but increases the amount of recent work at risk before a save. Autosave does nothing when the workspace has no changes. Search runs locally on the UI thread; large bodies can slow typing. Break large collections into separate exported workspaces while scale testing is developed.')
-p('Storage checks include Unicode text, metadata, checklists, native-format round trips, failed replacement, corrupt-primary recovery and invalid imports. A synthetic 1,000-note workload is recorded in docs/VERIFICATION-0.1.0.md. Resource measurements are local observations and are not performance guarantees on other computers.')
-h('Keyboard shortcuts')
-p('Ctrl+N opens New document. Ctrl+S saves. Ctrl+F focuses document search. F1 opens the Word KB. Enter adds a checklist item when the new-item field is focused. These shortcuts are fixed in this build; configurable bindings remain pending.')
-h('New features in version 0 1 0')
-p('The initial build adds a native Windows desktop shell, offline plain-text notes, checklists with completion progress, folders, favourites, recent documents, coloured tags, search, side notes, local atomic saving, previous-save recovery, native workspace copies, initial setup, a replayable feature tour and appearance controls.')
-h('Planned features')
-p('Books, DOCX editing, CVs, cover letters, advertisements, newsletters, PDFs, scanning, spreadsheets, slideshows, dashboards, databases, creative boards, templates, branding, encryption, version history and TMApps sync remain pending. Launcher registration, TMA-Mail tray/connection patterns, notifications, support forms, KB search integration and master KB publication also remain pending. No paid service is required by this build.')
-p('The full requirements remain in docs/TMAPPS-STANDARDS.md and docs/TMA-LIBRARIES-SPEC.md. Those specifications preserve requirements beyond this release.')
-
+p = d.add_paragraph('TMA Libraries KB Library', 'Title'); bookmark(p, 'Index', 0)
+d.add_paragraph('Windows desktop development preview 0.2.0 dev 1 | 22 October 2026')
+d.add_paragraph('Use this guide to create and preserve local documents, recover from errors and understand format limitations. This is a development draft; full editor and standards verification remains open.')
+d.add_paragraph('Master KB reference pending confirmation. Project reference: https://github.com/DaddyTylerXO/TMApps. Do not publish this draft until the actual master KB destination and every rendered page have been checked.')
+for number, (code, title, text) in enumerate(articles, 1):
+    link(code + '  ' + title, code.replace('-', '_'))
+for number, (code, title, text) in enumerate(articles, 1):
+    d.add_page_break()
+    p = d.add_heading(code.replace('-', ' ') + '  ' + title, 1)
+    bookmark(p, code.replace('-', '_'), number)
+    d.add_paragraph(text)
+    if code == 'Libraries-KB1':
+        d.add_paragraph('Run release/win-unpacked/TMA-Libraries.exe with its entire package directory present. The legacy build/TMA-Libraries.exe is the older interface. Only development dependencies require installation access to the internet.')
+        image = root / '.qa/home.png'
+        if image.exists():
+            d.add_picture(str(image), width=Inches(6.5))
+    if code == 'Libraries-KB2':
+        d.add_paragraph('The new user-data folder is normally %APPDATA%/TMA-Libraries/library-v2. Preserve the whole folder including managed assets when recovering. Independent dated native archives are recommended. Never add these files to GitHub.')
+    if code == 'Libraries-KB4':
+        d.add_paragraph('All-editor memory and final CPU samples exceed the initial targets on the development machine. Larger files, complex sheets and short save intervals can increase resource use. Full screen-reader and high-DPI verification is pending.')
+    if code == 'Libraries-KB6':
+        d.add_paragraph('Spreadsheet chart preview is not full XLSX chart export. Combined Book section exports, advanced layout fidelity and complete interactive round-trip verification are pending. Compatibility warnings must be reviewed before using exported copies.')
+    link('Back to index', 'Index')
 d.core_properties.author = 'TMApps'
-d.core_properties.title = 'TMA-Libraries KB Library'
-d.core_properties.subject = 'Version 0.1.0 desktop user guides and recovery'
-d.save(root / 'docs' / 'TMA-Libraries KB Library.docx')
-print('Created Word KB Library')
+d.core_properties.title = 'TMA Libraries KB Library'
+d.core_properties.subject = 'Offline setup recovery and format guidance 0.2.0 development draft'
+d.save(root / 'docs/TMA-Libraries KB Library.docx')
+print('Created local Word KB draft with seven stable article IDs and internal index links; rendering and master reference pending.')

@@ -1,0 +1,93 @@
+{
+  "name": "tma-libraries",
+  "productName": "TMA-Libraries",
+  "version": "0.2.0-dev.1",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "main": "desktop/main.mjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "start": "electron .",
+    "test": "node scripts/run-tests.mjs",
+    "test:ui": "node scripts/desktop-qa.mjs",
+    "native": "electron-rebuild -f -w better-sqlite3",
+    "package:win": "pnpm build && electron-builder --win zip --x64 --publish never"
+  },
+  "build": {
+    "appId": "com.tmapps.libraries",
+    "productName": "TMA-Libraries",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "assets/app.*",
+      "package.json",
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.md"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        "zip"
+      ],
+      "icon": "assets/app.ico",
+      "signExecutable": false
+    },
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "assets/app.png"
+    },
+    "artifactName": "TMA-Libraries-${version}-${os}-${arch}.${ext}"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "4.2.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.9.1",
+    "electron-builder": "26.15.3",
+    "playwright": "1.64.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "5.3.0",
+    "@fontsource/manrope": "5.3.0",
+    "@univerjs/preset-sheets-conditional-formatting": "1.1.0",
+    "@univerjs/preset-sheets-core": "1.1.0",
+    "@univerjs/preset-sheets-data-validation": "1.1.0",
+    "@univerjs/preset-sheets-filter": "1.1.0",
+    "@univerjs/preset-sheets-sort": "1.1.0",
+    "@univerjs/presets": "1.1.0",
+    "better-sqlite3": "12.8.0",
+    "docx": "9.13.0",
+    "exceljs": "4.4.0",
+    "fast-xml-parser": "5.11.2",
+    "jszip": "3.10.2",
+    "lucide-react": "1.60.0",
+    "mupdf": "1.28.1",
+    "pptxgenjs": "4.0.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "superdoc": "2.24.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zod": "4.6.7"
+  }
+}

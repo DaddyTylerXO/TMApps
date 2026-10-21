@@ -6,3 +6,8 @@ artifacts/
 workspace.json*
 *.tmalibrary
 __pycache__/
+node_modules/
+dist/
+release/
+.qa/
+*.tsbuildinfo
