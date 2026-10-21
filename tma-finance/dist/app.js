@@ -89,7 +89,8 @@ const select = (label, name, values, selected) =>
   `<label>${label}<select name="${name}">${options(values, selected)}</select></label>`;
 const amount = (label, name, value = "", extra = "") =>
   field(label, name, value, "number", `min="0" step="0.01" required ${extra}`);
-let mode = localStorage.getItem("tma:mode") || "demo";
+// Always open the real workspace. Sample data is an explicit, session-only preview.
+let mode = "personal";
 function readState() {
   try {
     const raw = localStorage.getItem("tma:" + mode);
@@ -327,7 +328,7 @@ function spending(s) {
       return `${colors[i % colors.length]} ${start}% ${at}%`;
     })
     .join(",");
-  return `<div class="donut-layout"><div class="donut" style="background:${gradient ? "conic-gradient(" + gradient + ")" : "#edf0e6"}"><div class="donut-center"><small>TOTAL SPENDING</small><strong>${money(s.expenses)}</strong></div></div></div>${rows.length ? rows.map(([cat, v], i) => `<div class="category-row"><span><i class="swatch" style="background:${colors[i % colors.length]}"></i>${esc(cat)}</span><strong>${money(v)} <span style="color:#acb29e;display:inline;margin-left:8px">${Math.round((v / s.expenses) * 100)}%</span></strong></div>`).join("") : empty("A clean slate", "Add an expense to see your spending breakdown.")}`;
+  return `<div class="donut-layout"><div class="donut" style="background:${gradient ? "conic-gradient(" + gradient + ")" : "#335b43"}"><div class="donut-center"><small>TOTAL SPENDING</small><strong>${money(s.expenses)}</strong></div></div></div>${rows.length ? rows.map(([cat, v], i) => `<div class="category-row"><span><i class="swatch" style="background:${colors[i % colors.length]}"></i>${esc(cat)}</span><strong>${money(v)} <span style="color:#acb29e;display:inline;margin-left:8px">${Math.round((v / s.expenses) * 100)}%</span></strong></div>`).join("") : empty("A clean slate", "Add an expense to see your spending breakdown.")}`;
 }
 function goalCard(g, full = false) {
   const n = goalStats(g);
@@ -1227,7 +1228,6 @@ function confirmAction(title, description, fn) {
   };
 }
 function switchMode() {
-  localStorage.setItem("tma:mode", mode);
   state = readState();
   histories = {};
   profileData = {};

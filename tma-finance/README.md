@@ -1,12 +1,12 @@
 # TMA-Finance desktop
 
-An Electron application for Windows with a GBP finance workspace and USD equity portfolio. Core finance tools work offline. No website deployment or local web server is required for the desktop application.
+An Electron application for Windows with a GBP finance workspace and USD equity portfolio. The interface uses the approved forest green `#163A2B`, with light text and matching panels, forms and dialogs. Core finance tools work offline. No website deployment or local web server is required for the desktop application.
 
 ## Run
 
-Open `release/TMA-Finance-0.1.0-Windows.exe`. This is a portable, unsigned development build. It stores its application profile in Electron’s `userData` directory, normally `%APPDATA%/TMA-Finance`. It is portable in the sense of requiring no installer; its data is not stored beside the executable.
+Open `release/TMA-Finance-0.1.1-Windows.exe`. This is a portable, unsigned development build. It stores its application profile in Electron’s `userData` directory, normally `%APPDATA%/TMA-Finance`. It is portable in the sense of requiring no installer; its data is not stored beside the executable.
 
-The app opens in an explicitly labelled sample workspace. Select **Start my workspace** to enter your own data. Personal and sample workspaces are stored separately. Neither sample prices nor invented news are presented as current financial data.
+The app opens in your personal workspace with no sample records. This also applies when upgrading from a version that remembered demo mode. **Settings & alerts > View demo** opens an optional sample workspace for the current session; reopening the app always returns to your personal workspace. Personal and sample records are stored separately and preserved. Neither sample prices nor invented news are presented as current financial data.
 
 For development with Node.js and pnpm (or npm):
 
@@ -70,3 +70,7 @@ Tax sources checked on 21 October 2026:
 - [HMRC self-employed National Insurance](https://www.gov.uk/self-employed-national-insurance-rates)
 - [Frankfurter API documentation](https://frankfurter.dev/v1/)
 - [Finnhub API documentation](https://finnhub.io/docs/api)
+
+## Appearance and startup guide
+
+See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the forest-green interface, and [release notes](docs/RELEASE-NOTES.md) for 0.1.1.

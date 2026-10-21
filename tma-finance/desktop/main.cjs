@@ -1,5 +1,6 @@
 const {
   app,
+  nativeTheme,
   BrowserWindow,
   Menu,
   protocol,
@@ -12,6 +13,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { writeFile, readFile } = require("node:fs/promises");
 app.setName("TMA-Finance");
+nativeTheme.themeSource = "dark";
 // Separate storage for a disposable QA run, never touching the personal profile.
 if (process.env.TMA_TEST_DATA_DIR)
   app.setPath("userData", path.resolve(process.env.TMA_TEST_DATA_DIR));
@@ -57,7 +59,7 @@ app.whenReady().then(() => {
     minWidth: 390,
     minHeight: 600,
     title: "TMA-Finance",
-    backgroundColor: "#f5f6f3",
+    backgroundColor: "#102c21",
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
