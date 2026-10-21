@@ -13,7 +13,11 @@ Version 0.1.0 is an initial **native Windows desktop application**, built with W
 
 Implemented: offline plain-text notes and checklists, optional checklist progress, folders, favourites, coloured tags, search, recent documents, side notes, configurable autosave, previous-save recovery, native workspace import/export, first-run accessibility choices, a replayable tour, Light/Grey/Black appearance, and release notes in Settings.
 
-This is a foundation build. Advanced editors, encryption, history, TMApps integrations, notifications, tray/connection patterns, support forms and Launcher registration remain pending. This branch contains source and build instructions; no installer or signed application package is published. The branded Word KB draft is retained locally and excluded from this publication because it has not passed visual rendering verification; the master KB destination is unconfirmed.
+This is a foundation build. Advanced editors, encryption, history, TMApps integrations, notifications, tray/connection patterns, support forms remain pending. Launcher installation is available for this Windows development build. A verified unsigned Windows development ZIP is now published through TMApps Launcher. A standalone installer and macOS/Linux app packages are not published. The branded Word KB draft is retained locally and excluded from this publication because it has not passed visual rendering verification; the master KB destination is unconfirmed.
+
+## Install through TMApps Launcher
+
+Update [TMApps Launcher](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) to 1.14.2 or later, then choose Install app for TMA-Libraries. The [Windows development ZIP](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip) is checksum-verified by the launcher. Its installation, smoke launch and uninstall were tested in isolated folders. Data is kept by default; standard profile deletion requires explicit consent. See the [launcher KB Library](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/KB.Library.docx), Launcher-KB14. The app's own Word KB and other incomplete foundation features remain pending.
 
 ## Build and run
 
