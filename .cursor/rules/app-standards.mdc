@@ -1,0 +1,22 @@
+---
+description: Compulsory TMApps standards for every current and future app
+alwaysApply: true
+---
+
+# Compulsory app standards
+
+- Follow `APP-STANDARDS.md` for every app feature, fix, release and new project.
+  It records the required branch, brand, platform support, launcher integration,
+  UI, tray, notifications, themes, performance, Help, settings search, KB and
+  crash-report acceptance criteria requested by the user.
+- Treat all requirements as compulsory. Preserve established app-specific choices
+  and existing instructions. Resolve any missing brand choice with the owner.
+- Requirements are not evidence of implementation. Track outstanding work honestly;
+  never claim a platform, feature or release is ready without verification.
+- Include documentation, screenshots, functional tests and performance checks in
+  relevant updates. Do not create unrelated product changes for policy-only edits.
+- When creating a future app, copy this rule, `APP-STANDARDS.md`, and the existing
+  security and KB maintenance guidance. Replace template identity fields with its
+  real branch URL, name, KB prefix, approved colour and white icon choice.
+- Follow `.cursor/rules/security-data.mdc`; no secrets or private data may be
+  published. Preserve existing release/version approval requirements.
