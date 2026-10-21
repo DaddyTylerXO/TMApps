@@ -23,7 +23,8 @@ def read(url):
         raise ValueError("Refusing a URL outside the audited repository")
     for attempt in range(3):
         try:
-            request = Request(url, headers={"User-Agent": "TMApps-maintenance-audit"})
+            request = Request(url, headers={"User-Agent": "TMApps-maintenance-audit",
+                                            "Cache-Control": "no-cache"})
             with urlopen(request, timeout=40) as response:
                 return response.read().decode("utf-8-sig")
         except Exception:
@@ -47,11 +48,11 @@ def collection(path):
         page += 1
 
 
-def audit():
-    branches = collection("branches")
+def audit(snapshot=None):
+    branches = snapshot["branches"] if snapshot else collection("branches")
     branch_names = {branch["name"] for branch in branches}
-    release = get_json(API + "releases/tags/tma-apps")
-    assets = collection(f"releases/{release['id']}/assets")
+    release = snapshot["release"] if snapshot else get_json(API + "releases/tags/tma-apps")
+    assets = snapshot["assets"] if snapshot else collection(f"releases/{release['id']}/assets")
     by_name = {asset["name"]: asset for asset in assets}
     findings = []
     if release["draft"] or release["prerelease"]:
@@ -79,7 +80,8 @@ def audit():
     def verify(package):
         url = package["url"]
         if not url.startswith(DOWNLOAD):
-            return {**package, "errors": ["Package URL is outside the shared release"]}
+            return {**package, "filename": url.rsplit("/", 1)[-1],
+                    "errors": ["Package URL is outside the shared release"]}
         name = unquote(urlparse(url).path.rsplit("/", 1)[-1])
         errors = []
         asset = by_name.get(name)
@@ -111,6 +113,7 @@ def audit():
     for package in checked:
         findings.extend(f"{package['filename']}: {error}" for error in package["errors"])
     return {"checked_at": datetime.now(timezone.utc).isoformat(),
+            "metadata_source": "supplied API snapshot" if snapshot else "live public GitHub API",
             "scope": "Public branch inventory, published manifests, asset digests and checksum sidecars; binaries not downloaded or executed",
             "branches": [{"name": b["name"], "sha": b["commit"]["sha"], "protected": b["protected"]} for b in branches],
             "release_asset_count": len(assets), "launcher_version": launcher_update["version"],
@@ -122,9 +125,14 @@ def audit():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", help="Optional JSON report path; default prints to stdout")
+    parser.add_argument("--api-snapshot", help="Optional fresh JSON containing branches, release and assets from the authenticated GitHub connector")
     args = parser.parse_args()
     try:
-        result = audit()
+        snapshot = None
+        if args.api_snapshot:
+            with open(args.api_snapshot, encoding="utf-8-sig") as source:
+                snapshot = json.load(source)
+        result = audit(snapshot)
     except Exception as error:
         print(f"Audit incomplete: {type(error).__name__}: {error}", file=sys.stderr)
         return 2
