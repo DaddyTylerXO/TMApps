@@ -1,0 +1,36 @@
+---
+description: Keep launcher knowledge articles and the illustrated Word KB Library current with every implemented update
+alwaysApply: true
+---
+
+# KB maintenance with every launcher update
+
+The user requires the KB Library to stay current with all future implemented
+updates. Treat documentation maintenance as part of completing each update.
+
+- Review each change for effects on installation, setup, app management, profiles,
+  appearance, settings, platform support, performance, privacy and troubleshooting.
+- Update relevant existing articles in `content/experience.json`. Add an article
+  when a distinct new topic needs its own guide. Preserve existing `Launcher-KB`
+  numbers and assign new numbers after the highest existing number; never reuse
+  or renumber an existing reference.
+- Keep `desktop/experience.json` identical to the shared content source so the
+  Windows, macOS and Linux libraries stay aligned.
+- Include relevant real screenshots wherever they help explain the instructions.
+  Refresh affected captures when the interface changes. Use sanitized example
+  data, never passwords, keys, tokens or private user content. Add or adjust the
+  illustration mappings and captions in `tools/build-kb.py` as needed.
+- Regenerate `docs/KB Library.docx` using `tools/build-kb.py` with the bundled
+  workspace Python. Keep its release/date metadata accurate. Follow the documents
+  skill when authoring or editing the Word artifact.
+- Preserve clickable index entries, orange KB reference buttons and Back to index
+  buttons. Ensure every link points to its corresponding article bookmark,
+  including new KBs. Verify there are no unlinked references in document text.
+- Render and visually inspect every page of the regenerated Word document before
+  publishing. Check image readability, captions, page breaks and link destinations.
+- Publish the updated articles, screenshots, generator changes and Word document
+  with the relevant update on `TMApps-Launcher`. Keep the release attachment
+  `KB.Library.docx` current when publishing a release.
+- Describe only implemented and verified behaviour. Clearly label prepared or
+  unavailable features and platform limitations. For changes with no user-facing
+  KB impact, record that assessment instead of inventing an unrelated article.
