@@ -1,0 +1,35 @@
+name: TMA-Finance Windows development package
+on:
+  push:
+    branches: [TMA-Finance]
+    paths: ['tma-finance/**', '.github/workflows/finance-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tma-finance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: node node_modules/electron/install.js
+      - run: pnpm run check
+      - run: pnpm test
+      - run: pnpm run dist:win
+      - run: node scripts/package-manifest.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TMA-Finance-Windows-x64-development
+          path: |
+            tma-finance/release/*.exe
+            tma-finance/release/*.zip
+            tma-finance/release/*.sha256
+            tma-finance/release/launcher-handoff.json
+          if-no-files-found: error

@@ -1,7 +1,9 @@
 # TMA-Finance
 
-This is the TMA-Finance project branch in the [TMApps suite](https://github.com/DaddyTylerXO/TMApps). It currently contains shared project instructions and app standards; an application implementation and installable package have not been published.
+A Windows desktop application in development for personal finance and investment tracking. The application source is in [`tma-finance/`](tma-finance/).
 
-The approved app identity is green #163A2B with a white bundle-of-bills icon. These are project requirements, not evidence that the app is ready.
+Open `tma-finance/release/TMA-Finance-0.1.0-Windows.exe` to run the portable Windows build. It does not require a web server or a separate Node installation.
 
-Follow [APP-STANDARDS.md](APP-STANDARDS.md), [AGENTS.md](AGENTS.md) and [SECURITY.md](SECURITY.md) when developing this project. Use the [suite download index](https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md) for currently available apps. Do not advertise this branch as an available Windows, macOS or Linux application before its packages are implemented, tested and published.
+See [`tma-finance/README.md`](tma-finance/README.md) for development, data storage and current integration limits.
+
+This is the Finance project branch of [TMApps](https://github.com/DaddyTylerXO/TMApps). Follow [APP-STANDARDS.md](APP-STANDARDS.md), [AGENTS.md](AGENTS.md) and [SECURITY.md](SECURITY.md). See the [release acceptance gaps](tma-finance/RELEASE-STATUS.md) and [launcher handoff](tma-finance/LAUNCHER-HANDOFF.md). Source availability does not mean the app has a published supported package or an active launcher listing.

@@ -1,0 +1,6 @@
+node_modules/
+.sites/
+*.tar.gz
+.cache/
+release/
+.desktop-test-data/
