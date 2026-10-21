@@ -5,4 +5,9 @@ artifacts/
 *.log
 .env
 provider-settings.json
+sites/
+oauth-clients.json
+*client_secret*.json
+*client-secret*.json
+*oauth-client*.json
 !provider-settings.example.json

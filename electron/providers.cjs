@@ -1,7 +1,7 @@
 const PLATFORMS = [
-  {id:'youtube',name:'YouTube',color:'#ff6666',mark:'▶',publish:false,help:'Channel totals via a YouTube OAuth token. Video uploads are not available in this beta.',docs:'https://developers.google.com/youtube/v3/guides/authentication'},
-  {id:'twitch',name:'Twitch',color:'#b69aff',mark:'◈',publish:false,help:'Requires a registered Twitch client ID and a user access token. Streaming platforms do not have a general social feed publishing API.',docs:'https://dev.twitch.tv/docs/authentication/'},
-  {id:'kick',name:'Kick',color:'#a5ec6b',mark:'K',publish:false,help:'Requires a Kick user access token. Shows your channel and current stream totals.',docs:'https://docs.kick.com/'},
+  {id:'youtube',name:'YouTube',color:'#ff6666',mark:'▶',publish:false,help:'Browser sign-in for channel totals and read-only YouTube Analytics. Configure your Google Desktop client locally. Video uploads are not available.',docs:'https://developers.google.com/youtube/v3/guides/authentication'},
+  {id:'twitch',name:'Twitch',color:'#b69aff',mark:'◈',publish:false,help:'Browser sign-in with your locally configured Twitch app. Read follower totals and live viewers; no chat or moderation actions.',docs:'https://dev.twitch.tv/docs/authentication/'},
+  {id:'kick',name:'Kick',color:'#a5ec6b',mark:'K',publish:false,help:'Browser sign-in with your locally configured Kick app. Shows your channel identity and current stream viewers.',docs:'https://docs.kick.com/'},
   {id:'tiktok',name:'TikTok',color:'#86e5e5',mark:'♪',publish:false,help:'Requires an approved TikTok app with user.info.basic and user.info.stats. Publishing needs additional audit and is not available in this beta.',docs:'https://developers.tiktok.com/doc/display-api-get-started/'},
   {id:'instagram',name:'Instagram',color:'#eaa1d8',mark:'◎',publish:true,help:'Professional account required. Supply an Instagram Login token and account ID. Publishes one publicly accessible JPEG image with a caption.',docs:'https://developers.facebook.com/docs/instagram-platform/'},
   {id:'facebook',name:'Facebook',color:'#91b9ff',mark:'f',publish:true,help:'Facebook Pages only. Requires a Page access token and Page ID with pages_read_engagement and pages_manage_posts.',docs:'https://developers.facebook.com/docs/pages-api/'},
@@ -12,13 +12,13 @@ const PLATFORMS = [
 class ProviderError extends Error { constructor(message,ambiguous=false){super(message);this.name='ProviderError';this.ambiguous=ambiguous;} }
 async function request(url,{token,method='GET',body,headers={},form=false,fetcher=fetch}={}) {
   const response=await fetcher(url,{method,headers:{Accept:'application/json',...(token?{Authorization:`Bearer ${token}`} : {}),...(body?{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'}:{}),...headers},body:body?(form?new URLSearchParams(body).toString():JSON.stringify(body)):undefined,signal:AbortSignal.timeout(30000),redirect:'error'});
-  if(!response.ok){const error=new ProviderError(response.status===401?'Sign-in expired. Reconnect this account.':response.status===429?'Rate limit reached. Automatic checks are paused for this account.':`Provider request failed (${response.status}). Check account permissions and setup.`,![400,401,403,404,422,429].includes(response.status));if(response.status===429){const raw=response.headers?.get('retry-after');const seconds=Number(raw)||((Date.parse(raw)-Date.now())/1000);error.retryAfter=Math.max(30,Math.min(86400,Number.isFinite(seconds)&&seconds>0?seconds:300));}throw error;}
+  if(!response.ok){const error=new ProviderError(response.status===401?'Sign-in expired. Reconnect this account.':response.status===429?'Rate limit reached. Automatic checks are paused for this account.':`Provider request failed (${response.status}). Check account permissions and setup.`,![400,401,403,404,422,429].includes(response.status));error.status=response.status;if(response.status===429){const raw=response.headers?.get('retry-after');const seconds=Number(raw)||((Date.parse(raw)-Date.now())/1000);error.retryAfter=Math.max(30,Math.min(86400,Number.isFinite(seconds)&&seconds>0?seconds:300));}throw error;}
   const data=await response.json();
   if((data.error&&data.error.code!=='ok') || data.json?.errors?.length) throw new ProviderError('The platform rejected this request. Check the account permissions and post requirements.');
   return data;
 }
 const count=v=>Number.isFinite(Number(v))&&Number(v)>=0?Number(v):null;
-function normalize(account,profile,metrics){return {id:account.id,accountId:String(profile.id||profile.did||account.accountId||''),platform:account.platform,label:profile.username||profile.handle||profile.name||profile.displayName||account.label,metrics:Object.fromEntries(Object.entries(metrics).map(([k,v])=>[k,v===undefined||v===null?null:count(v)])),updatedAt:new Date().toISOString()};}
+function normalize(account,profile,metrics){return {id:account.id,accountId:String(profile.id||profile.did||account.accountId||''),platform:account.platform,...(profile.reportPeriod?{reportPeriod:profile.reportPeriod}:{}),label:profile.username||profile.handle||profile.name||profile.displayName||account.label,metrics:Object.fromEntries(Object.entries(metrics).map(([k,v])=>[k,v===undefined||v===null?null:count(v)])),updatedAt:new Date().toISOString()};}
 async function connect(input,fetcher=fetch){
   const p=PLATFORMS.find(p=>p.id===input.platform); if(!p)throw new ProviderError('Unknown platform.');
   let a={platform:p.id,token:String(input.token||'').trim(),accountId:String(input.accountId||'').trim(),clientId:String(input.clientId||'').trim()};
@@ -43,7 +43,12 @@ async function analytics(a,fetcher=fetch){
       const feed=await get(`${a.service||'https://bsky.social'}/xrpc/app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(a.accountId)}&limit=100&filter=posts_no_replies`);
       const own=feed.feed.filter(x=>x.post.author.did===a.accountId);m={followers:p.followersCount,posts:p.postsCount,recentLikes:own.reduce((s,x)=>s+(x.post.likeCount||0),0),recentReplies:own.reduce((s,x)=>s+(x.post.replyCount||0),0),recentReposts:own.reduce((s,x)=>s+(x.post.repostCount||0),0)};break;
     }
-    case 'youtube': p=(await get('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true')).items?.[0];if(!p)throw new ProviderError('No YouTube channel found.');m={followers:p.statistics.hiddenSubscriberCount?null:p.statistics.subscriberCount,views:p.statistics.viewCount,posts:p.statistics.videoCount};p={id:p.id,name:p.snippet.title};break;
+    case 'youtube': {
+      p=(await get('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true')).items?.[0];if(!p)throw new ProviderError('No YouTube channel found.');
+      m={followers:p.statistics.hiddenSubscriberCount?null:p.statistics.subscriberCount,views:p.statistics.viewCount,posts:p.statistics.videoCount};p={id:p.id,name:p.snippet.title};
+      if(a.oauth){const end=new Date(),start=new Date(end.getTime()-27*86400000);const period={start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10)};const params=new URLSearchParams({ids:'channel==MINE',startDate:period.start,endDate:period.end,metrics:'views,likes,estimatedMinutesWatched,subscribersGained,subscribersLost'});const report=await get('https://youtubeanalytics.googleapis.com/v2/reports?'+params);const row=report.rows?.[0];const values=Object.fromEntries((report.columnHeaders||[]).map((column,index)=>[column.name,row?.[index]??null]));Object.assign(m,{periodViews:values.views,periodLikes:values.likes,watchMinutes:values.estimatedMinutesWatched,subscribersGained:values.subscribersGained,subscribersLost:values.subscribersLost});p.reportPeriod=period;}
+      break;
+    }
     case 'twitch': {
       const headers={'Client-Id':a.clientId};p=(await get('https://api.twitch.tv/helix/users',headers)).data?.[0];if(!p)throw new ProviderError('No Twitch user found.');
       const f=await get(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${encodeURIComponent(p.id)}`,headers);

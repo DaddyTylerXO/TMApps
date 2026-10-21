@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Add browser OAuth for YouTube, Twitch and Kick with encrypted per-device client settings and local Google Desktop JSON import.
+- Refresh expiring OAuth sessions and validate Twitch authorization hourly while running.
+- Add YouTube 28-day analytics reports, keeping YouTube values separate from mixed totals and derived percentages.
+- Remove account credentials, cached metrics and publishing records on disconnect; attempt remote OAuth revocation.
+- Add draft Terms, Privacy and deletion documents, with a separate private HTTPS review site.
+- Match release metadata to the current version when older local packages are present.
+
 ## 0.2.0
 
 - Add multiple custom dashboards, with independent named tabs and locally saved widget layouts.

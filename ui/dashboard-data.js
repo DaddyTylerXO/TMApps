@@ -3,16 +3,19 @@
   function accounts(state,widget){return state.accounts.filter(a=>!widget.accountIds.length||widget.accountIds.includes(a.id));}
   function points(state,account,metric){return (state.metricHistory?.[account.id]||[]).filter(p=>typeof p.metrics[metric]==='number').map(p=>({time:Date.parse(p.at),value:p.metrics[metric]})).sort((a,b)=>a.time-b.time);}
   function summary(state,widget,now=Date.now()){
-    const rows=accounts(state,widget);const available=rows.filter(a=>typeof a.snapshot?.metrics[widget.metric]==='number');
-    if(!available.length)return {value:null,delta:null,percent:null,available:0,total:rows.length,baselineAt:null};
+    const rows=accounts(state,widget);let available=rows.filter(a=>typeof a.snapshot?.metrics[widget.metric]==='number');
+    const hasYouTube=available.some(a=>a.platform==='youtube');
+    const separateYouTube=hasYouTube&&(widget.type==='pie'||((widget.type==='stat'||!widget.type)&&available.length>1));
+    if(separateYouTube)available=available.filter(a=>a.platform!=='youtube');
+    if(!available.length)return {value:null,delta:null,percent:null,available:0,total:rows.length,baselineAt:null,youtubeSeparated:separateYouTube};
     const value=available.reduce((sum,a)=>sum+a.snapshot.metrics[widget.metric],0);
     let baseline=0,baselineAt=null,complete=true;
     for(const a of available){const list=points(state,a,widget.metric);const latest=list.at(-1);const cutoff=now-(durations[widget.range]||durations.day);const previous=list.filter(p=>p.time<=cutoff).at(-1)||list[0];
       if(!latest||!previous||previous.time===latest.time){complete=false;continue;}
       baseline+=previous.value;baselineAt=Math.max(baselineAt||0,previous.time);
     }
-    const delta=complete?value-baseline:null;
-    return {value,delta,percent:delta===null||baseline===0?null:delta/baseline*100,available:available.length,total:rows.length,baselineAt:complete?baselineAt:null,hasError:available.some(a=>a.error)};
+    const rawYouTube=available.some(a=>a.platform==='youtube');const delta=complete&&!rawYouTube?value-baseline:null;
+    return {value,delta,percent:delta===null||baseline===0?null:delta/baseline*100,available:available.length,total:rows.length,baselineAt:complete&&!rawYouTube?baselineAt:null,hasError:available.some(a=>a.error),youtubeSeparated:separateYouTube,rawYouTube};
   }
   function reducePoints(list,limit=180){
     if(list.length<=limit)return list;
@@ -24,6 +27,6 @@
     const cutoff=now-(durations[widget.range]||durations.day);
     return accounts(state,widget).map(a=>({id:a.id,label:a.label,platform:a.platform,points:reducePoints(points(state,a,widget.metric).filter(p=>p.time>=cutoff&&p.time<=now))})).filter(s=>s.points.length);
   }
-  function breakdown(state,widget){return accounts(state,widget).filter(a=>typeof a.snapshot?.metrics[widget.metric]==='number').map(a=>({id:a.id,label:a.label,platform:a.platform,value:a.snapshot.metrics[widget.metric]}));}
+  function breakdown(state,widget){return accounts(state,widget).filter(a=>typeof a.snapshot?.metrics[widget.metric]==='number'&&(widget.type!=='pie'||a.platform!=='youtube')).map(a=>({id:a.id,label:a.label,platform:a.platform,value:a.snapshot.metrics[widget.metric]}));}
   return {accounts,summary,series,breakdown,durations,reducePoints};
 });

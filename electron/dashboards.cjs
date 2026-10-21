@@ -1,5 +1,5 @@
 const crypto = require('node:crypto');
-const METRICS = ['followers','posts','views','liveViewers','likes','karma','recentLikes','recentReplies','recentReposts'];
+const METRICS = ['followers','posts','views','liveViewers','likes','karma','recentLikes','recentReplies','recentReposts','periodViews','periodLikes','watchMinutes','subscribersGained','subscribersLost'];
 const TYPES = ['stat','line','bar','pie'];
 const RANGES = ['hour','day','week','month'];
 const id = () => crypto.randomUUID();

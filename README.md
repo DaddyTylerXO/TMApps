@@ -16,21 +16,21 @@ pnpm package
 
 Windows x64 ZIP, macOS x64/arm64 tar.gz and DMG, and Linux x64/arm64 AppImage packages are built on their native GitHub Actions runners. The release job verifies all five launcher packages, uploads them to the existing `tma-apps` release, and then merges this app into the latest launcher catalogue. Existing apps are retained. Builds are unsigned/ad-hoc signed, without macOS notarization.
 
-## Platform support in 0.2.0 beta
+## Platform support in 0.3.0 beta
 
 | Platform | Connect | Metrics | Publish |
 | --- | --- | --- | --- |
 | Bluesky | Handle + app password, no developer registration | Followers, posts, recent likes/replies/reposts | Text |
-| YouTube | User OAuth access token | Subscribers, videos, lifetime views | Not yet: video upload workflow required |
-| Twitch | Client ID + user OAuth token | Followers (scope required), live viewers | No general social feed publishing API |
-| Kick | User OAuth token | Current stream viewers | Not supported |
+| YouTube | Browser OAuth + local Desktop app registration | Subscribers, videos, lifetime views and 28-day reports | Not yet: video upload workflow required |
+| Twitch | Browser OAuth + local app registration | Followers (scope required), live viewers | No general social feed publishing API |
+| Kick | Browser OAuth + local app registration | Current stream viewers | Not supported |
 | TikTok | Approved app + user OAuth token | Followers, likes, videos (scopes required) | Not yet: audit and upload/consent workflow required |
 | Instagram | Instagram Login token + professional account ID | Followers, media count | One public HTTPS JPEG + caption |
 | Facebook | Page access token + Page ID | Page followers | Page text posts |
 | X | User OAuth 2 access token | Followers, posts | Text |
 | Reddit | Approved API access + user OAuth token | Karma | Subreddit text posts |
 
-**Bluesky is the easiest connection.** Create a dedicated app password in Bluesky settings, then enter it with your handle. Only Bluesky-hosted PDS servers are supported in this beta. Your regular password is never needed. Native browser OAuth flows for other providers are not included: the advanced token connection requires your own provider setup. Access tokens expire; reconnect when necessary. Bluesky sessions refresh automatically.
+**Bluesky is the easiest connection.** Create a dedicated app password in Bluesky settings, then enter it with your handle. Only Bluesky-hosted PDS servers are supported in this beta. Your regular password is never needed. YouTube, Twitch and Kick offer browser OAuth after local registration setup; see [OAUTH-SETUP.md](OAUTH-SETUP.md). Client IDs and secrets are entered only in encrypted local Settings, or imported from a Google Desktop JSON file. OAuth sessions refresh automatically when supported. Advanced token connections require manual renewal. No shared confidential client is bundled in distributed builds.
 
 The setup guide button opens the official documentation for each provider. API permissions, app reviews, account types, quotas and fees are controlled by the provider. No live provider account has been used during development; adapters are tested against representative API responses and require verification with authorized accounts.
 
@@ -46,7 +46,7 @@ Statistic trends compare the latest value with the last observation at or before
 
 Line graphs show recorded observations by account. Pie and bar charts compare the latest account values. Zero-only pie data and missing metrics have explicit empty states. Dense line history is reduced using actual minimum and maximum observations, preserving peaks and troughs. Chart legends and accessible labels identify accounts and values.
 
-Historical recording starts with the last known snapshot when upgrading and continues after successful checks. One observation per minute is retained for 48 hours, then one per hour for up to 90 days, capped at 5,200 observations per account. Counts only are stored in this history, without credentials. No earlier data is invented or fetched retroactively. Keep automatic refresh enabled for continuing graphs. Disconnecting removes credentials; recorded metrics and dashboard layouts remain local.
+Historical recording starts with the last known snapshot when upgrading and continues after successful checks. One observation per minute is retained for 48 hours, then one per hour for up to 90 days, capped at 5,200 observations per account. Counts only are stored in this history, without credentials. No earlier data is invented or fetched retroactively. Keep automatic refresh enabled for continuing graphs. Disconnecting removes account credentials, cached metrics, recorded metric history and account publishing records. Draft text and dashboard layouts remain local. YouTube statistics remain separate from mixed totals and derived pie percentages; raw historical graphs and provider-reported subscriber changes remain available.
 
 Create a post, choose connected publishing accounts, then save a draft or publish. Platform validation runs before any target is called. A confirmation precedes publishing. Each destination records its own outcome. Successful, in-progress and uncertain attempts are not resent automatically. After an uncertain result, inspect the provider before creating another post. Editing and republishing a previously successful draft requires creating a new draft. Drafts save when navigating or closing the window; there is no timed autosave or background scheduling.
 
@@ -60,9 +60,13 @@ Analytics settings offer manual refresh, live polling every 30 seconds, or a cus
 
 ## Security
 
-No application keys or account credentials are committed. Tokens use Electron `safeStorage`: Windows DPAPI, macOS Keychain, or a Linux secret store. Connections fail closed when encryption is unavailable or Linux reports `basic_text`. Renderer code receives account labels and metrics, never tokens. The Bluesky app password is discarded after obtaining a session. Disconnect deletes local credentials; revoke the app password/authorization in provider settings to remove remote access too.
+No application keys or account credentials are committed. Tokens use Electron `safeStorage`: Windows DPAPI, macOS Keychain, or a Linux secret store. Connections fail closed when encryption is unavailable or Linux reports `basic_text`. Renderer code receives account labels and metrics, never tokens. The Bluesky app password is discarded after obtaining a session. Disconnect deletes local account credentials and cached account data, and attempts remote revocation for browser OAuth accounts. Revoke access in provider settings if remote revocation cannot be confirmed. Local client configuration is removed separately in Settings.
 
 Workspace data is stored in Electron's OS-specific `userData` directory (`TMA-SocialsManager`). Drafts, labels, metrics and history are **plain local data**, not encrypted. Protect your OS account and backups. Credentials are not portable between machines. Renderer isolation, sandboxing, CSP, blocked navigation and fixed provider endpoints limit exposure. Provider error bodies are not displayed or logged.
+
+## Legal drafts
+
+Draft Terms, Privacy and deletion instructions are bundled in `assets/legal/` and available in Settings. The HTTPS policy site remains private while operator/contact details and distribution review are pending. It is not ready for provider submission. TikTok and Meta setup remain deferred.
 
 ## Validation
 

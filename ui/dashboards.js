@@ -65,12 +65,13 @@ function dashboardWidget(dashboard,tab,widget){
   const body=el('div','dashboard-widget-body');const data=dashboardData.summary(state,widget);const rows=dashboardData.accounts(state,widget);
   if(widget.type==='stat'){
     const value=el('div','widget-value',fmt(data.value));value.append(freshness(rows,widget.metric));body.append(value);
-    let label='Collecting a comparison…',direction='neutral';
+    let label=data.rawYouTube?'YouTube · provider-reported value':'Collecting a comparison…',direction='neutral';
     if(data.delta!==null){direction=data.delta>0?'up':data.delta<0?'down':'neutral';const change=(data.delta>0?'+':'')+fmt(data.delta);label=`${data.delta>0?'↑':data.delta<0?'↓':'→'} ${change}${data.percent===null?'':` (${Math.abs(data.percent).toFixed(1)}%)`}`;}
-    body.append(el('div','widget-trend '+direction,label),el('small','',data.baselineAt?`Compared with ${date(data.baselineAt)}`:'Two observations at least a minute apart are needed.'));
+    body.append(el('div','widget-trend '+direction,label),el('small','',data.baselineAt?`Compared with ${date(data.baselineAt)}`:data.rawYouTube?'Use YouTube-reported subscribers gained/lost for changes.':'Two observations at least a minute apart are needed.'));
   }else if(widget.type==='line')body.append(dashboardLineChart(state,widget));
   else body.append(dashboardComparisonChart(state,widget));
   if(data.hasError)body.append(el('p','warning widget-note','A source could not refresh. Showing its last successful observation.'));
+  if(data.youtubeSeparated)body.append(el('p','widget-note','YouTube data is kept separate from summed statistics and pie-share calculations. Choose a single YouTube account for a raw statistic, line graph or bar chart.'));
   body.append(el('p','widget-note',`${data.available} of ${data.total} selected accounts provide this metric${widget.type==='line'||widget.type==='stat'?' · '+rangeNames[widget.range]:''}.`));card.append(body);return card;
 }
 function dashboardSvg(tag,attributes={}){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value] of Object.entries(attributes))node.setAttribute(key,String(value));return node;}
