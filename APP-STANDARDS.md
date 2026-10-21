@@ -20,7 +20,7 @@ This branch holds the shared future-project template, not a standalone app. Sele
 | [TMA-SocialsManager](https://github.com/DaddyTylerXO/TMApps/tree/TMA-SocialsManager) | Yellow #E5B92F | Existing white speech bubble with three dots on the yellow rounded tile |
 | [TMA-Cut](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Cut) | Red #D5414C | Existing white camera on the red rounded tile |
 | [TMA-Finance](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Finance) | Green #163A2B | White bundle of bills on a green #163A2B rounded tile |
-| [TMA-Libraries](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries) | Awaiting owner colour selection | Awaiting owner white icon selection |
+| [TMA-Libraries](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries) | Leather Brown #97572B | White folder on the brown app background |
 
 ## Compulsory requirements
 
