@@ -1,3 +1,9 @@
+TMApps suite downloads
+
+Choose your application and operating system from the [current download and checksum index](https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md). The [repository overview](https://github.com/DaddyTylerXO/TMApps) links all app branches and their setup/change history. Read the [security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md) and use [Help and reports](https://github.com/DaddyTylerXO/TMApps/blob/main/SUPPORT.md) for support.
+
+The shared release contains independently versioned apps. Its creation date is not the update date of every package; use individual assets and the update feeds for current versions. Finance and Libraries do not yet have published app packages. Older assets remain available as release history.
+
 TMApps Launcher 1.14.1 adds TMA-Libraries as a coming-soon application.
 
 - Libraries has a neutral question-mark placeholder, working Details/source options and no install or OS badges until verified packages are published. No unpublished version or date is invented.

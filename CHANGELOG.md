@@ -1,5 +1,11 @@
 # Changelog
 
+## Repository maintenance — 2026-10-21
+
+- Correct Agent Office's source branch in both bundled catalogs to `TMA-AgentOffice`; retain package URLs, hashes, versions and compatibility.
+- Refresh the README platform paragraph, add suite security/reporting links, and link the shared release to the complete download index.
+- Verified 188 Windows checks and 37 desktop checks (one native-process check skipped on Windows); startup/idle resource checks passed. No UI/KB content change or app-version bump is required for this source-link/documentation correction.
+
 ## 1.12.6
 
 - Add TMA-Cut to Windows, macOS, and Linux launcher catalogs, validation, source links, and app tiles with its red camera icon.

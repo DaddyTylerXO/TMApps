@@ -23,7 +23,7 @@
       "description": "Your team, together. Bring AI specialists, projects, and real work into one live office.",
       "version": "0.2.0",
       "updatedAt": "2026-10-15T19:42:51Z",
-      "branch": "AI-Agent-Dashboard",
+      "branch": "TMA-AgentOffice",
       "executable": "Agent Office.exe",
       "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Agent-Office-0.2.0-windows.zip",
       "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883",
