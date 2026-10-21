@@ -14,6 +14,11 @@ This is an initial desktop implementation, not a completed production release. V
 
 Launcher 1.14.2 publishes the checked Windows development ZIP and its version/date/icon metadata. The real launcher engine installed it into an isolated custom folder, its packaged renderer loaded with Node integration disabled, its disposable window closed, and uninstall removed only the test copy. No personal profile was used. A local sample measured about 0.9 seconds to readiness, 353 MB for the process family and 0.04 percent normalized idle CPU. CI enforces startup under 30 seconds, working set under 800 MB and idle CPU under 30 percent. These are regression ceilings, not universal performance promises. The initial feature/KB/tray/native-platform gaps remain documented.
 
+
+## 0.1.1 startup and appearance update
+
+The Windows 0.1.1 package is published through the shared launcher catalog. Its live download was streamed and verified against the catalog SHA-256. The Finance syntax/build/test job passed, and the launcher workflow passed its Finance build, package verification and Windows package/catalog publication steps. The desktop personal-workspace startup, green budget surface and green expense dialog were inspected using an isolated empty profile. Existing personal and sample records are preserved. See [Finance-KB1](docs/Finance-KB1.md) and [release notes](docs/RELEASE-NOTES.md). These checks do not close the broader acceptance gaps below.
+
 ## Incomplete original feature scope
 
 Bank import remains deferred. Market-wide Top 100 data, full fundamental screening, financial-statement history/PEG/median earnings, intraday widgets, background schedules and custom news-sensitivity notifications are not implemented. Finnhub requests need a user key and suitable plan; they have not been verified with a paid provider account. Currency conversion uses daily published rates and still needs live verification in the delivered app environment. The tax tool is a planning estimate rather than a tax-return filing service.
