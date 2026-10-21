@@ -1,0 +1,18 @@
+name: Launcher Crash report
+description: Crash report for TMApps Launcher
+title: "[Launcher] Crash report"
+body:
+  - type: input
+    id: app
+    attributes:
+      label: Application and version
+      value: TMApps Launcher
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Error report and reproduction steps
+      description: Review before submitting. Do not include credentials, mail content or private files.
+    validations:
+      required: true

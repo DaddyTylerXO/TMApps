@@ -9,10 +9,10 @@ A launcher for **TMA-Mail** and **TMA-Agent Office**, available on **Windows, ma
 | Launcher download | Architecture | Install |
 | --- | --- | --- |
 | [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
-| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.13.0-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
-| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.13.0-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
-| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.13.0-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
-| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.13.0-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
 
 **Launcher support and app support are separate.** The Windows, Apple, and Linux logos under each app show the operating systems with published app builds. Both current app packages (**TMA-Mail and TMA-Agent Office**) are **Windows-only**. The Mac/Linux launchers display the library, profiles, settings, support badges, and release checks, and block incompatible EXE installations. Porting the launcher does not port the Mail or Office applications. Native app installation becomes available when that app has a verified package for the user's OS and CPU architecture.
 
@@ -156,3 +156,14 @@ Open the top-right profile icon to add optional social platforms and usernames o
 Entries are stored locally for the current user. Cancel leaves existing data unchanged. See the [shared profile contract](docs/shared-profile.md) for future app integration.
 
 ![Social accounts in profile](docs/social-profile-preview.png)
+
+
+## App details settings and help in 1.14
+
+Click an app name or Details to review its available version, update date and app-branch release notes. Each details screen supports one showcase video and ten screenshot slots. Existing screenshots are linked to their exact app-branch commit. Missing media stays unpublished. Screenshots load on demand and videos never autoplay.
+
+Settings now searches controls and optional KB article results, offers Orange, Grey and Black dark palettes, and explains the CPU/GPU, RAM, network and boot-time costs of relevant features. Cancel restores appearance changes. Help provides twelve numbered KB articles, Feature request, Bug report, Issue report and a crash-report draft. Report actions open a prefilled GitHub issue form; the user reviews and submits it in GitHub. They never silently create public issues. Structured issue-form definitions are also provided under `.github/ISSUE_TEMPLATE` for the repository default branch; launcher links use portable prefilled issue forms so they work before those templates are installed there.
+
+The requested Word document is [KB Library](docs/KB%20Library.docx), also attached to the release. The in-app articles and Word library share `content/experience.json`. See [release status](docs/update-status.md), [performance checks](docs/performance.md), and [sign-in deployment](backend/README.md).
+
+TMApps email-code sign-in clients, protected session storage, app access grants and a backend handoff service are prepared. They stay disabled until a Supabase project is deployed/configured; individual apps also need their broker/consumer integration before they reuse sign-in. No provider passwords or session tokens are written to the shared profile. Ratings were excluded at the user's request.

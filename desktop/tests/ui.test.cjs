@@ -11,7 +11,7 @@ async function view(t, platform = 'darwin') {
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; }; dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   let state = { version: '1.9.0', platform, arch: 'arm64', os: platform === 'darwin' ? 'macos' : 'linux', smoke: true, settings: { libraryView: 'List', navigationEdge: 'Left', closeToTray: false, checkOnStartup: false }, profile: { schemaVersion: 1, displayName: '', emails: [], shareWithMail: false }, apps: catalog.apps.map(a => ({ ...structuredClone(a), support: require('../electron/service.cjs').support(a), package: null, installed: null })) };
   const calls = [];
-  dom.window.launcher = { snapshot: async () => state, settings: async v => { calls.push(['settings', v]); state.settings = v; return state; }, profile: async v => { calls.push(['profile', v]); state.profile = v; return state; }, source: async id => calls.push(['source', id]), refresh: async () => { calls.push(['refresh']); return { ...state, notice: 'Catalog checked.' }; }, onPrompt: () => () => {}, onNotice: () => () => {}, onProgress: () => () => {}, onRefresh: () => () => {} };
+  dom.window.launcher = { experience: async () => require('../experience.json'), support: async (kind, report) => calls.push(['support',kind,report]), crash: async () => 'Redacted crash fixture', snapshot: async () => state, settings: async v => { calls.push(['settings', v]); state.settings = v; return state; }, profile: async v => { calls.push(['profile', v]); state.profile = v; return state; }, source: async id => calls.push(['source', id]), refresh: async () => { calls.push(['refresh']); return { ...state, notice: 'Catalog checked.' }; }, onPrompt: () => () => {}, onNotice: () => () => {}, onProgress: () => () => {}, onRefresh: () => () => {} };
   dom.window.eval(fs.readFileSync(path.join(__dirname, '../ui/icons.js'), 'utf8')); dom.window.eval(fs.readFileSync(path.join(__dirname, '../ui/renderer.js'), 'utf8')); await dom.window.launcherReady;
   return { dom, window: dom.window, document: dom.window.document, calls, state };
 }
@@ -66,4 +66,14 @@ test('profile social account controls add, remove, save, and cancel without sign
   assert.equal(v.calls.at(-1)[1].socialAccounts[0].platform, 'YouTube'); assert.equal(v.calls.at(-1)[1].shareWithSocialApps, true);
   v.document.getElementById('profile').click(); await tick(); dialog = v.document.querySelector('dialog'); row = dialog.querySelector('.social-account-row'); assert.equal(row.querySelectorAll('input')[1].value, 'https://www.youtube.com/@example');
   row.querySelector('button').click(); await tick(); const count = v.calls.length; dialog.querySelector('.dialog-actions button').click(); await tick(); assert.equal(v.calls.length, count); assert.equal(v.state.profile.socialAccounts.length, 1);
+});
+
+test('details show versions and ten gallery slots without autoplay', async t => {
+ const v=await view(t);v.document.querySelector('.app-title').click();await tick();const d=v.document.querySelector('dialog');assert.match(d.textContent,/Version/);assert.equal(d.querySelectorAll('.gallery figure').length,10);assert.match(d.textContent,/Showcase video not published/);assert.ok([...d.querySelectorAll('img')].every(i=>i.loading==='lazy'));
+});
+test('settings search finds KB numbers and theme cancellation restores the saved palette',async t=>{
+ const v=await view(t);v.document.getElementById('settings').click();await tick();let d=v.document.querySelector('dialog');const selects=d.querySelectorAll('select');selects[2].value='Black';selects[2].dispatchEvent(new v.window.Event('change'));assert.equal(v.document.documentElement.dataset.theme,'Black');const search=d.querySelector('input');search.value='Launcher-KB6';search.dispatchEvent(new v.window.Event('input'));assert.match(d.textContent,/Launcher-KB6/);d.querySelector('.dialog-actions button').click();await tick();assert.equal(v.document.documentElement.dataset.theme,'Orange');
+});
+test('help opens the chosen report draft only after user action',async t=>{
+ const v=await view(t);v.document.getElementById('help').click();await tick();const d=v.document.querySelector('dialog');[...d.querySelectorAll('button')].find(b=>b.textContent==='Bug report').click();await tick();assert.equal(v.calls.at(-1)[1],'bug');
 });

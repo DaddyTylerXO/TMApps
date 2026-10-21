@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.13.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.13.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.14.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.14.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -58,7 +58,7 @@ namespace TMApps {
         public event PropertyChangedEventHandler PropertyChanged;
         public void Changed() { if (PropertyChanged != null) PropertyChanged(this, new PropertyChangedEventArgs(null)); }
     }
-    public class LauncherApplication : Application {
+    public partial class LauncherApplication : Application {
         LauncherService service; Window window; List<AppView> apps; Preferences preferences;
         System.Windows.Controls.ContextMenu trayMenu;
         System.Windows.Forms.NotifyIcon tray; bool quitting; bool trayNoticeShown;
@@ -68,6 +68,7 @@ namespace TMApps {
         string filter = "all"; bool listView = true; bool refreshing; bool selfUpdating; readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         T Find<T>(string name) where T : FrameworkElement { return (T)window.FindName(name); }
         [STAThread] public static void Main(string[] args) {
+            if(args.Length==2 && args[0]=="--verify-performance") { VerifyPerformance(args[1]); return; }
             if (args.Length == 2 && args[0] == "--verify-package") {
                 try {
                     var app = new Application();
@@ -82,11 +83,12 @@ namespace TMApps {
             using (var mutex = new Mutex(true, "Local\\TMApps-Launcher", out created)) {
                 if (!created) { try { using(var show=EventWaitHandle.OpenExisting("Local\\TMApps-Launcher-Show")) show.Set(); } catch { } return; }
                 try { new LauncherApplication().Run(); }
-                catch (Exception ex) { MessageBox.Show("TMApps Launcher could not start.\n\n" + ex.Message, "TMApps", MessageBoxButton.OK, MessageBoxImage.Error); }
+                catch (Exception ex) { LauncherDiagnostics.Save(DesktopIntegration.ProfileDirectory,ex); MessageBox.Show("TMApps Launcher could not start. A local crash report was saved. Reopen Help to review it.\n\n" + LauncherDiagnostics.Redact(ex.Message), "TMApps", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
         }
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
+            DispatcherUnhandledException+=(sender,error)=> { LauncherDiagnostics.Save(DesktopIntegration.ProfileDirectory,error.Exception); };
             if (window != null) return; // An explicitly initialized verification window already owns this Application.
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             Initialize(DesktopIntegration.ProfileDirectory, null, true);
@@ -99,6 +101,7 @@ namespace TMApps {
             suiteProfilePath=desktop ? TMAppsShared.SuiteProfileStore.DefaultPath : Path.Combine(root,"shared-profile.json");
             try { suiteProfile=TMAppsShared.SuiteProfileStore.Load(suiteProfilePath); } catch { suiteProfile=new TMAppsShared.SuiteProfile(); suiteProfileWarning="The saved profile could not be read. You can replace it by saving a new profile."; }
             preferences = DesktopIntegration.LoadPreferences(root);
+            ThemedDialog.ThemeTransform=dialog=>LauncherThemes.Apply(dialog,preferences.theme);
             window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
             using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
                 window.Icon = System.Windows.Media.Imaging.BitmapDecoder.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames.Last();
@@ -207,6 +210,7 @@ namespace TMApps {
             string query = Find<TextBox>("Search").Text.Trim();
             var visible = apps.Where(a => (a.Name + " " + a.Category + " " + a.Description).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0).Where(a => { var installed = service.GetInstalled(a.Info); return filter == "all" || (filter == "notinstalled" ? installed == null : installed != null && (filter == "installed" || LauncherService.IsNewer(a.Info.version, installed.version))); }).ToList();
             Find<ItemsControl>("Cards").ItemsSource = visible;
+            Dispatcher.BeginInvoke(new Action(()=>LauncherThemes.Apply(window,preferences.theme)),System.Windows.Threading.DispatcherPriority.Loaded);
             Find<TextBlock>("Empty").Visibility = visible.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             Find<TextBlock>("LibraryLabel").Text = "APPLICATION LIBRARY / " + visible.Count.ToString("00");
             Find<Button>("InstalledFilter").Content = "Installed  " + apps.Count(a => service.GetInstalled(a.Info) != null);
@@ -315,6 +319,7 @@ namespace TMApps {
             string name = b.Name; string tag = b.Tag as string;
             if(name=="CompactButton") { preferences.compactNavigation=!preferences.compactNavigation; ApplyNavigation(window,preferences); Render(); DesktopIntegration.SavePreferences(service.Root,preferences); return; }
             if(name=="ProfileButton") { ShowProfile(); return; }
+            if(name=="HelpButton") { ShowHelp(""); return; }
             if(name=="SettingsButton") { Settings(); return; }
             if(name=="GitHubButton") { Browse("https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher"); return; }
             if (name == "RefreshButton") { RefreshCatalog(); return; }
@@ -325,6 +330,7 @@ namespace TMApps {
             }
             var app = apps.FirstOrDefault(a => a.Id == tag);
             if (app != null) {
+                if(b.Name=="AppDetailsButton" || Convert.ToString(b.Content)=="Details") { ShowDetails(app); return; }
                 if ((string)b.Content == "Cancel") { if (app.Cancellation != null) app.Cancellation.Cancel(); return; }
                 if ((string)b.Content == "•••") { ShowAppMenu(b, app); return; }
                 if (app.Busy) return;
@@ -379,6 +385,7 @@ namespace TMApps {
         internal void ShowProfile() {
             var dialog=new ThemedDialog(window,"Your TMApps profile","Optional. Save your name and email addresses for your apps on this PC. The first email address is your primary suggestion.");
             Action<string> label=text=>dialog.Body.Children.Add(new TextBlock { Text=text,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,10,0,7) });
+            var signIn=new Button { Content="TMApps sign-in and linked apps",HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,0,0,12) }; signIn.Click+=(s,e)=>ShowSignIn(); dialog.Body.Children.Add(signIn);
             label("Your name"); var name=new TextBox { Name="ProfileName",Text=suiteProfile.displayName,MaxLength=100 }; dialog.Body.Children.Add(name);
             label("Email addresses (one per line)"); var emails=new TextBox { Name="ProfileEmails",Text=String.Join("\r\n",suiteProfile.emails),AcceptsReturn=true,Height=100,VerticalScrollBarVisibility=ScrollBarVisibility.Auto }; dialog.Body.Children.Add(emails);
             var share=new CheckBox { Name="ShareWithMail",Content="Sync this profile to TMA-Mail on this PC",IsChecked=suiteProfile.revision==null || suiteProfile.shareWithMail,Margin=new Thickness(0,18,0,12) }; dialog.Body.Children.Add(share);
@@ -414,54 +421,6 @@ namespace TMApps {
                 } catch(Exception ex) { error.Text=ex.Message; }
             },"ConfirmAction");
             dialog.ShowDialog();
-        }
-        void Settings() {
-            var original=LauncherService.Json.Deserialize<Preferences>(LauncherService.Json.Serialize(preferences));
-            bool saved=false;
-            var dialog=new Window { Owner=window,Title="TMApps Launcher / Settings",Width=820,Height=650,MinWidth=740,MinHeight=570,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,Resources=window.Resources,Icon=window.Icon };
-            var root=new DockPanel(); dialog.Content=root;
-            var heading=new TextBlock { Text="TMApps Launcher / Settings",FontSize=23,Margin=new Thickness(24) }; DockPanel.SetDock(heading,Dock.Top); root.Children.Add(heading);
-            var footer=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(20) }; DockPanel.SetDock(footer,Dock.Bottom); root.Children.Add(footer);
-            var navigation=new StackPanel { Width=168,Margin=new Thickness(10) }; DockPanel.SetDock(navigation,Dock.Left); root.Children.Add(navigation);
-            var body=new StackPanel { Margin=new Thickness(20,16,26,10) }; root.Children.Add(new ScrollViewer { Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto });
-            var token=new PasswordBox { Padding=new Thickness(10),Margin=new Thickness(0,8,0,12) };
-            Action preview=() => { ApplyNavigation(window,preferences); ApplyView(window,preferences.libraryView); listView=preferences.libraryView=="List"; Render(); };
-            Action<string> label=text => body.Children.Add(new TextBlock { Text=text,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,16,0,8) });
-            Action<string, bool, Action<bool>> checkbox=(text,value,set) => { var c=new CheckBox { Content=text,IsChecked=value,Foreground=window.Foreground,Margin=new Thickness(0,12,0,5) }; c.Checked+=(s,e)=>set(true); c.Unchecked+=(s,e)=>set(false); body.Children.Add(c); };
-            Action<string> page=null;
-            page=section => {
-                body.Children.Clear(); body.Children.Add(new TextBlock { Text=section=="Appearance" ? "Your workspace" : section=="Startup" ? "Startup and closing" : "Downloads and storage",FontSize=23,Margin=new Thickness(0,0,0,8) });
-                body.Children.Add(new TextBlock { Text="Preview changes immediately. Save keeps them; Cancel restores your previous settings.",Foreground=Brushes.LightGray,TextWrapping=TextWrapping.Wrap,FontSize=11 });
-                if(section=="Appearance") {
-                    label("Navigation position"); var edge=new ComboBox { ItemsSource=new[]{"Left","Top","Right","Bottom"},SelectedItem=preferences.navigationEdge,MinHeight=38 }; edge.SelectionChanged+=(s,e)=>{ preferences.navigationEdge=Convert.ToString(edge.SelectedItem); preview(); }; body.Children.Add(edge);
-                    label("Application display"); var view=new ComboBox { ItemsSource=new[]{"List","Grid"},SelectedItem=preferences.libraryView,MinHeight=38 }; view.SelectionChanged+=(s,e)=>{ preferences.libraryView=Convert.ToString(view.SelectedItem); preview(); }; body.Children.Add(view);
-                    checkbox("Use a compact icon ribbon",preferences.compactNavigation,value=>{ preferences.compactNavigation=value; preview(); });
-                    body.Children.Add(new TextBlock { Text="Use the ☰ button to collapse or expand navigation at any time. Hover an icon to see its name.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11,Margin=new Thickness(0,8,0,0) });
-                } else if(section=="Startup") {
-                    checkbox("Open TMApps Launcher when I sign in to Windows",preferences.runAtStartup,value=>preferences.runAtStartup=value);
-                    checkbox("Create a desktop shortcut",preferences.desktopShortcut,value=>preferences.desktopShortcut=value);
-                    checkbox("Keep running in the tray when the window is closed",preferences.closeToTray,value=>preferences.closeToTray=value);
-                    checkbox("Check for application updates when the launcher opens",preferences.checkOnStartup,value=>preferences.checkOnStartup=value);
-                    body.Children.Add(new TextBlock { Text="Double-click the rocket in the Windows tray to reopen the launcher. Right-click it and choose Quit to exit completely.",Foreground=Brushes.LightGray,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,18,0,0) });
-                } else {
-                    body.Children.Add(new TextBlock { Text="Public downloads need no GitHub token. Application updates are installed only when you choose Update.",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,18,0,12) });
-                    var folder=new Button { Content="Open launcher storage",HorizontalAlignment=HorizontalAlignment.Left }; folder.Click+=(s,e)=>System.Diagnostics.Process.Start("explorer.exe",service.Root); body.Children.Add(folder);
-                    label("Optional GitHub token"); body.Children.Add(token);
-                    var disconnect=new Button { Content="Disconnect GitHub",HorizontalAlignment=HorizontalAlignment.Left }; disconnect.Click+=(s,e)=>{ service.SaveToken(""); token.Clear(); }; body.Children.Add(disconnect);
-                }
-            };
-            foreach(string section in new[]{"Appearance","Startup","Downloads"}) { string selected=section; var b=new Button { Content=section,Margin=new Thickness(0,0,0,7),Padding=new Thickness(15,18,15,18) }; b.Click+=(s,e)=>page(selected); navigation.Children.Add(b); }
-            var cancel=new Button { Content="Cancel",Margin=new Thickness(0,0,8,0) }; cancel.Click+=(s,e)=>dialog.Close(); footer.Children.Add(cancel);
-            var save=new Button { Content="Save changes",Background=(Brush)new BrushConverter().ConvertFromString("#CC5500") }; save.Click+=(s,e)=> {
-                try {
-                    if(!String.IsNullOrWhiteSpace(token.Password)) service.SaveToken(token.Password);
-                    string exe=System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    DesktopIntegration.SetStartup(exe,preferences.runAtStartup); DesktopIntegration.SetDesktopShortcut(exe,preferences.desktopShortcut);
-                    DesktopIntegration.SavePreferences(service.Root,preferences); saved=true; dialog.Close();
-                } catch(Exception ex) { MessageBox.Show(dialog,ex.Message,"Could not save settings"); }
-            }; footer.Children.Add(save);
-            dialog.Closed+=(s,e)=>{ if(!saved) { preferences=original; preview(); } };
-            page("Appearance"); dialog.ShowDialog();
         }
         void Browse(string url) { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception ex) { Notice("Could not open your browser: " + ex.Message); } }
     }

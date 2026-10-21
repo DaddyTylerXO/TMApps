@@ -125,7 +125,7 @@ class Library {
   async snapshot() {
     const apps = await Promise.all(this.catalog.apps.map(async a => ({ ...a, support: support(a), package: this.pkg(a), installed: await this.installed(a) })));
     let savedProfile; try { savedProfile = profile(await readJSON(this.shared, { schemaVersion: 1, displayName: '', emails: [], shareWithMail: false })); } catch { savedProfile = { schemaVersion: 1, displayName: '', emails: [], shareWithMail: false, warning: 'Saved profile could not be read. Saving will replace it.' }; }
-    return { apps, profile: savedProfile, settings: await readJSON(path.join(this.root, 'settings.json'), { navigationEdge: 'Left', libraryView: 'List', closeToTray: this.platform !== 'linux', checkOnStartup: true, runAtStartup: false }), platform: this.platform, arch: this.arch, os: osKey(this.platform), busy: this.busy };
+    return { apps, profile: savedProfile, settings: { theme: 'Orange', includeKbSearch: true, ...await readJSON(path.join(this.root, 'settings.json'), { navigationEdge: 'Left', libraryView: 'List', closeToTray: this.platform !== 'linux', checkOnStartup: true, runAtStartup: false }) }, platform: this.platform, arch: this.arch, os: osKey(this.platform), busy: this.busy };
   }
   async json(url) { const response = await this.fetcher(url + '?check=' + Date.now(), { signal: AbortSignal.timeout(35000) }); if (!response.ok) throw new Error('Could not reach the release service.'); const text = await response.text(); if (text.length > 1024 ** 2) throw new Error('Metadata too large.'); return JSON.parse(text.replace(/^\uFEFF/, '')); }
   async refresh() {
@@ -137,7 +137,8 @@ class Library {
   async saveProfile(value) { const saved = profile(value); saved.revision = crypto.randomUUID().replaceAll('-', ''); await atomic(this.shared, saved); return this.snapshot(); }
   async saveSettings(value) {
     if (!['Left', 'Right', 'Top', 'Bottom'].includes(value.navigationEdge) || !['List', 'Grid'].includes(value.libraryView)) throw new Error('Invalid appearance settings.');
-    const saved = { navigationEdge: value.navigationEdge, libraryView: value.libraryView, closeToTray: value.closeToTray === true, checkOnStartup: value.checkOnStartup === true, runAtStartup: value.runAtStartup === true };
+    if (value.theme && !['Orange','Grey','Black'].includes(value.theme)) throw new Error('Invalid theme.');
+    const saved = { theme: value.theme || 'Orange', includeKbSearch: value.includeKbSearch !== false, navigationEdge: value.navigationEdge, libraryView: value.libraryView, closeToTray: value.closeToTray === true, checkOnStartup: value.checkOnStartup === true, runAtStartup: value.runAtStartup === true };
     await this.integration('launcher', saved); await atomic(path.join(this.root, 'settings.json'), saved); return this.snapshot();
   }
   async processes() {

@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, safeStorage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
@@ -7,6 +7,8 @@ const { spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 const { Library, RELEASE, directories, launcherRelease, download, inside } = require('./service.cjs');
 const metadata = require('../package.json');
+const experience = require('./experience.cjs');
+const { SuiteAuth } = require('./auth.cjs');
 let window, library, tray, quitting = false, controller, settings, update, updating = false;
 const prompts = new Map();
 const smokeIndex = process.argv.indexOf('--smoke');
@@ -81,14 +83,25 @@ async function applyLauncherUpdate() {
   } finally { updating = false; controller = null; }
 }
 async function run() {
+  const startup = performance.now();
   const dirs = smokeReport ? { root: app.getPath('userData'), shared: path.join(app.getPath('userData'), 'suite-profile.json'), data: app.getPath('userData') } : directories();
   library = new Library({ ...dirs, bundled: require('../catalog.json'), confirm, progress: text => window.webContents.send('progress', text), integration: integrate });
+  let authConfiguration; try { authConfiguration = JSON.parse(await fs.readFile(path.join(library.root, 'auth-config.json'), 'utf8')); } catch { authConfiguration = require('../auth-config.json'); }
+  const authOptions = { root: library.root, configuration: authConfiguration, vault: { available: () => safeStorage.isEncryptionAvailable() && (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'), encrypt: text => safeStorage.encryptString(text), decrypt: bytes => safeStorage.decryptString(bytes) } };
+  let auth; try { auth = new SuiteAuth(authOptions); } catch (error) { auth = new SuiteAuth({ ...authOptions, configuration: {} }); auth.configurationError = error.message; }
   await library.load(); settings = (await library.snapshot()).settings;
   window = new BrowserWindow({ width: 1180, height: 800, minWidth: 960, minHeight: 600, title: 'TMApps Launcher', backgroundColor: '#17191f', autoHideMenuBar: true, show: !smokeReport, icon: path.join(__dirname, '../assets/icon.png'), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: !!smokeReport } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('render-process-gone', (_event, details) => experience.saveCrash(library.root, new Error('Renderer exited: ' + details.reason + ' (' + details.exitCode + ')'), metadata.version));
   window.webContents.on('will-navigate', event => event.preventDefault());
   const methods = {
     snapshot: () => library.snapshot(),
+    experience: () => experience.content,
+    auth: async ({ action, email, code, apps }) => { if (action === 'status') return auth.status(); if (action === 'send') return auth.send(email); if (action === 'verify') return auth.verify(email, code); if (action === 'access') return auth.access(apps); if (action === 'logout') return auth.logout(); throw new Error('Unknown sign-in action.'); },
+    support: ({ kind, report }) => shell.openExternal(experience.issue(kind, report)),
+    crash: () => experience.crash(library.root, metadata.version),
+    knowledgeDocument: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/blob/TMApps-Launcher/docs/KB%20Library.docx'),
+    rendererError: value => experience.saveCrash(library.root, String(value).slice(0, 6000), metadata.version),
     refresh: async () => { if (library.busy || updating) throw new Error('Wait for the current operation.'); const messages = []; try { await library.refresh(); messages.push('Application catalog checked.'); } catch { messages.push('Could not refresh applications; showing the saved catalog.'); } try { update = await checkLauncher(); messages.push(update ? `Launcher ${update.version} is available.` : 'Launcher is up to date.'); } catch { messages.push('Launcher update check could not complete.'); } return { ...await library.snapshot(), update, notice: messages.join(' ') }; },
     profile: async value => library.saveProfile(value),
     settings: async value => { if (library.busy || updating) throw new Error('Wait for the current operation.'); const result = await library.saveSettings(value); settings = result.settings; return result; },
@@ -117,6 +130,10 @@ async function run() {
     try {
       const result = await window.webContents.executeJavaScript('window.launcherSmoke()');
       if (!result.ok || result.nodeAvailable || result.cards !== require('../catalog.json').apps.length || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
+      app.getAppMetrics(); await new Promise(resolve => setTimeout(resolve, 1200));
+      const metrics = app.getAppMetrics(); result.performance = { startupMs: Math.round(performance.now() - startup - 1200), workingSetMb: metrics.reduce((sum, m) => sum + m.memory.workingSetSize / 1024, 0), idleCpuPercent: metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) };
+      result.performance.passed = result.performance.startupMs < 30000 && result.performance.workingSetMb < 800 && result.performance.idleCpuPercent < 30;
+      if (!result.performance.passed) throw new Error('Resource budget exceeded: ' + JSON.stringify(result.performance));
       await fs.mkdir(path.dirname(smokeReport), { recursive: true }); await fs.writeFile(smokeReport, JSON.stringify({ ...result, version: metadata.version }));
       await new Promise(resolve=>setTimeout(resolve,350));
       await fs.writeFile(smokeReport + '.png', (await window.webContents.capturePage()).toPNG());
@@ -133,9 +150,12 @@ async function run() {
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (window) restore(); });
-  app.whenReady().then(run).catch(async error => { if (smokeReport) { await fs.writeFile(smokeReport, JSON.stringify({ ok: false, error: error.stack })); app.exit(1); } else { dialog.showErrorBox('TMApps Launcher', error.message); app.quit(); } });
+  app.whenReady().then(run).catch(async error => { if (smokeReport) { await fs.writeFile(smokeReport, JSON.stringify({ ok: false, error: error.stack })); app.exit(1); } else { await experience.saveCrash(library?.root || directories().root, error, metadata.version); dialog.showErrorBox('TMApps Launcher', error.message); app.quit(); } });
   app.on('activate', () => { if (window) restore(); });
 }
 app.on('before-quit', event => { if ((library?.busy || updating) && !quitting) { event.preventDefault(); if (window) restore(); } else quitting = true; });
 app.on('will-quit', () => { for (const resolve of prompts.values()) resolve(false); tray?.destroy(); });
 app.on('window-all-closed', () => { if (!tray) app.quit(); });
+
+process.on('uncaughtException', error => { experience.saveCrash(library?.root || (smokeReport ? app.getPath('userData') : directories().root), error, metadata.version).finally(() => app.exit(1)); });
+process.on('unhandledRejection', error => { experience.saveCrash(library?.root || (smokeReport ? app.getPath('userData') : directories().root), error, metadata.version); window?.webContents.send('notice', 'An error was captured locally. Open Help to review a crash report.'); });

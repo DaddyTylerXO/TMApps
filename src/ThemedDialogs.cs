@@ -7,7 +7,9 @@ using System.Windows.Media;
 namespace TMApps {
     public class ThemedDialog : Window {
         public readonly StackPanel Body,Actions;
+        public static Action<Window> ThemeTransform;
         public ThemedDialog(Window owner,string title,string message) {
+            Loaded+=(sender,args)=>{if(ThemeTransform!=null)ThemeTransform(this);};
             Title=title; Width=600; SizeToContent=SizeToContent.Height; MaxHeight=Math.Min(800,SystemParameters.WorkArea.Height-40); ResizeMode=ResizeMode.NoResize;
             WindowStyle=WindowStyle.None; AllowsTransparency=true; Background=Brushes.Transparent; Foreground=(Brush)new BrushConverter().ConvertFromString("#ECEEF3"); FontFamily=new FontFamily("Segoe UI");
             WindowStartupLocation=WindowStartupLocation.CenterScreen;

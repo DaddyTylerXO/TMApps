@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "articles": [
+    {
+      "id": "Launcher-KB1",
+      "title": "Install the launcher",
+      "keywords": "installation mac windows linux setup download architecture",
+      "body": "Download the build for your OS and CPU. Windows uses Setup.exe and offers install location, startup and shortcuts. On macOS drag the app from its DMG to Applications. On Linux make the AppImage executable; if FUSE is unavailable use --appimage-extract-and-run. Launcher OS support is separate from the apps in its library. See Launcher-KB2 and Launcher-KB12."
+    },
+    {
+      "id": "Launcher-KB2",
+      "title": "Install and update applications",
+      "keywords": "apps update install location uninstall tray",
+      "body": "Use Install or Update in the library. Select an empty app folder and choose startup and desktop options. Updates check hashes before replacing files. Allow a running app to close before updating; force close is a separate choice. Uninstall can preserve or delete standard local data. External work folders are preserved. See Launcher-KB1 and Launcher-KB10."
+    },
+    {
+      "id": "Launcher-KB3",
+      "title": "Profile and social account suggestions",
+      "keywords": "profile mail socials accounts email passwords key",
+      "body": "The optional profile stores name, email addresses and social handles or public profile URLs locally. Sharing suggestions does not authenticate with providers. Enable each sharing choice only for the apps you want to use it. Provider passwords and API keys stay in each app. See Launcher-KB4 and Launcher-KB10."
+    },
+    {
+      "id": "Launcher-KB4",
+      "title": "TMApps sign in and app access",
+      "keywords": "sign in login otp email session linked authentication",
+      "body": "TMApps email-code sign-in requires the operator to deploy and configure the prepared sign-in service. Once enabled, sign in once and select which supported apps may request a TMApps session. This does not transfer social-network or mailbox passwords. Apps must implement the session handoff before they can reuse sign-in. Revoking app access stops future handoffs. See Launcher-KB3 and Launcher-KB10."
+    },
+    {
+      "id": "Launcher-KB5",
+      "title": "Choose your appearance",
+      "keywords": "theme dark grey gray black orange colours color",
+      "body": "Settings offers Orange, Grey and Black dark palettes. Navigation can sit on any edge. List view uses smaller app tiles; Grid view emphasises app cards. Save keeps your changes and Cancel restores the previous appearance. See Launcher-KB11."
+    },
+    {
+      "id": "Launcher-KB6",
+      "title": "Reduce resource usage",
+      "keywords": "performance cpu gpu ram memory network startup tray media",
+      "body": "Close-to-tray keeps the launcher in memory; use Quit to release it. Startup launch affects boot time. Startup update checks use network and some CPU briefly. App videos use network, RAM, decoding CPU and GPU while playing; playback starts only when requested. Screenshots load only in app details. Close details to release media. Functional and resource checks run in the release workflow. See Launcher-KB5 and Launcher-KB9."
+    },
+    {
+      "id": "Launcher-KB7",
+      "title": "Review and submit a crash report",
+      "keywords": "crash errors logs github report privacy",
+      "body": "The launcher prepares a local report with app version, OS, architecture and redacted error details. Review the full draft before choosing Upload to GitHub Issues. That opens the GitHub report form; you sign in and submit it there. Nothing is sent automatically. Remove anything you do not want public. Reports omit credentials and your saved profile. See Launcher-KB8 and Launcher-KB10."
+    },
+    {
+      "id": "Launcher-KB8",
+      "title": "Get help and request changes",
+      "keywords": "help faq bug issue feature request support github",
+      "body": "Use Help to search this library, request a feature, report a reproducible bug, or report another issue. Each action opens its matching GitHub form. Choose the affected app and describe expected versus actual behaviour. Do not include passwords, keys, mail content or private project files. See Launcher-KB7."
+    },
+    {
+      "id": "Launcher-KB9",
+      "title": "App details and galleries",
+      "keywords": "details versions new features changelog video screenshots gallery",
+      "body": "Click an app name or Details to see its catalog version, update date, description and published release notes. Each app can publish one showcase video and up to ten screenshots. Missing media is labelled unpublished. Media is loaded only when details are opened; videos never play automatically. See Launcher-KB6."
+    },
+    {
+      "id": "Launcher-KB10",
+      "title": "Privacy and local data",
+      "keywords": "privacy data delete accounts passwords credentials sharing",
+      "body": "Profile suggestions and app preferences are local to your OS user. Sign-in sessions, when configured, are protected with the OS credential facility; Linux without a secure keyring keeps sessions in memory only. GitHub reports become public only after you submit them. Uninstall choices apply to the selected app; external projects are kept. See Launcher-KB3 and Launcher-KB7."
+    },
+    {
+      "id": "Launcher-KB11",
+      "title": "Search settings and knowledge articles",
+      "keywords": "settings search keywords kb library toggle",
+      "body": "Type keywords in Settings search to find relevant controls. Knowledge articles are included by default. Turn off Include KB articles in settings search to limit results to controls; Help still provides the complete KB Library. Search supports KB numbers such as Launcher-KB6. See Launcher-KB5."
+    },
+    {
+      "id": "Launcher-KB12",
+      "title": "Troubleshoot platform compatibility",
+      "keywords": "macos mac linux windows fuse gatekeeper tray unsupported install",
+      "body": "Choose x64 for Intel/AMD and arm64 for Apple Silicon or ARM Linux. Do not install a Windows EXE on macOS or Linux. Only published matching app packages can be installed. macOS packages currently use ad-hoc signing and are not notarized; OS approval may be required. Linux tray support depends on the desktop. See Launcher-KB1 and Launcher-KB7."
+    }
+  ],
+  "apps": {
+    "tma-mail": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "# TMA-Mail changelog\n\nDevelopment history reconstructed from the local prototype milestones. Earlier versions were local builds, not previously published GitHub releases.\n\n## 0.16.5 beta \u2014 19 October 2026\n\n- Replace stretched notification lettering with the heavier Segoe UI Black weight. Scale uniformly to preserve the natural digit proportions while keeping the count centred inside the red bubble.\n- Visually verify single digits, two digits and `99+` at full and taskbar sizes; pass the existing notification integration checks.\n\n## 0.16.4 beta \u2014 19 October 2026\n\n- Correct the remaining small `99+` notification text by fitting the glyph height independently of its width. Use narrower lettering for large counts so it remains tall inside the circular badge.\n- Verify the `99+` white lettering occupies ten pixels vertically at a 16px taskbar size, compared with six in 0.16.3. Pass the existing 120 workspace-suite checks.\n\n## 0.16.3 beta \u2014 19 October 2026\n\n- Enlarge the white unread notification count for single digits, two digits and `99+`. Centre the visible glyphs rather than the font's line-height box so the text fills the red bubble more evenly.\n- Verify rendered badges at full and taskbar sizes; pass the existing 120 workspace-suite checks, including notification count and Appearance toggle behavior.\n\n## 0.16.2 beta \u2014 19 October 2026\n\n- Hide deleted messages immediately, including bulk deletes and deletes queued behind sync or another mail operation. Complete the server move in the background, preserving original cached folders and UIDs until confirmation. Keep pending deletions hidden if a refresh replaces cached message objects.\n- Update visible Inbox unread counts and the notification badge while deletion is pending. Restore messages and counts if the server rejects the delete or the account disconnects before the operation starts. Retain the existing duplicate-operation guard and server-identity handling.\n- Move local message persistence off the immediate toolbar and pop-out action path so local deletes update the view before saving to disk.\n- Use the same responsive toolbar layout and green buttons in separate email windows, including all main actions, the divider, Fast Functions, Create New Button and Edit Bar. Synchronize saved action/Fast Function ordering and edit mode between windows. Keep actions, recipient history and custom buttons tied to the opened message's mailbox rather than the main selection.\n- Double-click a separate window's subject to edit it in a themed Save/Cancel dialog. Validate a single-line subject, update the main list and window title, and retain the local edit through sync and encrypted cache reload. The original server subject is unchanged.\n- Add 11 synthetic checks for immediate visibility, slow-server behavior, bulk deletion, account isolation, refresh persistence, confirmation and failure recovery. No real mail was deleted by automated tests.\n- Add 12 separate-window toolbar/editor checks and three edited-subject persistence/search checks.\n\n## 0.16.1 beta \u2014 19 October 2026\n\n- Prevent `Unknown Mailbox: [Gmail]` sync failures by excluding Gmail's reserved system-label parent containers, non-selectable folders and nonexistent placeholders before sending STATUS or EXAMINE. Preserve the folder hierarchy and sync real children, including All Mail. Apply the same folder eligibility check to subscription scans.\n- Wait five minutes after each account's completed sync before its next fallback scan; retry failed attempts after one minute. Keep new-mail monitoring, explicit Sync, resume and action-triggered refreshes immediate. Avoid duplicate scheduled work already queued for an account.\n- Add 10 in-memory IMAP protocol checks for container handling, child-folder sync, cached message preservation, server failures and cancellation, plus six scheduling checks. Automated checks use synthetic data and do not access real mailboxes.\n\n## 0.16.0 beta \u2014 18 October 2026\n\n- Suggest recipient addresses while typing in To, Cc or Bcc for new messages, replies, forwards and Fast Functions. Rank valid addresses from the composing account's cached sent mail by message frequency, then recency; omit the account itself, duplicates, drafts and unrelated accounts. Support arrows, Enter/Tab, Escape and mouse selection, preserving other recipients.\n- Queue Delete, Archive and Move behind active mail operations instead of refusing clicks during sync. Cancel an active sync to let queued moves proceed, then resume background work where appropriate. Keep manually paused mailboxes paused and reject duplicate moves or moves queued for disconnected accounts.\n- Refresh source and destination cache entries after successful moves using the server's destination UID mapping. On servers without a mapping, refresh the destination on the next sync. Failed moves keep the cached source visible and do not automatically retry.\n- Recognize common Deleted Items/Deleted Messages folder names and Gmail's All Mail archive when special-folder flags are unavailable. Keep pop-out reply recipient history tied to its original account after mailbox switching.\n- Add 14 synthetic recipient/dropdown checks and 11 toolbar/move/account-isolation checks. No real mailbox was modified by automated tests.\n\n## 0.15.9 beta \u2014 18 October 2026\n\n- Add per-mailbox Pause sync / Resume sync controls in the footer and Settings \u2192 Accounts. Pause stops queued/periodic sync and new-mail monitoring for that mailbox until resumed or the app restarts.\n- Pause immediately when removal is selected. Cancelling the confirmation restores syncing unless the mailbox was already paused; confirming waits asynchronously for sync cancellation and the mail-operation lock before removing credentials. Reconnect-dialog disconnection also awaits removal.\n- Pass cancellation through IMAP/SMTP authentication and modern OAuth token renewal, suppress late sync callbacks, retain completed cache batches and preserve other accounts and encrypted caches.\n- Add eight synthetic workspace checks for cancellation, removal ordering, queue isolation, cache retention and resume controls. No real mailbox is removed during tests.\n\n## 0.15.8 beta \u2014 17 October 2026\n\n- Add a green question-mark help button beside the Google app-password option and password field. Hover shows 'How to get app specific password?'; clicking opens Google's official app-password guide.\n\n## 0.15.7 beta \u2014 17 October 2026\n\n- Keep Google desktop OAuth configuration local and preserve the Google app-specific password option. Public packaging uses only the public provider configuration and refuses a nonempty Google OAuth client secret.\n- Add a provider setup regression confirming that Google browser sign-in and password setup are both available and that password setup keeps password authentication.\n- Google sign-in initially requires a listed test account. Production availability and any required Google verification remain separate provider setup steps.\n\n## 0.15.6 beta \u2014 17 October 2026\n\n- Fix a reproduced MSAL json_parse_failed error while parsing valid Microsoft client-info JSON. The packaged JSON encoder version differs from MSAL's requested assembly version; redirect it to the shipped version, together with the async interfaces and task extensions dependencies.\n- Add runtime regressions that exercise MSAL client-info parsing, token-response JSON, account-cache loading and cache roundtrip with synthetic data. The previous configuration reproduces the loader failure; the corrected configuration passes.\n- Keep the safe Outlook diagnostics available. Live Microsoft sign-in and mailbox connection still require an account-holder retry.\n\n## 0.15.5 beta \u2014 17 October 2026\n\n- Show MSAL/Microsoft error codes and a connection-details button for Outlook failures after browser authentication. Distinguish the browser/token step from session renewal during mailbox connection.\n- Include only diagnostic identifiers, stage, HTTP status and targeted hints; omit raw Microsoft messages, token responses and callback URLs. Keep failed setup open for review/retry without adding an incomplete account.\n- Add a synthetic post-authentication failure regression that verifies actionable error codes and excludes fake token/callback values. The reported live failure still requires its actual error code for a confirmed fix.\n\n## 0.15.4 beta \u2014 17 October 2026\n\n- Bundle TMA-Mail\u2019s Microsoft public client ID so Outlook setup offers Continue with Outlook and uses the existing MSAL system-browser sign-in flow. Register the desktop localhost redirect and delegated IMAP, SMTP and calendar permissions; users consent to their own account access.\n- Source builds use the tracked public client configuration unless a local provider-settings.json override exists. No Microsoft client secret is required; Gmail remains unconfigured.\n- Verify the release configuration exposes Outlook sign-in without opening a browser or accessing a real mailbox. Live sign-in/consent and organization-specific restrictions remain to be verified by the account holder.\n\n## 0.15.3 beta \u2014 17 October 2026\n\n- Replace the white provider calendar discovery list with rounded green rows, readable names, checkboxes, and read-only/writable labels.\n- Add selection counts, Select all, Clear selection, Add selected calendars, and Add all calendars. Connect and download multiple calendars together, then show All Calendars.\n- Reconnecting known calendars preserves their cached events, pending uploads and uploaded-event identities. Save the group together and restore the previous list on save failure.\n- Theme the reminder list and actions in green. Apply Dismiss/Snooze/Dismiss all immediately with selection-aware buttons, saved state, error rollback and visible confirmation.\n- Add a Calendar reminder sound setting with seven cozy choices, None, Custom WAV and preview. Sound once per due reminder batch and again after snoozing; keep mail sound choices independent. Desktop calendar reminders use the existing bra"
+    },
+    "tma-agent-office": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "# Changelog\n\nUser-visible changes to Agent Office are recorded here. Entries under Unreleased\nmove into a numbered release when that release is prepared.\n\n## Unreleased\n\n## 0.2.0 \u2014 2026-10-15\n\n### Added\n\n- Collapsible navigation ribbon with saved state, accessible labels, and tooltips.\n- Open file location directly below a completed job's heading, using its saved directory.\n- Claude Code CLI connection, account verification/sign-in, model selection, and per-agent provider selection for mixed teams.\n- Live office appearance choices: Default (the original look), Robot workshop, and Neon network. Robot couriers deliver actual handoffs between desks and return to their stations.\n- Office styles are shared by Overview and The Office Live; animations respect reduced motion and office pause, and restored history is not replayed.\n- GitHub source repository setup and project instructions for maintaining this changelog.\n\n### Validation\n\n- 51 automated tests pass, including provider routing, ribbon persistence, completed-job folder access, and real-event/reduced-motion animation behavior.\n- Claude integration is covered by protocol fixtures and a mixed-provider file-handoff test. A live Claude generation run requires an installed native CLI and signed-in Claude account.\n- Office appearances and collapsed navigation were rendered in isolated Electron windows for visual checks; fixture jobs do not perform live AI work.\n\n## 0.1.0 \u2014 2026-10-15\n\n### Added\n\n- Windows desktop application with a visual agent office, Overview, and dedicated The Office Live tab.\n- Configurable specialist agents, collaborative stage handoffs, job priorities, pause, cancellation, and retry.\n- Eight project zones: Forge, Content, SNS, Products, Infra, Business, Games, and Archive; project status styling and seven-day inactivity indicators.\n- Codex integration with ChatGPT browser sign-in, account model selection, usage information, and streamed output. No API key is required for this connection.\n- Optional OpenAI API connection with encrypted Windows key storage or session-only credentials.\n- ArtCraft integration for all 13 applications shown in the suite, including per-agent app permissions, folder confinement where supported, and action review.\n- Spotify desktop playback information and previous/play/pause/next controls through Windows media sessions.\n- Light, dark, and system appearance, reduced motion, and text scaling from 100% to 200%.\n- Projects tab with live disk changes, nested folder navigation, safe text previews, recent changes, and Open folder.\n- Per-project folder location and folder name controls, full-path preview, and persistent folder settings.\n- Completed Jobs tab with saved deliverables, tool results, file locations, and history across restarts.\n- Windows installer with installation-folder selection, Desktop and Start menu shortcuts, and uninstall support.\n\n### Fixed\n\n- Corrected the Codex project configuration that described writable work as read-only and caused chat-only output instead of saved files.\n- Jobs now verify that non-empty output files were created or changed before reporting completion. Empty folders, unchanged files, and chat claims do not pass verification.\n- Generated Codex images are copied into the project instead of being left only in the runtime cache.\n- Specialist stages are coordinated by Agent Office; unnecessary internal delegation is discouraged, and the tool budget scales with the team.\n- Linked jobs and supported ArtCraft sessions use the selected project directory, including locations outside the office default workspace.\n- Project folder names reject invalid Windows characters and reserved names; existing folders are not overwritten or silently moved.\n- Interrupted jobs are reported as failures and are never automatically retried. Explicit retry preserves the original job history.\n\n### Validation\n\n- 42 automated tests pass for the current implementation.\n- Real signed-in Codex checks created and read back HTML, and completed a two-specialist job producing five SVG logos, a gallery, a README, and review notes.\n- A real VectorCraft open/export check verified output in a custom project folder. Automated protocol fixtures do not themselves constitute live AI generation tests.\n"
+    },
+    "tma-safe": {
+      "video": null,
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/4c60b69708913dc5f8cc967093f159229b639656/docs/create-vault-preview.png",
+          "caption": "Create Vault Preview"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/4c60b69708913dc5f8cc967093f159229b639656/docs/login-editor-preview.png",
+          "caption": "Login Editor Preview"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/4c60b69708913dc5f8cc967093f159229b639656/docs/settings-preview.png",
+          "caption": "Settings Preview"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/4c60b69708913dc5f8cc967093f159229b639656/docs/unlock-preview.png",
+          "caption": "Unlock Preview"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/4c60b69708913dc5f8cc967093f159229b639656/docs/vault-preview.png",
+          "caption": "Vault Preview"
+        }
+      ],
+      "releaseNotes": "# Changelog\n\n## 0.2.2\n\n- Applied the selected Icon D: one horizontal white key on the existing purple background, matching TMA-Mail's minimal style.\n\n## 0.2.1\n\n- Optional \u201cAlways use this vault when opening TMA-Safe\u201d selection on the unlock/create screen.\n- Remembers only the device-local file path; master password and any key file remain required.\n- Missing or moved files offer a clear message and normal file selection. Unticking the option forgets the default.\n- Existing startup and tray settings are preserved when upgrading.\n\n## 0.2.0\n\n- Redrawn purple-and-white bunch-of-keys icon throughout the app and native packages.\n- Eye buttons for master, confirmation and login password fields, with automatic hiding.\n- Encrypted folders: create, rename, assign/move logins, and delete folders while preserving logins.\n- Settings for open at sign-in, tray/menu-bar icon, close to tray, idle locking and clipboard clearing.\n- TMA-Mail-style rounded tray menu in purple, with Open, Settings, Lock vault and Exit actions.\n- Closing to the tray always locks; startup always opens a locked app.\n- Existing vaults remain readable; new folder data stays inside the encrypted portable file.\n\n## 0.1.0\n\n- Initial encrypted portable password vault, generator, expiry reminders, CSV imports, key-file protection and browser-filling extension.\n"
+    },
+    "tma-padlock": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "Release notes have not been published for this app yet."
+    },
+    "tma-socialsmanager": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "# Changelog\n\n## 0.2.0\n\n- Add multiple custom dashboards, with independent named tabs and locally saved widget layouts.\n- Add statistic cards with measured up/down changes, line graphs, bar charts and pie charts.\n- Configure each widget's metric, account scope, period and size; edit, reorder or remove widgets.\n- Record local metric history on successful checks, with minute/hour retention and honest missing-data states.\n- Keep dashboard statistics connected to manual, live and scheduled analytics refresh.\n\n## 0.1.1\n\n- Prefill the Bluesky handle suffix, place the cursor before it, and support pasting complete handles.\n\n## 0.1.0\n\n- Initial desktop beta with account analytics, supported publishing, drafts, tray preferences and automatic refresh.\n"
+    },
+    "tma-cut": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "Release notes have not been published for this app yet."
+    }
+  }
+}

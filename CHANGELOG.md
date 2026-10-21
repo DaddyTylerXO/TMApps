@@ -92,3 +92,8 @@
 - GitHub Actions packaging and publishing for the launcher and both applications.
 - Installation safety checks and real WPF rendering verification.
 - Private GitHub downloads using a user-supplied token encrypted with Windows DPAPI.
+
+
+## 1.14.0
+
+Added app details with version/date, branch release notes, one video slot and ten screenshot slots; searchable settings and twelve cross-referenced KB articles; Grey and Black dark palettes; explicit feature/bug/issue forms and local reviewed crash reports. Added the Word KB Library and resource regression checks in Windows and native desktop release paths. Prepared email-code sign-in, encrypted session storage, per-app grants and a PKCE handoff backend, disabled until operator configuration and consumer integration are complete. Ratings were excluded by request.

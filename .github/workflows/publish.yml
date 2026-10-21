@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [TMApps-Launcher]
-    paths: ['desktop/**', 'src/**', 'assets/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
+    paths: ['desktop/**', 'src/**', 'assets/**', 'content/**', 'backend/**', 'tools/**', 'docs/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
 permissions:
   contents: write
 concurrency:
@@ -110,7 +110,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: TMApps-Windows
-          path: published/*
+          path: |
+            published/*
+            launcher/build/windows-performance.json
       - name: Publish application packages, then catalog
         shell: powershell
         env:
@@ -128,9 +130,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Package upload failed; catalog was not published' }
           gh release upload tma-apps published/catalog.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }
+          gh release upload tma-apps 'launcher/docs/KB Library.docx' --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'KB Library upload failed' }
           gh release upload tma-apps published/launcher-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Launcher update manifest upload failed' }
-          gh release edit tma-apps --notes 'Download TMApps-Launcher-Setup.exe for Windows, a mac-x64/mac-arm64 DMG for macOS, or a linux-x64/linux-arm64 AppImage for Linux. TMA-Safe is available after its application release workflow publishes verified packages. OS logos under each app show actual published support. macOS builds are ad-hoc signed and not notarized. The optional top-right profile shares your name and email suggestions locally with TMA-Mail 0.14.1 or later; app-specific credentials or provider sign-in remain required in Mail. Check for updates includes the launcher itself, with verified download, in-place update, and restart. Setup offers install location, Windows startup, desktop shortcut, and stay-in-tray options. App installs also offer location, app startup, and desktop icon choices. Running apps, including tray apps, require close permission before update/uninstall; force closing requires separate consent. Uninstall offers keep/delete local data. Install/uninstall dialogs use the orange/grey rounded theme. Mail updates are checked directly against its branch manifest as well as this catalog. Windows 10/11 x64 with .NET Framework 4.8. Unsigned beta builds. ZIP files below are app packages managed by the launcher.'
+          gh release edit tma-apps --notes-file launcher/RELEASE-NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'Release description update failed' }
           $names = gh release view tma-apps --json assets --jq '.assets[].name'
           if ($LASTEXITCODE -ne 0) { throw 'Could not list old launcher assets' }

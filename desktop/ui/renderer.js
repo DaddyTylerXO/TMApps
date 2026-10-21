@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const api = window.launcher, $ = id => document.getElementById(id), names = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
+  let content = { articles: [], apps: {} };
   let state, filter = 'all', busy = false, update;
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
   const isNewer = (a, b) => { const av = a.split('-')[0].split('.').map(Number), bv = b.split('-')[0].split('.').map(Number); for (let i = 0; i < 3; i++) if (av[i] !== bv[i]) return av[i] > bv[i]; return !a.includes('-') && b.includes('-'); };
@@ -12,6 +13,7 @@
     $('footer').textContent = `TMApps Launcher ${state.version || '1.9.0'} · DaddyTylerXO · ${names[state.os]} ${state.arch}`;
     const initial = [...(state.profile.displayName || state.profile.emails[0] || '')][0]; $('profile').textContent = initial ? initial.toUpperCase() : '◉'; $('profile').title = state.profile.displayName || 'Your optional profile';
     const view = state.settings.libraryView; $('library').className = view.toLowerCase(); $('list').setAttribute('aria-pressed', String(view === 'List')); $('grid').setAttribute('aria-pressed', String(view === 'Grid'));
+    document.documentElement.dataset.theme = state.settings.theme || 'Orange';
     $('shell').className = `edge-${state.settings.navigationEdge.toLowerCase()}`;
     $('all-count').textContent = state.apps.length; $('installed-count').textContent = state.apps.filter(a => a.installed).length; $('updates-count').textContent = state.apps.filter(a => a.installed && isNewer(a.version, a.installed.version)).length; $('notinstalled-count').textContent = state.apps.filter(a => !a.installed).length;
     document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
@@ -25,7 +27,7 @@
       const body = el('div', null, 'card-body'), info = el('div', null, 'app-info'), meta = el('div', null, 'app-meta');
       const icon = el('div', app.id === 'tma-mail' ? null : app.id === 'tma-socialsmanager' ? null : app.id === 'tma-padlock' ? '▦' : app.id === 'tma-safe' ? '⚿' : '♧', 'app-icon');
       if (app.id === 'tma-cut' || app.id === 'tma-mail' || app.id === 'tma-padlock' || app.id === 'tma-safe' || app.id === 'tma-socialsmanager') { icon.replaceChildren(); icon.classList.add('app-image'); const image = el('img'); image.src = app.id === 'tma-cut' ? '../assets/TMA-Cut.png' : app.id === 'tma-mail' ? '../assets/TMA-Mail.png' : app.id === 'tma-safe' ? '../assets/TMA-Safe.png' : app.id === 'tma-socialsmanager' ? '../assets/TMA-SocialsManager.png' : '../assets/TMA-Padlock.png'; image.alt = app.name; icon.append(image); }
-      body.append(icon); info.append(el('h2', app.name), el('p', app.description));
+      body.append(icon); const title = el('h2'); const titleButton = button(app.name, () => details(app)); titleButton.className = 'app-title'; title.append(titleButton); info.append(title, el('p', app.description));
       const badges = el('div', null, 'support'); badges.setAttribute('aria-label', 'Supported operating systems'); app.support.forEach(key => badges.append(osBadge(key))); if (!app.support.length) badges.append(el('small', 'No published packages yet')); info.append(badges); body.append(info);
       const unavailable = !app.package && !app.installed, comingSoon = app.id === 'tma-socialsmanager' && unavailable;
       const status = comingSoon ? 'COMING SOON' : unavailable ? state.platform==='win32' ? 'USE THE NATIVE WINDOWS EDITION' : `NOT AVAILABLE FOR ${names[state.os].toUpperCase()} ${state.arch.toUpperCase()}` : app.installed ? (isNewer(app.version, app.installed.version) ? 'UPDATE AVAILABLE' : 'INSTALLED · UP TO DATE') : 'READY TO INSTALL';
@@ -45,7 +47,7 @@
     return new Promise(resolve => {
       const dialog = el('dialog'), header = el('div', title, 'dialog-header'), body = el('div', null, 'dialog-body'), footer = el('div', null, 'dialog-actions'), error = el('p', '', 'dialog-error');
       body.append(el('p', message)); const controls = build(body) || {}; body.append(error);
-      const finish = value => { dialog.close(); dialog.remove(); resolve(value); };
+      const finish = value => { dialog.querySelectorAll('video').forEach(v => { v.pause(); v.removeAttribute('src'); v.load(); }); dialog.close(); dialog.remove(); resolve(value); };
       const cancel = button('Cancel', () => finish(false)), primary = button(action, async () => { try { if (await submit(controls) !== false) finish(true); } catch (e) { error.textContent = e.message; } }, true);
       footer.append(cancel, primary); dialog.append(header, body, footer); dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); }); document.body.append(dialog); dialog.showModal();
     });
@@ -59,7 +61,7 @@
     const unsubscribe = api.onProgress(text => { status.textContent = text; });
     try { const result = await job(); if (result?.apps) state = result; if (result?.notice || result?.warning) notice(result.notice || result.warning); else notice('Operation completed.'); }
     catch (e) { notice(e.message); }
-    finally { unsubscribe(); dialog.close(); dialog.remove(); busy = false; state = await api.snapshot(); render(); }
+    finally { unsubscribe(); dialog.close(); dialog.remove(); busy = false; state = await api.snapshot(); content = api.experience ? await api.experience() : content; render(); }
   }
   async function install(app) {
     let options = {};
@@ -82,6 +84,7 @@
   }
   async function profile() {
     await modal('Your TMApps profile', 'Optional. Save your name, email addresses, and social accounts for your apps on this device.', 'Save profile', body => {
+      if (api.auth) body.append(button('TMApps sign-in and linked apps', signIn));
       const name = field(body, 'Your name', state.profile.displayName), emails = field(body, 'Email addresses (one per line)', state.profile.emails.join('\n'), 'textarea'); name.maxLength = 100;
       const mailShare = check(body, 'Sync name and emails to TMA-Mail when supported on this device', state.profile.shareWithMail);
       body.append(el('p', 'TMA-Mail is currently Windows-only. Its name/email sync works on Windows with a compatible Mail version. A profile does not connect accounts: app-specific passwords/keys or provider sign-in are still required in Mail. Never enter credentials here.'));
@@ -102,17 +105,64 @@
       return { name, emails, mailShare, socialShare, entries };
     }, async fields => { state = await api.profile({ schemaVersion: 1, displayName: fields.name.value, emails: fields.emails.value.split(/\r?\n/).filter(Boolean), shareWithMail: fields.mailShare.checked, socialAccounts: fields.entries.map(e => ({ platform: e.platform.value, account: e.account.value })), shareWithSocialApps: fields.socialShare.checked }); render(); notice('Optional profile saved locally. Future social app linking will require sign-in inside each app.'); });
   }
+  async function signIn() {
+    let status = await api.auth({ action: 'status' });
+    await modal('TMApps sign-in and linked apps', status.configured ? 'Sign in with an email code, then allow selected compatible apps to reuse your TMApps identity. This does not connect mailbox or social-network accounts.' : 'The TMApps sign-in service is prepared but not configured. The operator must deploy it and supply the project URL and public key. Separate app/provider sign-ins remain available.', 'Close', body => {
+      if (status.warning) body.append(el('p', status.warning, 'dialog-error'));
+      const summary = el('p', status.email ? `Signed in as ${status.email}` : 'Not signed in.'); body.append(summary);
+      if (!status.persistent) body.append(el('p', 'No secure OS keyring is available. This session is kept only in memory and ends when the launcher exits.'));
+      const email = field(body, 'Email address', status.email || state.profile.emails[0] || ''), code = field(body, 'Email verification code', ''); code.autocomplete = 'one-time-code';
+      const error = el('p', '', 'dialog-error'), entries = [];
+      const send = button('Send sign-in code', async () => { try { const result = await api.auth({ action: 'send', email: email.value }); error.textContent = result.notice; } catch(e) { error.textContent = e.message; } }); send.disabled = !status.configured; body.append(send);
+      const verify = button('Verify code', async () => { try { status = await api.auth({ action: 'verify', email: email.value, code: code.value }); summary.textContent = `Signed in as ${status.email}`; code.value = ''; error.textContent = 'Verified. Select apps and save access.'; entries.forEach(e => { e.input.checked = status.allowedApps.includes(e.id); }); } catch(e) { error.textContent = e.message; } }); verify.disabled = !status.configured; body.append(verify, el('h3', 'Selected app access'));
+      state.apps.forEach(app => { const input = check(body, app.name, status.allowedApps.includes(app.id)); entries.push({ id: app.id, input }); });
+      body.append(el('p', 'Apps must implement the prepared handoff contract before they can reuse sign-in. Revoking access blocks future handoffs and app-session checks. Provider credentials stay in each app.'));
+      const save = button('Save app access', async () => { try { status = await api.auth({ action: 'access', apps: entries.filter(e => e.input.checked).map(e => e.id) }); error.textContent = 'App access saved.'; } catch(e) { error.textContent = e.message; } }); save.disabled = !status.configured; body.append(save, button('Sign out of launcher', async () => { try { status = await api.auth({ action: 'logout' }); summary.textContent = 'Not signed in.'; } catch(e) { error.textContent = e.message; } }), error);
+    });
+  }
+  const matches = (text, query) => query.toLowerCase().split(/\s+/).filter(Boolean).every(word => text.toLowerCase().includes(word));
+  const media = value => { try { const u = new URL(value); return u.protocol === 'https:' && u.hostname === 'raw.githubusercontent.com' && u.pathname.startsWith('/DaddyTylerXO/TMApps/') && !u.username && !u.password; } catch { return false; } };
+  async function details(app) {
+    const entry = content.apps[app.id] || {}, updated = new Date(app.updatedAt);
+    await modal(app.name, `Version ${app.version} · Updated ${Number.isNaN(updated.getTime()) ? 'date not published' : updated.toLocaleDateString()}`, 'Close', body => {
+      const notes = el('details'); notes.append(el('summary', 'New features and release notes from the app branch'), el('pre', entry.releaseNotes || 'Release notes have not been published yet.', 'release-notes')); body.append(el('p', app.description), notes, el('h3', 'Showcase video · 1 slot'));
+      if (media(entry.video)) { const video = el('video'); video.src = entry.video; video.controls = true; video.preload = 'none'; video.autoplay = false; video.setAttribute('aria-label', `${app.name} showcase`); body.append(video); } else body.append(el('p', 'Showcase video not published.'));
+      body.append(el('h3', 'Screenshots · 10 slots')); const gallery = el('div', null, 'gallery');
+      for (let i = 0; i < 10; i++) { const slot = el('figure'), shot = entry.screenshots?.[i]; if (shot && media(shot.url)) { const image = el('img'); image.src = shot.url; image.alt = shot.caption; image.loading = 'lazy'; image.decoding = 'async'; slot.append(image); } slot.append(el('figcaption', shot ? `${i + 1} · ${shot.caption}` : `Screenshot ${i + 1} · Not published`)); gallery.append(slot); } body.append(gallery);
+    });
+  }
+  async function help() {
+    await modal('Help and KB Library', 'Search guides, setup information, and troubleshooting by keyword or KB number.', 'Close', body => {
+      const search = field(body, 'Search KB Library', ''); const results = el('div'); body.append(results);
+      const render = () => { results.replaceChildren(); content.articles.filter(a => matches(`${a.id} ${a.title} ${a.keywords} ${a.body}`, search.value)).forEach(a => results.append(button(`${a.id} · ${a.title}`, () => modal(`${a.id} · ${a.title}`, a.body, 'Close')))); }; search.addEventListener('input', render); render();
+      for (const [kind, label] of [['feature','Feature request'],['bug','Bug report'],['issue','Issue report']]) body.append(button(label, () => api.support(kind)));
+      body.append(button('Review crash report', crashReport)); if (api.knowledgeDocument) body.append(button('Download KB Library Word document', () => api.knowledgeDocument()));
+    });
+  }
+  async function crashReport() {
+    const report = await api.crash();
+    await modal('Review crash report', 'Review and edit this draft. Upload opens a GitHub issue form; you sign in and submit it there. Nothing is sent automatically.', 'Upload to GitHub Issues…', body => { const draft = field(body, 'Report draft', report, 'textarea'); draft.rows = 14; return { draft }; }, async c => { await api.support('crash', c.draft.value); });
+  }
   async function settings() {
-    await modal('Your workspace', 'Choose where navigation appears and how the launcher starts.', 'Save changes', body => {
-      const edge = field(body, 'Navigation position', '', 'select'); ['Left', 'Right', 'Top', 'Bottom'].forEach(v => edge.append(new Option(v, v))); edge.value = state.settings.navigationEdge;
-      const view = field(body, 'Library view', '', 'select'); ['List', 'Grid'].forEach(v => view.append(new Option(v, v))); view.value = state.settings.libraryView;
-      return { edge, view, startup: check(body, 'Open launcher on sign-in', state.settings.runAtStartup), tray: check(body, 'Stay in the tray when closed (requires desktop tray support)', state.settings.closeToTray), updates: check(body, 'Check apps and launcher for updates at startup', state.settings.checkOnStartup) };
-    }, async c => { state = await api.settings({ ...state.settings, navigationEdge: c.edge.value, libraryView: c.view.value, runAtStartup: c.startup.checked, closeToTray: c.tray.checked, checkOnStartup: c.updates.checked }); render(); notice('Settings saved.'); });
+    const result = await modal('Your workspace', 'Search settings or KB numbers. Appearance previews immediately; Cancel restores it.', 'Save changes', body => {
+      const search = field(body, 'Search settings', ''), groups = [], group = (title, keywords) => { const block = el('section'); block.dataset.keywords = title + ' ' + keywords; block.append(el('h3', title)); body.append(block); groups.push(block); return block; };
+      const appearance = group('Appearance', 'theme dark grey gray black orange colour color navigation view list grid');
+      const edge = field(appearance, 'Navigation position', '', 'select'); ['Left', 'Right', 'Top', 'Bottom'].forEach(v => edge.append(new Option(v, v))); edge.value = state.settings.navigationEdge;
+      const view = field(appearance, 'Library view', '', 'select'); ['List', 'Grid'].forEach(v => view.append(new Option(v, v))); view.value = state.settings.libraryView;
+      const theme = field(appearance, 'Dark palette', '', 'select'); ['Orange', 'Grey', 'Black'].forEach(v => theme.append(new Option(v, v))); theme.value = state.settings.theme || 'Orange'; theme.addEventListener('change', () => { document.documentElement.dataset.theme = theme.value; });
+      const performance = group('Startup and performance', 'cpu gpu ram memory network boot startup tray update background');
+      const startup = check(performance, 'Open launcher on sign-in', state.settings.runAtStartup), tray = check(performance, 'Stay in the tray when closed (requires desktop tray support)', state.settings.closeToTray), updates = check(performance, 'Check apps and launcher for updates at startup', state.settings.checkOnStartup);
+      performance.append(el('p', 'Startup affects boot time. Tray mode keeps RAM in use; Quit releases it. Updates briefly use CPU and network. Screenshots load only in Details. Playing a video uses RAM, CPU/GPU decoding and network; close Details to stop it. See Launcher-KB6.'));
+      const support = group('Help and settings search', 'knowledge kb guides help search reports'); const kb = check(support, 'Include KB articles in settings search', state.settings.includeKbSearch !== false); support.append(button('Open KB Library and support', help));
+      const results = el('div'); body.append(results); const filter = () => { groups.forEach(g => { g.hidden = !matches(g.dataset.keywords + ' ' + g.textContent, search.value); }); results.replaceChildren(); if (kb.checked && search.value.trim()) content.articles.filter(a => matches(`${a.id} ${a.title} ${a.keywords} ${a.body}`, search.value)).forEach(a => results.append(button(`${a.id} · ${a.title}`, () => modal(`${a.id} · ${a.title}`, a.body, 'Close')))); }; search.addEventListener('input', filter); kb.addEventListener('change', filter);
+      return { edge, view, theme, startup, tray, updates, kb };
+    }, async c => { state = await api.settings({ ...state.settings, navigationEdge: c.edge.value, libraryView: c.view.value, theme: c.theme.value, includeKbSearch: c.kb.checked, runAtStartup: c.startup.checked, closeToTray: c.tray.checked, checkOnStartup: c.updates.checked }); render(); notice('Settings saved.'); });
+    if (!result) document.documentElement.dataset.theme = state.settings.theme || 'Orange';
   }
   async function refresh() { if (busy) return; busy = true; render(); notice('Checking apps and launcher…'); try { const result = await api.refresh(); state = result; update = result.update; notice(result.notice); } catch (e) { notice(e.message); } finally { busy = false; render(); } }
   const ready = (async () => {
     state = await api.snapshot(); render(); notice(state.platform==='win32' ? 'This is the macOS/Linux client preview. Use TMApps-Launcher-Setup.exe for the full Windows edition.' : `Showing published app support. Windows-only apps cannot be installed on ${names[state.os]} until a compatible package is published.`);
-    $('search').addEventListener('input', render); $('refresh').addEventListener('click', refresh); $('settings').addEventListener('click', settings); $('profile').addEventListener('click', profile); $('github').addEventListener('click', () => api.source());
+    $('search').addEventListener('input', render); $('refresh').addEventListener('click', refresh); $('settings').addEventListener('click', settings); $('profile').addEventListener('click', profile); $('github').addEventListener('click', () => api.source()); $('help').addEventListener('click', help);
     document.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.filter; render(); }));
     for (const [id, view] of [['list', 'List'], ['grid', 'Grid']]) $(id).addEventListener('click', async () => { try { state = await api.settings({ ...state.settings, libraryView: view }); render(); } catch (e) { notice(e.message); } });
     $('launcher-update').addEventListener('click', async () => { if (await modal('Update TMApps Launcher?', state.platform === 'darwin' ? 'Download and verify the update, then open its disk image. Quit the launcher and replace the app in Applications. Settings and your library are kept.' : 'Download and verify the update, replace this AppImage, and restart? Your profile and library are kept.', state.platform === 'darwin' ? 'Download and open' : 'Update and restart')) await operation('Updating launcher', () => api.update()); });
@@ -120,5 +170,6 @@
     if (state.settings.checkOnStartup && !state.smoke) refresh();
   })();
   window.launcherSmoke = async () => { await ready; return { ok: true, cards: document.querySelectorAll('.card').length, badges: document.querySelectorAll('.os-badge').length, platform: state.platform, arch: state.arch, nodeAvailable: typeof window.require !== 'undefined' || typeof window.process !== 'undefined' }; };
+  if (api.rendererError) { window.addEventListener('error', event => api.rendererError(String(event.error?.stack || event.message)).catch(() => {})); window.addEventListener('unhandledrejection', event => api.rendererError(String(event.reason?.stack || event.reason)).catch(() => {})); }
   window.launcherReady = ready;
 })();
