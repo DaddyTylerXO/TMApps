@@ -1,0 +1,40 @@
+---
+description: Never commit or publish secrets or sensitive security data to GitHub
+alwaysApply: true
+---
+
+# Keep sensitive security data out of GitHub
+
+The user requires this policy for all TMApps projects and future updates.
+
+- Never commit, push or upload client secrets, API secrets, passwords, access or
+  refresh tokens, session cookies, authorization codes, private keys, signing
+  certificates with private material, recovery codes, database credentials,
+  service-role keys, credential stores or real user security data to GitHub.
+  This applies to public and private repositories, branches and Git history.
+- Apply the same restriction to release packages, installers, archives, documents,
+  screenshots, videos, logs, CI artifacts, issue reports, PR text and comments.
+  Do not print secret values in commands, tool output or diagnostics.
+- Keep runtime credentials in the appropriate OS credential store or secret
+  manager. Keep server credentials on the server. Use protected GitHub Actions
+  secrets for authorized CI tasks; never bake them into client applications,
+  public configuration, generated files or distributable packages.
+- Keep local secret configuration and credential files untracked and ignored.
+  An ignore rule does not remove an already tracked file or erase Git history.
+  Commit templates with clearly fake placeholders instead of real credentials.
+- Public OAuth client IDs and explicitly publishable keys are distinct from
+  secrets. Include them only when their provider documents them as suitable for
+  public clients; never treat a client secret, service-role key or privileged
+  server key as publishable. Public values do not replace authorization checks.
+- Before each commit, push or release, review the actual staged changes and any
+  generated/uploaded artifacts for sensitive data. Use an available secret
+  scanner with redacted output alongside manual review, and investigate findings
+  before publishing. Never paste a suspected secret into GitHub to discuss it.
+- If exposure is suspected, stop the affected publication and tell the user using
+  redacted identifiers or file locations. Treat exposed credentials as compromised
+  and arrange revocation/rotation. Removing a value from the latest file is not
+  sufficient. Do not rewrite shared history or force-push without explicit user
+  authorization; coordinate any history and release-asset cleanup safely.
+- Use synthetic accounts and fake security data for tests and screenshots. Review
+  crash reports and support exports before submission, including embedded files.
+- Carry this rule forward when creating a new TMApps app, branch or project.
