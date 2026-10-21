@@ -1,0 +1,14 @@
+name: Socials Manager Bug or Crash
+description: Report a Socials Manager bug with safe diagnostics
+title: "[Socials Manager] "
+body:
+  - type: markdown
+    attributes:
+      value: Do not include client IDs, client secrets, tokens, downloaded client JSON or private account data.
+  - type: textarea
+    id: report
+    attributes:
+      label: Bug or crash report
+      description: Steps to reproduce, expected result, app version and optional safe report from Help.
+    validations:
+      required: true

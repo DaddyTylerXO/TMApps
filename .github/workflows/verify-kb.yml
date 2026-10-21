@@ -1,0 +1,27 @@
+name: Verify Word KB Library
+on:
+  push:
+    branches: [TMA-SocialsManager]
+    paths: ['docs/**', 'scripts/build-kb*', 'scripts/render_docx.py', '.github/workflows/verify-kb.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated document rendering tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libreoffice-writer poppler-utils fonts-crosextra-carlito python3-docx python3-pil
+      - name: Generate the Word review copy
+        run: python3 scripts/build-kb-docx.py
+      - name: Verify KB bookmarks and screenshots
+        run: python3 scripts/check-kb.py
+      - name: Render Word document to page images
+        run: python3 scripts/render_docx.py 'docs/KB Library.docx' kb-render
+      - uses: actions/upload-artifact@v4
+        with:
+          name: socials-kb-pages
+          path: |
+            kb-render/
+            docs/KB Library.docx

@@ -16,11 +16,13 @@ pnpm package
 
 Windows x64 ZIP, macOS x64/arm64 tar.gz and DMG, and Linux x64/arm64 AppImage packages are built on their native GitHub Actions runners. The release job verifies all five launcher packages, uploads them to the existing `tma-apps` release, and then merges this app into the latest launcher catalogue. Existing apps are retained. Builds are unsigned/ad-hoc signed, without macOS notarization.
 
-## Platform support in 0.3.0 beta
+## Platform support in 0.4.0 beta
 
 | Platform | Connect | Metrics | Publish |
 | --- | --- | --- | --- |
-| Bluesky | Handle + app password, no developer registration | Followers, posts, recent likes/replies/reposts | Text |
+| LinkedIn | Approved Community Management token + organization ID | Organization followers | Organization text posts |
+| Pinterest | Approved user token | Followers, Pins including saved Pins | Image Pin + Board ID |
+| Bluesky | Handle + app password, no developer registration | Followers, posts, recent likes/replies/reposts | Text + local image |
 | YouTube | Browser OAuth + local Desktop app registration | Subscribers, videos, lifetime views and 28-day reports | Not yet: video upload workflow required |
 | Twitch | Browser OAuth + local app registration | Followers (scope required), live viewers | No general social feed publishing API |
 | Kick | Browser OAuth + local app registration | Current stream viewers | Not supported |
@@ -36,7 +38,7 @@ The setup guide button opens the official documentation for each provider. API p
 
 ## Analytics and publishing
 
-Select all accounts or one account in Overview. Unknown metrics are `—`, not zero. Audience sums are not deduplicated. Reddit karma and live viewers stay separate. Bluesky engagement covers at most 100 recent feed entries and excludes reposts of other authors.
+Select all accounts or one account in Overview. YouTube values remain separate from mixed platform totals. Unknown metrics are `—`, not zero. Audience sums are not deduplicated. Reddit karma and live viewers stay separate. Bluesky engagement covers at most 100 recent feed entries and excludes reposts of other authors.
 
 ### Custom dashboards
 
@@ -50,9 +52,20 @@ Historical recording starts with the last known snapshot when upgrading and cont
 
 Create a post, choose connected publishing accounts, then save a draft or publish. Platform validation runs before any target is called. A confirmation precedes publishing. Each destination records its own outcome. Successful, in-progress and uncertain attempts are not resent automatically. After an uncertain result, inspect the provider before creating another post. Editing and republishing a previously successful draft requires creating a new draft. Drafts save when navigating or closing the window; there is no timed autosave or background scheduling.
 
+## Workspace additions in 0.4.0
+
+See the [KB Library](docs/KB-Library.md) for numbered guides, API costs and setup. The same articles work offline in Help and Settings search.
+
+- Performance reviews show each integration separately, with cached data, source warnings and evidence-limited review prompts.
+- Topics and trends fetches available YouTube US popular videos, Twitch top categories and Reddit hot posts only on request; other providers use official discovery links. These are partial sources, not an all-platform trend census.
+- Offline mode blocks social checks and publishing while preserving local work.
+- One local JPEG/PNG attachment can publish to Bluesky, Facebook Pages or Pinterest. Other targets are blocked before any post is sent. Instagram retains its public HTTPS JPEG workflow. Images are re-encoded, resized and kept with draft files.
+- Widget setup offers visual types, named presets, drag ordering, source check intervals and local CSV exports. Sources share the fastest enabled interval.
+- First launch offers an isolated demo; Help reopens it. Reports contain safe categories and open a prefilled GitHub form for user review/submission. No report is uploaded silently.
+
 ## Settings and tray
 
-Settings includes launch at sign-in, tray icon visibility, close-to-tray, start minimized at sign-in and start maximized. Launch at sign-in requires a packaged app in a permanent location. Windows/macOS use Electron's login item API. Linux uses an XDG autostart desktop file and needs a desktop secret store for accounts and tray support for notification-area behaviour. Without a tray icon, close-to-tray and hidden startup are disabled.
+Settings includes left/right/top/bottom navigation, Yellow/Grey/Black dark palettes, scheduled gradual palette transitions, offline mode, KB search, launch at sign-in, tray icon visibility, close-to-tray, start minimized at sign-in and start maximized. Launch at sign-in requires a packaged app in a permanent location. Windows/macOS use Electron's login item API. Linux uses an XDG autostart desktop file and needs a desktop secret store for accounts and tray support for notification-area behaviour. Without a tray icon, close-to-tray and hidden startup are disabled.
 
 The Windows tray menu follows TMA-Mail's rounded container and pill buttons, recoloured yellow: **Open TMA-SocialsManager**, **Settings**, **Exit TMA-SocialsManager**. macOS and Linux use their native tray menus. Closing saves the active draft before hiding or exiting.
 
@@ -70,4 +83,4 @@ Draft Terms, Privacy and deletion instructions are bundled in `assets/legal/` an
 
 ## Validation
 
-`pnpm test` covers metrics normalization, credential redaction, trusted Bluesky hosts, platform validation, partial publishing, duplicate prevention, uncertain outcomes, persistence and startup configuration. `node node_modules/electron/cli.js . --smoke` runs an isolated desktop check and writes screenshots and a result to ignored `artifacts/`. Use a fresh smoke profile for repeated tests. No real social post is sent by tests.
+`pnpm test` covers metrics normalization, credential redaction, trusted Bluesky hosts, platform validation, partial publishing, duplicate prevention, uncertain outcomes, persistence and startup configuration. `node node_modules/electron/cli.js . --smoke` runs an isolated desktop check and writes screenshots and a result to ignored `artifacts/`. Use a fresh smoke profile for repeated tests. No real social post is sent by tests. Every release runs a bounded dashboard data preparation benchmark; Windows builds also run the isolated UI smoke checks. Synthetic timing budgets do not establish performance on every machine.

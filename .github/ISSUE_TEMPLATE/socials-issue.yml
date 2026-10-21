@@ -1,0 +1,11 @@
+name: Socials Manager General Issue
+description: Ask about setup or report a general Socials Manager issue
+title: "[Socials Manager issue] "
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue details
+      description: Include app version and the safe error message. Never include credentials or private account data.
+    validations:
+      required: true

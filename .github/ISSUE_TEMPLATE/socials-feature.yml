@@ -1,0 +1,11 @@
+name: Socials Manager Feature Request
+description: Suggest a Socials Manager feature
+title: "[Socials Manager feature] "
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: Feature and purpose
+      description: Describe what you want to do and how it would help. Do not include credentials or private account data.
+    validations:
+      required: true

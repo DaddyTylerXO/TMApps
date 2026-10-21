@@ -14,7 +14,7 @@ Open Settings → Provider sign-in → Remove for each configured provider. This
 
 ## Remove the entire local workspace
 
-Close every copy of TMA-SocialsManager, including any tray copy. Use TMApps Launcher's explicit local-data deletion option where supported, or remove the app's own OS application-data folder. This permanently removes local accounts, drafts, layouts, preferences and history. Keep any personal backups you need first. Do not remove unrelated app folders.
+Close every copy of TMA-SocialsManager, including any tray copy. Use TMApps Launcher's explicit local-data deletion option where supported, or remove the app's own OS application-data folder. This permanently removes local accounts, drafts, managed image copies, layouts, preferences and history. Unreferenced image copies older than seven days are also pruned on the next app start. Keep any personal backups you need first. Do not remove unrelated app folders.
 
 Typical locations are %APPDATA%/TMA-SocialsManager on Windows, ~/Library/Application Support/TMA-SocialsManager on macOS, and ~/.config/TMA-SocialsManager on Linux unless your OS configuration overrides the base location. The running app determines its userData location; package or OS settings can affect it.
 

@@ -2,6 +2,7 @@ name: Verify and publish Socials Manager
 on:
   push:
     branches: [TMA-SocialsManager]
+    paths-ignore: ['docs/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,10 +33,37 @@ jobs:
       - run: node node_modules/electron/install.js
       - run: pnpm test
       - run: node scripts/check-secrets.cjs
+      - name: Windows desktop regression checks
+        if: runner.os == 'Windows'
+        run: node node_modules/electron/cli.js . --smoke
       - run: node scripts/icons.cjs
       - run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify packaged launch and idle budgets on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $check = Start-Process -FilePath './dist/win-unpacked/TMA-SocialsManager.exe' -ArgumentList '--verify-launch' -Wait -PassThru -WindowStyle Hidden
+          if ($check.ExitCode -ne 0) { throw 'Packaged launch check failed.' }
+          Get-Content artifacts/launch-win32-x64.json
+      - name: Verify packaged launch and idle budgets on macOS
+        if: runner.os == 'macOS'
+        run: |
+          package=$(find dist -path '*/Contents/MacOS/TMA-SocialsManager' -type f -print -quit)
+          "$package" --verify-launch
+          cat artifacts/launch-darwin-*.json
+      - name: Verify packaged launch and idle budgets on Linux
+        if: runner.os == 'Linux'
+        run: |
+          package=$(find dist -maxdepth 1 -name '*.AppImage' -type f -print -quit)
+          chmod +x "$package"
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a "$package" --verify-launch --no-sandbox
+          cat artifacts/launch-linux-*.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: performance-${{ matrix.platform }}-${{ matrix.arch }}
+          path: artifacts/launch-*.json
       - run: node scripts/release-metadata.cjs
       - uses: actions/upload-artifact@v4
         with:

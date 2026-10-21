@@ -12,7 +12,7 @@ When you connect an account, the app may access its provider-issued account/chan
 
 The app stores access tokens and, where issued, refresh tokens. If you configure a developer app locally, it stores its client ID, client secret where required, and loopback callback URL. Bluesky app-password sign-in exchanges your handle and app password for a session; the app password is not retained after the exchange. Normal social-account passwords are not requested.
 
-The app also stores the drafts, post text, media URLs, selected destinations, dashboard names, tabs, widget configuration, preferences and publishing results you create or request. It does not download a social platform's complete private account archive, private messages, contact list or payment information for these analytics features.
+The app also stores the drafts, attached image copies, image descriptions, media URLs, selected destinations, dashboard names, tabs, widget configuration, preferences and publishing results you create or request. It does not download a social platform's complete private account archive, private messages, contact list or payment information for these analytics features.
 
 ## 3. Purposes and permission
 
@@ -30,6 +30,8 @@ Other local records, including labels, drafts, analytics, dashboard layouts and 
 
 The relevant social platform receives the network requests, credentials and content needed to complete your requested connection or post. OAuth opens your system browser, and the provider may set its own cookies or process IP address and device information under its own policy. Requests use HTTPS except for the authorization response sent to a loopback listener on your own computer. Client secrets are exchanged only through the applicable provider's token endpoint and local encrypted storage.
 
+Popular-content discovery is fetched only when requested. YouTube popular videos use the US region, Twitch supplies top categories and Reddit supplies hot posts. These cached public results are not complete trend feeds. The app retains up to 20 safe diagnostic events containing fixed error categories and safe messages, without raw exception details, credentials, paths or draft content. Report sharing opens a prefilled GitHub browser form only when requested; review and submit it there.
+
 The desktop app has no advertising SDK, behavioral advertising or general-purpose usage analytics service in this implementation. The operator does not sell social account data or use it to train AI models. GitHub is used for source/releases and Launcher distribution, not for account-credential storage. Never attach credentials or private workspace files to a support issue.
 
 The policy website's hosting provider may process request, network and security information needed to serve the pages. A private draft site uses hosting-provider sign-in and access controls. The final public site, hosting provider disclosures, international-transfer arrangements, any access logs and their retention must be confirmed before final publication. This draft does not assert that a hosted website creates no logs or cookies.
@@ -45,6 +47,8 @@ You can revoke the app's Google access at any time through [Google account permi
 ## 7. Retention
 
 Local historical metrics are normally retained at minute resolution for 48 hours and hourly resolution for up to 90 days, with a maximum of 5,200 observations per account. Recording occurs only after successful observations; earlier history is not invented. YouTube retention is additionally subject to continued authorization checks and applicable YouTube storage rules. If the app cannot refresh/reconfirm a stale YouTube connection, its managed local YouTube data is removed; a connection whose last successful data check is over 30 days old is pruned when the app next runs or performs maintenance.
+
+Attached images are re-encoded into local managed copies. Draft-referenced copies remain with your drafts; unreferenced copies older than seven days are pruned when the app next starts. The local media library is capped at 250 images. Clear the app data to remove all managed media.
 
 Tokens remain until replaced, disconnected or removed. User-authored drafts and dashboard preferences remain until you delete them or remove the application data. Publishing records remain until the associated account is disconnected or the managed workspace is deleted. Developer client configuration is independent of account tokens and can be removed in Provider sign-in settings. Copies in personal backups or previously exported files are under your control.
 

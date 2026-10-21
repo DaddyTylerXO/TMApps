@@ -28,6 +28,8 @@ function recordSample(state, account) {
 function mutate(state, input) {
   if (!input || typeof input.action !== 'string') throw Error('Invalid dashboard action.');
   state.dashboards ||= [];
+  if(input.action==='savePreset'){state.widgetPresets||=[];if(state.widgetPresets.length>=50)throw Error('Keep up to 50 named presets.');const widget=state.dashboards.flatMap(d=>d.tabs.flatMap(t=>t.widgets)).find(w=>w.id===input.widgetId);if(!widget)throw Error('Widget no longer exists.');state.widgetPresets.push({...structuredClone(widget),id:id(),title:name(input.name||widget.title),accountIds:[]});return {};}
+  if(input.action==='deletePreset'){state.widgetPresets=(state.widgetPresets||[]).filter(w=>w.id!==input.presetId);return {};}
   if (input.action === 'createDashboard') {
     if (state.dashboards.length >= 30) throw Error('You can create up to 30 dashboards.');
     const dashboard = {id:id(),name:name(input.name),tabs:[{id:id(),name:'Overview',widgets:[]}]};
@@ -52,13 +54,14 @@ function mutate(state, input) {
     const old=w.id?tab.widgets.find(v=>v.id===w.id):null;
     if(w.id&&!old)throw Error('Widget no longer exists.');
     if(!old&&tab.widgets.length>=24)throw Error('A tab can hold up to 24 widgets.');
-    const widget={id:old?.id||id(),title:name(w.title),type:w.type,metric:w.metric,range:w.range,accountIds:[...new Set(w.accountIds)],width:w.width==='wide'?'wide':'small'};
+    const widget={id:old?.id||id(),title:name(w.title),type:w.type,metric:w.metric,range:w.range,accountIds:[...new Set(w.accountIds)],width:w.width==='wide'?'wide':'small',syncMode:['inherit','manual','interval'].includes(w.syncMode)?w.syncMode:'inherit',syncMinutes:Math.max(1,Math.min(1440,Math.round(Number(w.syncMinutes)||15)))};
     if(old)tab.widgets[tab.widgets.indexOf(old)]=widget;else tab.widgets.push(widget);
     return {widgetId:widget.id};
   }
   const index=tab.widgets.findIndex(w=>w.id===input.widgetId);
   if(index<0)throw Error('Widget no longer exists.');
   if(input.action==='deleteWidget'){tab.widgets.splice(index,1);return {};}
+  if(input.action==='dropWidget'){const target=tab.widgets.findIndex(w=>w.id===input.beforeId);if(target<0)throw Error('Invalid widget position.');const [moving]=tab.widgets.splice(index,1);tab.widgets.splice(target,0,moving);return {};}
   if(input.action==='moveWidget'){
     if(![-1,1].includes(input.direction))throw Error('Invalid widget position.');
     const next=index+input.direction;if(next>=0&&next<tab.widgets.length)[tab.widgets[index],tab.widgets[next]]=[tab.widgets[next],tab.widgets[index]];return {};

@@ -32,15 +32,16 @@ function dashboards(){
   const heading=el('div','toolbar dashboard-tab-heading');const title=el('div');title.append(el('h2','',tab.name),el('p','',`${tab.widgets.length} widgets · ${dashboard.name}`));heading.append(title,button('＋ Add widget',()=>dashboardWidgetEditor(dashboard,tab),'primary'));content.append(heading);
   const grid=el('div','dashboard-grid');grid.id='dashboard-widgets';grid.setAttribute('role','tabpanel');grid.setAttribute('aria-labelledby','tab-'+tab.id);
   if(!tab.widgets.length)grid.append(empty('Make space for what matters.','Start with a follower count, track engagement over time, or compare your communities in a pie chart.',()=>dashboardWidgetEditor(dashboard,tab),'＋ Add your first widget'));
-  else for(const widget of tab.widgets)grid.append(dashboardWidget(dashboard,tab,widget));content.append(grid);
+  else for(const widget of tab.widgets)grid.append(dashboardWidget(dashboard,tab,widget));content.append(grid,presetPicker(dashboard,tab));
   content.append(el('p','data-note','Trends use observations saved on this device. Recording starts when an account is connected or upgraded; earlier history cannot be reconstructed. Minute samples are retained for 48 hours, then hourly samples for up to 90 days. Charts retain each metric’s meaning; audience totals are not unique people.'));
 }
-function dashboardWidgetEditor(dashboard,tab,widget){
-  const existing=widget||{title:'Follower count',type:'stat',metric:'followers',range:'day',accountIds:[],width:'small'};
+function dashboardWidgetEditor(dashboard,tab,widget,preset){
+  const existing=widget||preset||{title:'Follower count',type:'stat',metric:'followers',range:'day',accountIds:[],width:'small'};
   dashboardModal(widget?'Edit widget':'Add widget',body=>{
     const titleField=field('Widget title','widget-title');const title=titleField.querySelector('input');title.value=existing.title;title.maxLength=60;title.required=true;body.append(titleField);
     const selectField=(label,id,values,value)=>{const wrapper=el('div','field');const l=el('label','',label);l.htmlFor=id;const s=el('select');s.id=id;for(const [v,text] of values)s.append(new Option(text,v));s.value=value;wrapper.append(l,s);body.append(wrapper);return s;};
     const type=selectField('Display','widget-type',[['stat','Statistic with trend arrow'],['line','Line graph over time'],['bar','Bar chart by account'],['pie','Pie chart by account']],existing.type);
+    body.append(widgetGallery(type));const sync=widgetExtras(body,existing);
     const metric=selectField('Statistic','widget-metric',Object.entries(names).map(([key,label])=>[key,label]),existing.metric);
     const range=selectField('Trend / graph period','widget-range',Object.entries(rangeNames),existing.range);
     const width=selectField('Widget size','widget-width',[['small','Standard'],['wide','Wide']],existing.width);
@@ -50,11 +51,11 @@ function dashboardWidgetEditor(dashboard,tab,widget){
     if(!state.accounts.length)choices.append(el('p','','Connect accounts to choose specific sources. You can still create widgets for all future connections.'));
     for(const a of state.accounts){const row=el('label','target');const input=el('input');input.type='checkbox';input.value=a.id;input.checked=existing.accountIds.includes(a.id);row.append(input,el('span','',`${platform(a.platform).name} · ${a.label}`));choices.append(row);checkboxes.push(input);}
     scope.onchange=()=>choices.hidden=scope.value!=='selected';scope.onchange();body.append(choices,el('p','data-note','Only accounts exposing this statistic contribute. Lifetime likes and likes on recent Bluesky posts are separate metrics. Pie and bar charts compare the latest values; the period controls statistic trends and line graphs.'));
-    return {title,type,metric,range,width,scope,checkboxes};
+    return {title,type,metric,range,width,scope,checkboxes,sync};
   },controls=>{
     const accountIds=controls.scope.value==='selected'?controls.checkboxes.filter(c=>c.checked).map(c=>c.value):[];
     if(controls.scope.value==='selected'&&!accountIds.length)throw Error('Choose at least one account.');
-    return dashboardChange({action:'saveWidget',dashboardId:dashboard.id,tabId:tab.id,widget:{id:widget?.id,title:controls.title.value,type:controls.type.value,metric:controls.metric.value,range:controls.range.value,width:controls.width.value,accountIds}});
+    return dashboardChange({action:'saveWidget',dashboardId:dashboard.id,tabId:tab.id,widget:{id:widget?.id,title:controls.title.value,type:controls.type.value,metric:controls.metric.value,range:controls.range.value,width:controls.width.value,syncMode:controls.sync.mode.value,syncMinutes:Number(controls.sync.input.value),accountIds}});
   });
 }
 function dashboardWidget(dashboard,tab,widget){
@@ -72,7 +73,7 @@ function dashboardWidget(dashboard,tab,widget){
   else body.append(dashboardComparisonChart(state,widget));
   if(data.hasError)body.append(el('p','warning widget-note','A source could not refresh. Showing its last successful observation.'));
   if(data.youtubeSeparated)body.append(el('p','widget-note','YouTube data is kept separate from summed statistics and pie-share calculations. Choose a single YouTube account for a raw statistic, line graph or bar chart.'));
-  body.append(el('p','widget-note',`${data.available} of ${data.total} selected accounts provide this metric${widget.type==='line'||widget.type==='stat'?' · '+rangeNames[widget.range]:''}.`));card.append(body);return card;
+  body.append(el('p','widget-note',`${data.available} of ${data.total} selected accounts provide this metric${widget.type==='line'||widget.type==='stat'?' · '+rangeNames[widget.range]:''}.`));card.append(body);widgetActions(card,widget,dashboard,tab);return card;
 }
 function dashboardSvg(tag,attributes={}){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value] of Object.entries(attributes))node.setAttribute(key,String(value));return node;}
 function dashboardChartFrame(label){const svg=dashboardSvg('svg',{viewBox:'0 0 560 250',role:'img','aria-label':label,class:'dashboard-chart'});const title=dashboardSvg('title');title.textContent=label;svg.append(title);return svg;}

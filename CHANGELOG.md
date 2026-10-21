@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0
+
+- Replace generic OAuth failures with safe setup diagnostics; preserve basic sign-in when optional metrics are forbidden.
+- Add LinkedIn organization and Pinterest advanced integrations, including organization text posts and image Pins.
+- Add performance reviews and clearly sourced popular-content discovery with official links for other platforms.
+- Add explicit offline mode, local JPEG/PNG attachments, conditional Reddit/Pinterest fields and image alt text.
+- Add visual widget setup, presets, drag ordering, shared custom check intervals and CSV exports.
+- Add four navigation positions, grey/black dark palettes and gradual scheduled palette changes.
+- Add an isolated first-run demo, searchable local KB articles, Word documentation and safe GitHub report forms.
+- Reduce status IPC traffic, bound image storage and add automatic performance regression checks.
+
 ## 0.3.0
 
 - Add browser OAuth for YouTube, Twitch and Kick with encrypted per-device client settings and local Google Desktop JSON import.
