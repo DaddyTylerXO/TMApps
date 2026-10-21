@@ -77,7 +77,13 @@
       "id": "Launcher-KB13",
       "title": "Coming soon applications",
       "keywords": "libraries coming soon unavailable question mark source install version date order",
-      "body": "Coming soon means no compatible installable build has been published. TMA-Libraries currently has a source branch only and uses a neutral question-mark placeholder until its app icon is available. Its version and update date are shown as not published, and no OS support badges are advertised. You can open its Details screen or View source on GitHub from the options menu; installation stays disabled until a verified package is published. Libraries appears before SocialsManager, which stays immediately before Agent Office. Agent Office is always last and its number moves down when apps are added. Check for updates to refresh published app availability. If you are using launcher 1.14.0 or earlier, accept the launcher update to support the expanded catalog. See Launcher-KB2 and Launcher-KB12."
+      "body": "Coming soon means no installable package has been published. A source branch or app icon alone does not mean an app is ready to install. Check for updates to refresh verified availability. The OS badges show the platforms with actual published builds; a Windows app cannot be installed by the macOS or Linux launcher. Libraries and Finance 0.1.0 now have Windows development packages and their app icons. Their feature sets are incomplete; review Details and release notes before installing. SocialsManager stays immediately before Agent Office, which is always last and moves down when apps are added. Older launchers may need to update and restart before they can read an expanded app catalog. See Launcher-KB2 and Launcher-KB14."
+    },
+    {
+      "id": "Launcher-KB14",
+      "title": "Install Libraries and Finance",
+      "keywords": "libraries finance windows install beta development notes budgets profile data privacy",
+      "body": "Launcher 1.14.2 adds Libraries and Finance 0.1.0 as Windows development builds. Choose Check updates, accept the launcher update and restart if needed, then choose Install app and an empty folder. Startup and desktop shortcuts are optional. Libraries uses the brown folder icon and provides offline text notes, checklists and workspace recovery; advanced editors, encryption and integrations are pending. Finance uses the green bills icon and provides budgets, savings and a manual investment workspace; optional online providers require your own account and permissions inside Finance. No provider key is entered in the launcher. Both apps store records locally without app-level encryption. Libraries uses the current Windows user local TMApps TMA-Libraries folder; Finance uses the roaming TMA-Finance profile. Uninstall keeps data by default; deleting standard local data requires your explicit choice and affects other copies using that profile. Export backups before deletion. No macOS or Linux app build is advertised until a matching tested package exists. See Launcher-KB2, Launcher-KB10 and Launcher-KB13."
     }
   ],
   "apps": {
@@ -135,7 +141,12 @@
     "tma-libraries": {
       "video": null,
       "screenshots": [],
-      "releaseNotes": "No application build or release notes have been published for TMA-Libraries yet."
+      "releaseNotes": "# TMA-Libraries version notes\n\n## 0.1.0 \u00e2\u20ac\u201d 21 October 2026\n\nInitial Windows desktop foundation using Windows Forms and .NET Framework 4.8, with no required paid services or external packages.\n\n- Offline plain-text notes, checklists, optional completion progress and side notes.\n- Folders, favourites, recent documents, search and coloured tags.\n- Atomic local saves, previous-save recovery and native workspace import/export.\n- Autosave defaults to five seconds when changed; configurable from two to 300 seconds or disabled.\n- First-run setup offers optional larger text/high contrast, both off by default. Feature tour can be replayed from the toolbar.\n- Light, Grey and Black appearance; fixed keyboard shortcuts and Settings release notes.\n- Leather Brown identity and white-folder executable/window icon.\n- Word KB draft with setup, offline operation, recovery, error catalogue and performance guidance. Rendering, master KB linking and publication are pending.\n\nAdvanced editors and the other pending specification items are not included. No Launcher package, remote publication, encryption, sync, tray, connection indicator or support forms are claimed.\n"
+    },
+    "tma-finance": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "TMA-Finance 0.1.0 Windows development build. Budgets, expenses, subscriptions, savings, exports and a manual USD investment workspace. Optional Finnhub requests require the user's provider key and permissions. Bank linking, cloud sync, background alerts, macOS/Linux builds and the full suite settings/help features are not complete. Local finance records are not encrypted. The tax tool is an estimate, not a filing service."
     }
   }
 }

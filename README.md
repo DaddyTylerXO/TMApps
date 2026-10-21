@@ -9,10 +9,10 @@ A launcher for the **TMApps application suite**, available on **Windows, macOS, 
 | Launcher download | Architecture | Install |
 | --- | --- | --- |
 | [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
-| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
-| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
-| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
-| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
 
 **Launcher support and app support are separate.** Mail and Agent Office have Windows-only packages. Safe, Padlock and SocialsManager have Windows x64, macOS Intel/Apple Silicon and Linux x64/ARM64 packages; Cut has Windows x64, macOS Intel/Apple Silicon and Linux x64 packages. Finance and Libraries have no published application package. The logos under each app follow verified catalog packages; incompatible packages remain unavailable. See the [suite download index](https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md) for dated versions and direct checksum links.
 
@@ -168,8 +168,15 @@ The requested Word document is [KB Library](docs/KB%20Library.docx), also attach
 
 TMApps email-code sign-in clients, protected session storage, app access grants and a backend handoff service are prepared. They stay disabled until a Supabase project is deployed/configured; individual apps also need their broker/consumer integration before they reuse sign-in. No provider passwords or session tokens are written to the shared profile. Ratings were excluded at the user's request.
 
-## TMA Libraries
+## Libraries and Finance
 
-TMA-Libraries is listed as **Coming soon** with a neutral question-mark placeholder. Its branch currently contains project guidance but no application build, published icon, version or update date. Install is disabled and no OS support is claimed. Use Details or the source menu to review its [project branch](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries). It appears before SocialsManager and Agent Office; Agent Office remains last. Launcher 1.14.1 or later is required for the expanded catalog. See Launcher-KB13.
+Launcher **1.14.2** includes verified Windows development packages for **TMA-Libraries 0.1.0** and **TMA-Finance 0.1.0**. Use **Check updates**, accept the launcher update/restart if needed, and choose **Install app**. Both use their actual app icons, source versions/dates and SHA-256-checked ZIP packages, with custom installation folders and optional startup/desktop shortcuts. Neither app has a published macOS/Linux build yet; those launchers show the Windows badge and disable incompatible installation.
 
-![TMA-Libraries coming-soon listing](docs/libraries-preview.png)
+Libraries provides offline text notes and checklists with local workspace recovery. Its brown folder icon matches the app. Advanced editors, encryption, notifications and several suite settings/help features remain incomplete. Finance provides budgets, subscriptions, savings and a manual investment workspace, with optional data-provider connections. Its green bills icon matches the app; provider credentials are entered only in Finance. Bank linking, cloud sync and the full suite tray/help/settings features remain incomplete. Both are development builds, not a claim that all compulsory standards are finished.
+
+Both store personal records locally without app-level encryption. Libraries stores its standard workspace under `%LOCALAPPDATA%\TMApps\TMA-Libraries`; Finance uses `%APPDATA%\TMA-Finance`. Uninstall keeps records by default. Deleting standard local data requires explicit consent and affects other copies sharing that profile; export backups first. User-selected external exports remain separate.
+
+Libraries and Finance precede SocialsManager, with Agent Office always last. **Launcher-KB14** covers setup and current limitations; the Word KB Library includes screenshots and clickable references. The release workflow builds and verifies both Windows packages before publishing their catalog entries, and native launcher packages bundle the same published catalog.
+
+![Libraries Windows launcher card](docs/libraries-preview.png)
+![Finance Windows launcher card](docs/finance-preview.png)

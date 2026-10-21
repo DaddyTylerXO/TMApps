@@ -4,7 +4,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:
 const {SuiteAuth,config}=require('../electron/auth.cjs');
 const {content,media,redact,issue}=require('../electron/experience.cjs');
 test('KB references resolve and galleries use actual trusted media within capacity',()=>{
- const ids=new Set(content.articles.map(a=>a.id));assert.equal(ids.size,13);
+ const ids=new Set(content.articles.map(a=>a.id));assert.equal(ids.size,14);
  for(const a of content.articles) for(const reference of a.body.match(/Launcher-KB\d+/g)||[])assert.ok(ids.has(reference));
  for(const value of Object.values(content.apps)){assert.ok(value.screenshots.length<=10);assert.ok(value.screenshots.every(s=>media(s.url)));assert.ok(!value.video||media(value.video));}
  assert.equal(media('https://raw.githubusercontent.com.attacker.test/DaddyTylerXO/TMApps/file.png'),false);

@@ -8,7 +8,7 @@ const { promisify } = require('node:util');
 const tar = require('tar');
 const exec = promisify(execFile);
 const RELEASE = 'https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/';
-const IDS = ['tma-mail', 'tma-agent-office', 'tma-safe', 'tma-padlock', 'tma-socialsmanager', 'tma-cut', 'tma-libraries'];
+const IDS = ['tma-mail', 'tma-agent-office', 'tma-safe', 'tma-padlock', 'tma-socialsmanager', 'tma-cut', 'tma-libraries', 'tma-finance'];
 const LABELS = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
 const osKey = platform => ({ win32: 'windows', darwin: 'macos', linux: 'linux' }[platform]);
 function inside(root, candidate) { const rel = path.relative(root, candidate); return rel !== '' && !rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel); }
@@ -202,7 +202,7 @@ class Library {
     const executable = path.join(state.root, state.folder, state.executable);
     await new Promise((resolve, reject) => { const child = spawn(executable, [], { cwd: path.dirname(executable), detached: true, stdio: 'ignore' }); child.once('error', reject); child.once('spawn', () => { child.unref(); resolve(); }); });
   }
-  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return ['tma-libraries','tma-cut','tma-mail','tma-safe','tma-padlock','tma-socialsmanager'].includes(id) ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
+  dataLocations(id) { if (!IDS.includes(id)) throw new Error('Unknown application.'); return ['tma-finance','tma-libraries','tma-cut','tma-mail','tma-safe','tma-padlock','tma-socialsmanager'].includes(id) ? [] : [path.join(this.data, 'agent-office'), path.join(this.data, 'Agent Office')]; }
   async uninstall(id, deleteData = false) {
     if (this.busy) throw new Error('Wait for the current operation.'); this.busy = true;
     try {

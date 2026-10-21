@@ -41,7 +41,7 @@ namespace TMApps {
             public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
                 token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
-                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.14.1.exe\",\"id\":11}]}") });
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.14.2.exe\",\"id\":11}]}") });
                 bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
                 if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
                 Downloads++;
@@ -114,15 +114,23 @@ namespace TMApps {
                 var socials = catalog.apps.First(a => a.id=="tma-socialsmanager");
                 var socialsView = new AppView { Info=socials };
                 Check(!socials.Available && socials.branch=="TMA-SocialsManager" && socialsView.Icon!=null && socialsView.IconVisibility==Visibility.Visible && socialsView.Accent=="#E5B92F" && socialsView.WindowsSupport==Visibility.Collapsed && socialsView.MacSupport==Visibility.Collapsed && socialsView.LinuxSupport==Visibility.Collapsed, "SocialsManager has a yellow chat icon, correct source, and no unverified installers");
-                Check(catalog.apps.Count == 7 && catalog.apps.Take(2).All(a => a.Available) && catalog.apps[2].id=="tma-safe", "Both real app packages bundled in catalog");
+                Check(catalog.apps.Count == 8 && catalog.apps.Take(2).All(a => a.Available) && catalog.apps[2].id=="tma-safe", "Both real app packages bundled in catalog");
                 var ordered = AppView.OrderLibrary(catalog.apps.Select(a => new AppView { Info = a }));
-                Check(ordered.Last().Id=="tma-agent-office" && ordered.Last().Number=="07 / YOUR AI TEAM" && ordered[1].Id=="tma-safe", "Agent Office follows Mail and Safe with a dynamic number");
+                Check(ordered.Last().Id=="tma-agent-office" && ordered.Last().Number=="08 / YOUR AI TEAM" && ordered[1].Id=="tma-safe", "Agent Office follows Mail and Safe with a dynamic number");
                 ordered = AppView.OrderLibrary(ordered.Concat(new[] { new AppView { Info = new AppInfo { id="future-app", category="Tools" } } }));
-                Check(ordered.Last().Number=="08 / YOUR AI TEAM" && ordered[5].Id=="future-app" && ordered[6].Id=="tma-socialsmanager", "New apps move Agent Office down without changing other app order");
+                Check(ordered.Last().Number=="09 / YOUR AI TEAM" && ordered[6].Id=="future-app" && ordered[7].Id=="tma-socialsmanager", "New apps move Agent Office down without changing other app order");
                 var libraries = catalog.apps.First(a => a.id=="tma-libraries");
                 var librariesView = new AppView {Info=libraries};
-                Check(!libraries.Available && libraries.branch=="TMA-Libraries" && libraries.executable=="TMA-Libraries.exe" && librariesView.Glyph=="?" && librariesView.GlyphFont=="Segoe UI" && librariesView.UpdatedLabel=="Date not published" && librariesView.WindowsSupport==Visibility.Collapsed && librariesView.MacSupport==Visibility.Collapsed && librariesView.LinuxSupport==Visibility.Collapsed, "Libraries has an unpublished question-mark placeholder with correct source and no invented support");
-                Check(new WindowsAppData().Locations(libraries).Length==0,"Libraries cannot delete unrelated application data");
+                Check(libraries.Available && libraries.version=="0.1.0" && libraries.branch=="TMA-Libraries" && libraries.executable=="TMA-Libraries.exe" && librariesView.Icon!=null && librariesView.Accent=="#DCA87D" && librariesView.WindowsSupport==Visibility.Visible && librariesView.MacSupport==Visibility.Collapsed && librariesView.LinuxSupport==Visibility.Collapsed,"Libraries has its brown folder icon and verified Windows development metadata");
+                Check(catalog.apps.Select(a=>WindowsAppIntegration.ShortcutName(a.id)).Distinct().Count()==8 && WindowsAppIntegration.ShortcutName("tma-finance")=="TMA-Finance" && WindowsAppIntegration.ShortcutName("tma-libraries")=="TMA-Libraries" && WindowsAppIntegration.ShortcutName("tma-agent-office")=="TMA-Agent Office","Desktop shortcuts cannot overwrite another app's shortcut");
+                var finance=catalog.apps.First(a=>a.id=="tma-finance");var financeView=new AppView{Info=finance};
+                Check(finance.Available && finance.version=="0.1.0" && finance.branch=="TMA-Finance" && finance.executable=="TMA-Finance.exe" && financeView.Icon!=null && financeView.Accent=="#8FBD9E" && financeView.WindowsSupport==Visibility.Visible && financeView.MacSupport==Visibility.Collapsed && financeView.LinuxSupport==Visibility.Collapsed,"Finance has its green bills icon, correct source and Windows-only development support");
+                Check(new WindowsAppData().Locations(libraries).Single().EndsWith(Path.Combine("TMApps","TMA-Libraries")) && new WindowsAppData().Locations(finance).Single().EndsWith("TMA-Finance"),"New app uninstall data choices use only each app's documented standard profile");
+                var newAppData=new WindowsAppData(Path.Combine(root,"new-app-local"),Path.Combine(root,"new-app-roaming"));
+                var librariesData=newAppData.Locations(libraries).Single();var financeData=newAppData.Locations(finance).Single();
+                Directory.CreateDirectory(librariesData);Directory.CreateDirectory(financeData);File.WriteAllText(Path.Combine(librariesData,"synthetic.txt"),"fixture");File.WriteAllText(Path.Combine(financeData,"synthetic.txt"),"fixture");
+                newAppData.Delete(libraries);Check(!Directory.Exists(librariesData) && File.Exists(Path.Combine(financeData,"synthetic.txt")),"Deleting synthetic Libraries data preserves Finance's separate profile");
+                newAppData.Delete(finance);Check(!Directory.Exists(financeData),"Explicit Finance data deletion is limited to its synthetic standard profile");
                 Reject(()=>LauncherService.ParseCatalog(File.ReadAllText(Path.Combine(args[0],"catalog.json")).Replace("\"TMA-Libraries\"","\"TMA-Mail\"")),"Libraries rejects a mismatched application branch");
                 var cut = catalog.apps.First(a => a.id=="tma-cut");
                 Check(new WindowsAppData().Locations(cut).Length==0, "Cut projects are preserved when uninstalling the app");
@@ -140,7 +148,7 @@ namespace TMApps {
                 Reject(() => LauncherService.ParseCatalog("{}"), "Reject invalid catalog");
                 string original = File.ReadAllText(Path.Combine(args[0], "catalog.json"));
                 Reject(()=>LauncherService.ParseCatalog(original.Replace("\"windows\"","\"unknown-os\"")),"Catalog rejects unknown operating-system badges");
-                Check(LauncherService.ParseCatalog(original.Replace("AI-Agent-Dashboard","TMA-AgentOffice")).apps.Count==7,"Renamed Agent Office source branch and legacy catalog alias are both supported");
+                Check(LauncherService.ParseCatalog(original.Replace("AI-Agent-Dashboard","TMA-AgentOffice")).apps.Count==8,"Renamed Agent Office source branch and legacy catalog alias are both supported");
                 Reject(() => LauncherService.ParseCatalog(original.Replace("Agent Office.exe", "..\\\\evil.exe")), "Reject arbitrary executable");
                 Reject(() => LauncherService.ParseCatalog(original.Replace("tma-agent-office", "tma-mail")), "Reject duplicate app");
                 Reject(() => LauncherService.ParseCatalog(original.Replace(catalog.apps[0].sha256, "bad")), "Require checksum");
@@ -194,7 +202,7 @@ namespace TMApps {
                     string userData = Path.Combine(service.Root, "user-data.txt"); File.WriteAllText(userData, "keep"); service.Uninstall(app);
                     Check(service.GetInstalled(app) == null && File.Exists(userData), "Uninstall removes binaries and preserves other data");
                     File.WriteAllText(Path.Combine(service.Root,"catalog.json"), "broken");
-                    Check(service.LoadCatalog(Path.Combine(args[0], "catalog.json")).apps.Count == 7, "Corrupt cache falls back to bundled catalog");
+                    Check(service.LoadCatalog(Path.Combine(args[0], "catalog.json")).apps.Count == 8, "Corrupt cache falls back to bundled catalog");
                 }
                 string package = Path.Combine(root, "valid.zip"); Zip(package, "TMA-Mail.exe", "first application fixture");
                 var handler = new PackageHandler { Bytes = File.ReadAllBytes(package) };
@@ -321,19 +329,19 @@ namespace TMApps {
                 Check(File.Exists(shortcut) && BitConverter.ToInt32(File.ReadAllBytes(shortcut),0)==76,"Windows desktop/Start menu shortcut helper creates a real shell link");
                 Check(DesktopIntegration.ShortcutTargets(shortcut,exe),"Desktop shortcut target can be verified before removing a launcher-managed icon");
                 Check(new AppView { Info = new AppInfo { updatedAt="2026-10-16T22:53:40Z" } }.UpdatedLabel == "Oct 16, 2026", "App update date displayed from metadata");
-                using (var embedded = new LauncherService(Path.Combine(root,"embedded-profile"))) Check(embedded.LoadCatalog().apps.Count == 7, "Embedded catalog fallback works without source files");
+                using (var embedded = new LauncherService(Path.Combine(root,"embedded-profile"))) Check(embedded.LoadCatalog().apps.Count == 8, "Embedded catalog fallback works without source files");
                 string installerRoot=Path.Combine(root,"installer");
                 var installStart=new System.Diagnostics.ProcessStartInfo(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"),"--verify-install \""+installerRoot+"\"") { UseShellExecute=false,CreateNoWindow=true };
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
                 byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
                 string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
-                var release=new LauncherRelease { schemaVersion=1,version="1.14.1",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.14.1.exe",sha256=setupHash };
+                var release=new LauncherRelease { schemaVersion=1,version="1.14.2",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.14.2.exe",sha256=setupHash };
                 var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
                 using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
-                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.14.1","Launcher check discovers a newer launcher independently of app catalog");
-                    Check(updater.CheckLauncherUpdate("1.14.1",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.14.2","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.14.2",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
                     string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
-                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.14.1.0","Launcher installer download verifies checksum and embedded product version");
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.14.2.0","Launcher installer download verifies checksum and embedded product version");
                     File.Delete(downloaded);
                     launcherHandler.Installer=new byte[]{1,2,3};
                     Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
@@ -398,7 +406,7 @@ namespace TMApps {
                     Check(!System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(authRoot,"auth-session.bin"))).Contains("private-refresh"),"Windows session persistence uses OS protection instead of plaintext");
                     auth.Access(new[]{"tma-cut"}).GetAwaiter().GetResult();Reject(()=>auth.Access(new[]{"unknown"}).GetAwaiter().GetResult(),"Sign-in cannot grant access to an unknown app");auth.Logout().GetAwaiter().GetResult();Check(!File.Exists(Path.Combine(authRoot,"auth-session.bin")),"Sign-out removes the protected local session");
                 }
-                Check(ExperienceContent.Current.articles.Count==13 && ExperienceContent.Current.apps.Values.All(a=>a.screenshots.Count<=10 && a.screenshots.All(m=>ExperienceContent.Media(m.url))),"Knowledge articles and app galleries have trusted bounded content");
+                Check(ExperienceContent.Current.articles.Count==14 && ExperienceContent.Current.apps.Values.All(a=>a.screenshots.Count<=10 && a.screenshots.All(m=>ExperienceContent.Media(m.url))),"Knowledge articles and app galleries have trusted bounded content");
                 var redacted=LauncherDiagnostics.Redact("token=secret Bearer access user@example.com\nC:\\Users\\Person\\private.txt");Check(!redacted.Contains("secret")&&!redacted.Contains("user@example.com")&&!redacted.Contains("Person"),"Crash reports redact tokens, emails and local paths");
                 Check(LauncherDiagnostics.Issue("bug",redacted).StartsWith("https://github.com/DaddyTylerXO/TMApps/issues/new?") && LauncherDiagnostics.Issue("feature",null).Contains("Requested"),"Support actions use prefilled matching GitHub issue forms");
                 string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
@@ -438,14 +446,18 @@ namespace TMApps {
                 Check(pixels.Any(p => p > 0), "WPF preview has rendered pixels");
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 using (var output = File.Create(Path.Combine(args[0], "build", "launcher-preview.png"))) encoder.Save(output);
-                Check(cards.Items.Count == 7, "Render real WPF templates for both apps");
+                Check(cards.Items.Count == 8, "Render real WPF templates for both apps");
                 var librariesSearch=(TextBox)window.FindName("Search");
                 librariesSearch.Text="TMA-Libraries"; window.UpdateLayout();
                 window.Dispatcher.Invoke(new Action(()=>{}),System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 var librariesCard=((System.Collections.IEnumerable)cards.ItemsSource).Cast<AppView>().Single();
-                Check(librariesCard.Id=="tma-libraries" && librariesCard.Status=="COMING SOON" && !librariesCard.CanAct && librariesCard.VersionLabel=="Version not published" && librariesCard.Number=="05 / LIBRARIES", "Libraries search keeps its position and disables unpublished installation");
+                Check(librariesCard.Id=="tma-libraries" && librariesCard.Status=="READY TO INSTALL" && librariesCard.CanAct && librariesCard.VersionLabel=="v0.1.0" && librariesCard.Number=="05 / LIBRARIES", "Libraries search keeps its position and enables the published Windows install");
                 var librariesBitmap=new RenderTargetBitmap(1180,800,96,96,PixelFormats.Pbgra32);librariesBitmap.Render(content);
                 var librariesEncoder=new PngBitmapEncoder();librariesEncoder.Frames.Add(BitmapFrame.Create(librariesBitmap));using(var output=File.Create(Path.Combine(args[0],"build","libraries-preview.png")))librariesEncoder.Save(output);
+                librariesSearch.Text="TMA-Finance";window.UpdateLayout();window.Dispatcher.Invoke(new Action(()=>{}),System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                var financeCard=((System.Collections.IEnumerable)cards.ItemsSource).Cast<AppView>().Single();
+                Check(financeCard.Id=="tma-finance" && financeCard.CanAct && financeCard.Number=="06 / FINANCE","Finance search keeps its full library position and enables installation");
+                var financeBitmap=new RenderTargetBitmap(1180,800,96,96,PixelFormats.Pbgra32);financeBitmap.Render(content);var financeEncoder=new PngBitmapEncoder();financeEncoder.Frames.Add(BitmapFrame.Create(financeBitmap));using(var output=File.Create(Path.Combine(args[0],"build","finance-preview.png")))financeEncoder.Save(output);
                 librariesSearch.Text="";window.UpdateLayout();
 
                 var mailButton=Buttons(cards).First(b=>Convert.ToString(b.Tag)=="tma-mail" && Convert.ToString(b.Content).Contains("Install"));
@@ -479,7 +491,7 @@ namespace TMApps {
                 LauncherApplication.ApplyNavigation(window,new Preferences());
                 LauncherApplication.ApplyView(window,"Grid");
                 content.Measure(new Size(1000,640)); content.Arrange(new Rect(0,0,1000,640)); content.UpdateLayout();
-                Check(cards.ActualWidth>0 && cards.Items.Count==7,"Grid template loads at minimum supported width");
+                Check(cards.ActualWidth>0 && cards.Items.Count==8,"Grid template loads at minimum supported width");
                 System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=> {
                     var dialog=application.Windows.OfType<ThemedDialog>().Single();
                     SaveDialog(dialog,Path.Combine(args[0],"build","uninstall-preview.png"));

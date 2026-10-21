@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.2
+
+- Publish Windows development packages for Libraries and Finance from their app branches, with their brown folder/green bills icons, verified hashes and source dates. Native launchers advertise Windows support and block incompatible installs.
+- Preserve custom installation choices, scoped profile deletion consent, and SocialsManager/Agent Office ordering.
+- Verify Libraries storage/recovery/smoke behavior and Finance calculation/export tests, packaged renderer isolation, startup/idle resources and window closure.
+- Update the in-app KB, add Launcher-KB14 and refresh the illustrated, linked Word library. Existing acceptance gaps in both apps remain documented.
+
 ## Repository maintenance — 2026-10-21
 
 - Correct Agent Office's source branch in both bundled catalogs to `TMA-AgentOffice`; retain package URLs, hashes, versions and compatibility.

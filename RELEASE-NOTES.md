@@ -1,3 +1,11 @@
+TMApps Launcher 1.14.2 adds installable Windows development builds of TMA-Libraries and TMA-Finance.
+
+- Install Libraries 0.1.0 for offline text notes, checklists and workspace recovery, or Finance 0.1.0 for budgets, subscriptions, savings and a manual investment workspace. Both are initial development builds with documented missing features.
+- Both show their actual app icons, version/date, Windows support and checked download metadata. The Mac/Linux launchers display their details but do not try to install Windows EXEs.
+- Startup and desktop shortcuts are optional; each app can use its own install folder. Uninstall keeps profile data by default and requires consent before deleting the selected app's standard local data. Export backups first; app records are not encrypted.
+- Libraries and Finance appear before SocialsManager, and Agent Office remains last. Launcher-KB14 documents setup and limitations; the updated Word KB has screenshots and clickable references.
+- Windows, macOS and Linux launcher builds run functional and resource checks. Windows app packages additionally run their app checks; Finance's packaged window is tested with disposable data and renderer isolation.
+
 TMApps suite downloads
 
 Choose your application and operating system from the [current download and checksum index](https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md). The [repository overview](https://github.com/DaddyTylerXO/TMApps) links all app branches and their setup/change history. Read the [security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md) and use [Help and reports](https://github.com/DaddyTylerXO/TMApps/blob/main/SUPPORT.md) for support.

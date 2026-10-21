@@ -70,7 +70,9 @@ namespace TMApps {
             roaming=InstallationPaths.Normalize(roamingRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
         }
         public string[] Locations(AppInfo app) {
-            if(app.id=="tma-libraries" || app.id=="tma-cut" || app.id=="tma-socialsmanager" || app.id=="tma-safe" || app.id=="tma-padlock") return new string[0]; // User-chosen projects and vaults are never removed by the launcher.
+            if(app.id=="tma-finance") return new[]{Path.Combine(roaming,"TMA-Finance")};
+            if(app.id=="tma-libraries") return new[]{Path.Combine(local,"TMApps","TMA-Libraries")};
+            if(app.id=="tma-cut" || app.id=="tma-socialsmanager" || app.id=="tma-safe" || app.id=="tma-padlock") return new string[0]; // User-chosen projects and vaults are never removed by the launcher.
             if(app.id=="tma-mail") return new[]{Path.Combine(local,"TMA-Mail")};
             if(app.id=="tma-agent-office") return new[]{Path.Combine(roaming,"agent-office"),Path.Combine(roaming,"Agent Office")};
             throw new InvalidDataException("Unknown application profile.");
@@ -87,8 +89,9 @@ namespace TMApps {
         public void Delete(AppInfo app) {
             foreach(string folder in Locations(app)) {
                 string normalized=InstallationPaths.Normalize(folder);
-                string parent=app.id=="tma-mail" ? local : roaming;
+                string parent=app.id=="tma-mail" ? local : app.id=="tma-libraries" ? Path.Combine(local,"TMApps") : roaming;
                 if(!String.Equals(Path.GetDirectoryName(normalized),parent,StringComparison.OrdinalIgnoreCase)) throw new IOException("Invalid application data folder.");
+                if(app.id=="tma-libraries" && Directory.Exists(parent) && (File.GetAttributes(parent)&FileAttributes.ReparsePoint)!=0) throw new IOException("The TMApps data folder is linked. Remove its data manually.");
                 if(!Directory.Exists(normalized)) continue;
                 if((File.GetAttributes(normalized)&FileAttributes.ReparsePoint)!=0) throw new IOException("This app profile is a linked folder. Remove its data manually.");
                 DeleteFolder(normalized); Directory.Delete(normalized,false);

@@ -28,6 +28,16 @@ jobs:
         with:
           ref: TMA-AgentOffice
           path: office
+      - uses: actions/checkout@v4
+        with:
+          ref: TMA-Libraries
+          path: libraries
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: TMA-Finance
+          path: finance
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -47,7 +57,7 @@ jobs:
           gh release download tma-apps --pattern catalog.json --dir prior-catalog
           if ($LASTEXITCODE -eq 0) {
             $prior = Get-Content prior-catalog/catalog.json -Raw | ConvertFrom-Json
-            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock", "tma-socialsmanager", "tma-cut", "tma-libraries") -and $_.downloadUrl })
+            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock", "tma-socialsmanager", "tma-cut") -and $_.downloadUrl })
             if ($securityApps.Count -gt 0) {
               $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
               $catalog.apps = @($catalog.apps | ForEach-Object { $current = $_; $published = $securityApps | Where-Object id -eq $current.id; if ($published) { $published } else { $current } })
@@ -69,6 +79,28 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Agent Office tests failed' }
           pnpm exec electron-builder --win --dir
           if ($LASTEXITCODE -ne 0) { throw 'Agent Office packaging failed' }
+      - name: Verify and build Libraries Windows app
+        shell: powershell
+        run: |
+          ./libraries/build.ps1 -Test
+          if ($LASTEXITCODE -ne 0) { throw 'Libraries build or storage/smoke verification failed' }
+          ./libraries/scripts/security-check.ps1
+      - name: Verify and build Finance Windows app
+        working-directory: finance/tma-finance
+        shell: powershell
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { throw 'Finance dependency restore failed' }
+          node node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { throw 'Finance Electron download failed' }
+          pnpm run check
+          if ($LASTEXITCODE -ne 0) { throw 'Finance syntax verification failed' }
+          pnpm test
+          if ($LASTEXITCODE -ne 0) { throw 'Finance tests failed' }
+          pnpm exec electron-builder --win --dir --publish never
+          if ($LASTEXITCODE -ne 0) { throw 'Finance packaging failed' }
       - name: Prepare verified application packages
         shell: powershell
         run: |
@@ -94,7 +126,26 @@ jobs:
           $officeApp.updatedAt = (git -C office log -1 --format=%cI).Trim()
           $officeApp.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/$officeName"
           $officeApp.sha256 = (Get-FileHash "published/$officeName" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $librariesVersion = [regex]::Match((Get-Content libraries/docs/RELEASE-NOTES.md -Raw), '(?m)^## (\d+\.\d+\.\d+)').Groups[1].Value
+          if (!$librariesVersion) { throw 'Libraries release version missing' }
+          $librariesName = "TMA-Libraries-$librariesVersion-windows.zip"
+          Compress-Archive -LiteralPath libraries/build/TMA-Libraries.exe,libraries/build/TMA-Libraries.exe.config -DestinationPath "published/$librariesName" -CompressionLevel Optimal
+          $financeVersion = (Get-Content finance/tma-finance/package.json -Raw | ConvertFrom-Json).version
+          $financeName = "TMA-Finance-$financeVersion-windows.zip"
+          Compress-Archive -Path finance/tma-finance/release/win-unpacked/* -DestinationPath "published/$financeName" -CompressionLevel Optimal
+          foreach ($newApp in @(@{id='tma-libraries';version=$librariesVersion;file=$librariesName;directory='libraries';paths=@('src','assets','docs/RELEASE-NOTES.md')},@{id='tma-finance';version=$financeVersion;file=$financeName;directory='finance';paths=@('tma-finance/desktop','tma-finance/dist','tma-finance/package.json')})) {
+            $entry = $catalog.apps | Where-Object id -eq $newApp.id
+            if (!$entry) { throw 'New app missing from launcher catalog' }
+            $entry.version = $newApp.version
+            $entry.platforms = @('windows')
+            $appPaths = @($newApp.paths)
+            $entry.updatedAt = (git -C $newApp.directory log -1 --format=%cI -- $appPaths).Trim()
+            $entry.downloadUrl = "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/$($newApp.file)"
+            $entry.sha256 = (Get-FileHash "published/$($newApp.file)" -Algorithm SHA256).Hash.ToLowerInvariant()
+          }
           $catalog | ConvertTo-Json -Depth 6 | Set-Content published/catalog.json -Encoding UTF8
+          ./launcher/tools/verify-windows-app-packages.ps1 -CatalogPath published/catalog.json -PackageDirectory published -OutputDirectory launcher/build/app-package-verification
+          if ($LASTEXITCODE -ne 0) { throw 'Real app installation/launch/uninstall verification failed' }
           # Embed the exact catalog for the packages built by this run.
           Copy-Item published/catalog.json launcher/catalog.json -Force
           ./launcher/package.ps1
@@ -113,6 +164,7 @@ jobs:
           path: |
             published/*
             launcher/build/windows-performance.json
+            launcher/build/app-package-verification/finance-verification/finance-performance.json
       - name: Publish application packages, then catalog
         shell: powershell
         env:
@@ -146,6 +198,7 @@ jobs:
           }
 
   native-launcher:
+    needs: publish
     name: Native launcher (${{ matrix.platform }} ${{ matrix.arch }})
     strategy:
       fail-fast: false
@@ -197,6 +250,8 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
+          curl --fail --location --retry 3 'https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/catalog.json?run=${{ github.run_id }}' -o catalog.json
+          node -e "const c=require('./electron/service.cjs').parseCatalog(require('./catalog.json'));for(const id of ['tma-libraries','tma-finance'])if(!c.apps.find(a=>a.id===id&&a.downloadUrl))throw Error('New Windows package missing: '+id)"
           if [ '${{ matrix.platform }}' = 'darwin' ]; then
             pnpm exec electron-builder --mac dmg --${{ matrix.arch }} --publish never
           else

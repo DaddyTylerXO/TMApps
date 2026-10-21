@@ -109,8 +109,8 @@ illustrations = {
                       'The uninstall dialog lets you choose whether the selected app keeps its standard local data.'),
     'Launcher-KB11': ('settings-search-preview.png', None, 5.8,
                       'Search by keywords or a KB number to find relevant knowledge articles.'),
-    'Launcher-KB13': ('libraries-preview.png', (230, 185, 1165, 445), 6.6,
-                      'TMA-Libraries has a coming-soon card, an unpublished version and date, and a disabled install action.'),
+    'Launcher-KB14': ('libraries-finance-preview.png', None, 6.6,
+                      'Libraries and Finance show their actual app icons, version dates, Windows support and install actions.'),
 }
 
 

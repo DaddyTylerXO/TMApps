@@ -16,7 +16,7 @@ async function view(t, platform = 'darwin') {
   return { dom, window: dom.window, document: dom.window.document, calls, state };
 }
 test('Mac and Linux libraries render real support logos and disable incompatible installers', async t => {
-  for (const platform of ['darwin', 'linux']) { const v = await view(t, platform); assert.equal(v.document.querySelectorAll('.card').length, 7); assert.equal(v.document.querySelectorAll('.os-badge').length, 2); assert.equal(v.document.querySelectorAll('.os-badge svg').length, 2); assert.ok([...v.document.querySelectorAll('.os-badge')].every(b => b.textContent === 'Windows')); assert.ok([...v.document.querySelectorAll('.actions > button')].every(b => b.disabled)); const smoke = await v.window.launcherSmoke(); assert.equal(smoke.nodeAvailable, false); }
+  for (const platform of ['darwin', 'linux']) { const v = await view(t, platform); assert.equal(v.document.querySelectorAll('.card').length, 8); assert.equal(v.document.querySelectorAll('.os-badge').length, 4); assert.equal(v.document.querySelectorAll('.os-badge svg').length, 4); assert.ok([...v.document.querySelectorAll('.os-badge')].every(b => b.textContent === 'Windows')); assert.ok([...v.document.querySelectorAll('.actions > button')].every(b => b.disabled)); const smoke = await v.window.launcherSmoke(); assert.equal(smoke.nodeAvailable, false); }
 });
 test('list/grid and navigation choices persist through the actual controls', async t => {
   const v = await view(t); v.document.getElementById('grid').click(); await tick(); assert.equal(v.document.getElementById('library').className, 'grid'); v.document.getElementById('settings').click(); await tick(); const fields = v.document.querySelectorAll('dialog select'); fields[0].value = 'Right'; v.document.querySelector('dialog .primary').click(); await tick(); assert.equal(v.document.getElementById('shell').className, 'edge-right'); assert.equal(v.calls.at(-1)[1].navigationEdge, 'Right');
@@ -79,25 +79,20 @@ test('help opens the chosen report draft only after user action',async t=>{
 });
 
 
-test('Libraries stays coming soon with working details and source on Mac and Linux', async t => {
-  for (const platform of ['darwin', 'linux']) {
-    const v = await view(t, platform), card = v.document.querySelector('[data-id="tma-libraries"]');
-    assert.equal(card.querySelector('.app-icon').textContent, '?');
-    assert.equal(card.querySelector('.status').textContent, 'COMING SOON');
-    assert.ok(card.querySelector('.actions > button').disabled);
-    assert.equal(card.querySelectorAll('.os-badge').length, 0);
-    assert.match(card.textContent, /Version not published/);
-    assert.match(card.textContent, /date not published/);
-    assert.ok(!card.textContent.includes('1970') && !card.textContent.includes('v0.0.0'));
-    assert.equal(card.querySelector('.card-head').textContent, '05 / LIBRARIES');
-    assert.equal(v.document.querySelector('.card:last-child .card-head').textContent, '07 / YOUR AI TEAM');
-    [...card.querySelectorAll('.menu-items button')].find(b => b.textContent.includes('source')).click(); await tick();
-    assert.equal(v.calls.at(-1)[1], 'tma-libraries');
-    card.querySelector('.app-title').click(); await tick();
-    const dialog = v.document.querySelector('dialog');
-    assert.match(dialog.textContent, /Version not published/);
-    assert.match(dialog.textContent, /date not published/);
-    assert.equal(dialog.querySelectorAll('.gallery figure').length, 10);
-    assert.equal(dialog.querySelectorAll('video,img').length, 0);
+test('Libraries and Finance show real branding and block Windows packages on Mac and Linux', async t => {
+ for(const platform of ['darwin','linux']) {
+  const v=await view(t,platform);
+  for(const [id,icon,number] of [['tma-libraries','TMA-Libraries.png','05 / LIBRARIES'],['tma-finance','TMA-Finance.png','06 / FINANCE']]) {
+   const card=v.document.querySelector(`[data-id="${id}"]`);
+   assert.equal(card.querySelector('.app-icon img').getAttribute('src'),'../assets/'+icon);
+   assert.match(card.querySelector('.status').textContent,/NOT AVAILABLE FOR/);
+   assert.ok(card.querySelector('.actions > button').disabled);
+   assert.equal(card.querySelectorAll('.os-badge').length,1);
+   assert.equal(card.querySelector('.os-badge').textContent,'Windows');
+   assert.match(card.textContent,/v0.1.0/);assert.equal(card.querySelector('.card-head').textContent,number);
+   [...card.querySelectorAll('.menu-items button')].find(b=>b.textContent.includes('source')).click();await tick();assert.equal(v.calls.at(-1)[1],id);
+   card.querySelector('.app-title').click();await tick();const dialog=v.document.querySelector('dialog');assert.match(dialog.textContent,/Version 0.1.0/);assert.equal(dialog.querySelectorAll('.gallery figure').length,10);assert.equal(dialog.querySelectorAll('video').length,0);dialog.querySelector('.dialog-actions button').click();await tick();
   }
+  assert.equal(v.document.querySelector('.card:last-child .card-head').textContent,'08 / YOUR AI TEAM');
+ }
 });

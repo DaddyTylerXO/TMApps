@@ -9,6 +9,19 @@ namespace TMApps {
         void Remove(AppInfo app,Installed installed,string executable);
     }
     public sealed class WindowsAppIntegration : IAppIntegration {
+        internal static string ShortcutName(string id) {
+            switch(id) {
+                case "tma-mail": return "TMA-Mail";
+                case "tma-agent-office": return "TMA-Agent Office";
+                case "tma-safe": return "TMA-Safe";
+                case "tma-padlock": return "TMA-Padlock";
+                case "tma-socialsmanager": return "TMA-SocialsManager";
+                case "tma-cut": return "TMA-Cut";
+                case "tma-libraries": return "TMA-Libraries";
+                case "tma-finance": return "TMA-Finance";
+                default: throw new InvalidDataException("Unknown application shortcut.");
+            }
+        }
         public void Apply(AppInfo app,Installed previous,Installed current,string previousExecutable,string executable) {
             string name="TMApps-"+app.id;
             if(current.runAtStartup) {
@@ -18,7 +31,7 @@ namespace TMApps {
                     if(key!=null && Convert.ToString(key.GetValue(name))=="\""+previousExecutable+"\"") key.DeleteValue(name,false);
                 }
             }
-            string shortcut=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),(app.id=="tma-mail" ? "TMA-Mail" : "TMA-Agent Office")+".lnk");
+            string shortcut=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),ShortcutName(app.id)+".lnk");
             if(current.desktopShortcut) DesktopIntegration.CreateShortcut(shortcut,executable,app.name);
             else if(previous!=null && previous.desktopShortcut && DesktopIntegration.ShortcutTargets(shortcut,previousExecutable)) File.Delete(shortcut);
         }
@@ -72,7 +85,7 @@ namespace TMApps {
             string exe = Path.Combine(directory,"TMApps-Launcher.exe");
             CreateShortcut(Path.Combine(StartMenuDirectory,"TMApps Launcher.lnk"),exe);
             using(var key=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\TMAppsLauncher")) {
-                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.14.1"); key.SetValue("Publisher","DaddyTylerXO");
+                key.SetValue("DisplayName","TMApps Launcher"); key.SetValue("DisplayVersion","1.14.2"); key.SetValue("Publisher","DaddyTylerXO");
                 key.SetValue("InstallLocation",directory); key.SetValue("DisplayIcon",exe);
                 key.SetValue("UninstallString","\""+Path.Combine(directory,"Uninstall.exe")+"\" --uninstall");
                 key.SetValue("NoModify",1); key.SetValue("NoRepair",1);

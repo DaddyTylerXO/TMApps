@@ -79,12 +79,31 @@
       "id": "tma-libraries",
       "name": "TMA-Libraries",
       "category": "LIBRARIES",
-      "description": "TMA-Libraries is being prepared. Installation will be available when a verified build is published.",
-      "version": "0.0.0",
-      "updatedAt": "",
+      "description": "Offline notes, checklists, folders and workspace import/export. Initial Windows development build; advanced editors and integrations are still pending.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-21T15:03:39+01:00",
       "branch": "TMA-Libraries",
       "executable": "TMA-Libraries.exe",
-      "platforms": []
+      "platforms": [
+        "windows"
+      ],
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip",
+      "sha256": "3d775cf9e762a41619f6440d14de8e5d4000fa965ac076d428e895f117a271d6"
+    },
+    {
+      "id": "tma-finance",
+      "name": "TMA-Finance",
+      "category": "FINANCE",
+      "description": "Budgets, expenses, subscriptions, savings and a manual investment workspace. Initial Windows development build with optional market-data providers.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-21T14:55:05+01:00",
+      "branch": "TMA-Finance",
+      "executable": "TMA-Finance.exe",
+      "platforms": [
+        "windows"
+      ],
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.0-windows.zip",
+      "sha256": "7499c112f04d68b962ad0e7f965553d979ae92a517239922d105dfcfaa51afe7"
     }
   ]
 }

@@ -110,7 +110,7 @@ async function run() {
     open: ({ id }) => library.open(id),
     uninstall: ({ id, deleteData }) => library.uninstall(id, deleteData === true),
     data: ({ id }) => library.dataLocations(id),
-    source: ({ id } = {}) => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/tree/' + (id === 'tma-libraries' ? 'TMA-Libraries' : id === 'tma-cut' ? 'TMA-Cut' : id === 'tma-socialsmanager' ? 'TMA-SocialsManager' : id === 'tma-mail' ? 'TMA-Mail' : id === 'tma-agent-office' ? 'TMA-AgentOffice' : id === 'tma-padlock' ? 'TMA-Padlock' : id === 'tma-safe' ? 'TMA-Safe' : 'TMApps-Launcher')),
+    source: ({ id } = {}) => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/tree/' + (id === 'tma-finance' ? 'TMA-Finance' : id === 'tma-libraries' ? 'TMA-Libraries' : id === 'tma-cut' ? 'TMA-Cut' : id === 'tma-socialsmanager' ? 'TMA-SocialsManager' : id === 'tma-mail' ? 'TMA-Mail' : id === 'tma-agent-office' ? 'TMA-AgentOffice' : id === 'tma-padlock' ? 'TMA-Padlock' : id === 'tma-safe' ? 'TMA-Safe' : 'TMApps-Launcher')),
     cancel: () => controller?.abort(),
     answer: ({ id, value }) => { const resolve = prompts.get(id); if (resolve) { prompts.delete(id); resolve(value === true); } },
     update: applyLauncherUpdate
