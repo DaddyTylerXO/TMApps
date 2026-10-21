@@ -1,3 +1,5 @@
+> Repository-wide reporting, supported-version guidance and publishing requirements: [suite security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md). Send vulnerabilities through [private vulnerability reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new); keep sensitive details out of public issues.
+
 # Release credential checks
 
 Never publish OAuth client secrets, user passwords, access/refresh tokens, account stores or private keys. Microsoft public client IDs are identifiers, not client secrets. Keep local provider configuration in ignored `provider-settings.json`; it must never be staged or copied into a public package.
