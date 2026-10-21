@@ -15,6 +15,13 @@ using System.Windows.Media.Imaging;
 
 namespace TMApps {
     public class Tests {
+        class AuthHandler : HttpMessageHandler {
+            public int Requests;
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
+                Requests++;string route=request.RequestUri.AbsolutePath;string body=route.EndsWith("/verify")?"{\"access_token\":\"private-access\",\"refresh_token\":\"private-refresh\",\"expires_in\":3600}":route.EndsWith("/user")?"{\"id\":\"user-1\",\"email\":\"verified@example.com\",\"email_confirmed_at\":\"2026-10-21\"}":route.EndsWith("/app_access")&&request.Method==HttpMethod.Get?"[{\"app_id\":\"tma-cut\",\"enabled\":true}]":"{}";
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(body)});
+            }
+        }
         class PackageHandler : HttpMessageHandler {
             public byte[] Bytes;
             public bool UsedAuth; public string LastUrl; public Catalog UpdateCatalog; public LauncherRelease Launcher; public int LauncherChecks;
@@ -34,7 +41,7 @@ namespace TMApps {
             public LauncherRelease Release; public byte[] Installer; public bool FailManifest; public int Downloads;
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
                 token.ThrowIfCancellationRequested(); string path=request.RequestUri.AbsolutePath;
-                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.13.0.exe\",\"id\":11}]}") });
+                if(path.EndsWith("/releases/tags/tma-apps")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent("{\"assets\":[{\"name\":\"launcher-update.json\",\"id\":10},{\"name\":\"TMApps-Launcher-Setup-1.14.0.exe\",\"id\":11}]}") });
                 bool manifest=path.EndsWith("launcher-update.json") || path.EndsWith("/assets/10");
                 if(manifest) return Task.FromResult(new HttpResponseMessage(FailManifest ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK) { Content=new StringContent(LauncherService.Json.Serialize(Release)) });
                 Downloads++;
@@ -315,13 +322,13 @@ namespace TMApps {
                 using(var process=System.Diagnostics.Process.Start(installStart)) { if(!process.WaitForExit(20000)) { process.Kill(); throw new Exception("Installer verification timed out"); } Check(process.ExitCode==0 && File.ReadAllText(Path.Combine(installerRoot,"installer-report.txt")).StartsWith("OK:"),"Real installer writes payload, saves options, launches installed EXE, and preserves data on uninstall"); }
                 byte[] installerBytes=File.ReadAllBytes(Path.Combine(args[0],"build","TMApps-Launcher-Setup.exe"));
                 string setupHash; using(var sha=SHA256.Create()) setupHash=BitConverter.ToString(sha.ComputeHash(installerBytes)).Replace("-","").ToLowerInvariant();
-                var release=new LauncherRelease { schemaVersion=1,version="1.13.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.13.0.exe",sha256=setupHash };
+                var release=new LauncherRelease { schemaVersion=1,version="1.14.0",downloadUrl="https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup-1.14.0.exe",sha256=setupHash };
                 var launcherHandler=new LauncherUpdateHandler { Release=release,Installer=installerBytes };
                 using(var updater=new LauncherService(Path.Combine(root,"launcher-updates"),launcherHandler)) {
-                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.13.0","Launcher check discovers a newer launcher independently of app catalog");
-                    Check(updater.CheckLauncherUpdate("1.13.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
+                    Check(updater.CheckLauncherUpdate("1.6.0",CancellationToken.None).GetAwaiter().GetResult().version=="1.14.0","Launcher check discovers a newer launcher independently of app catalog");
+                    Check(updater.CheckLauncherUpdate("1.14.0",CancellationToken.None).GetAwaiter().GetResult()==null && updater.CheckLauncherUpdate("2.0.0",CancellationToken.None).GetAwaiter().GetResult()==null,"Launcher check skips current versions and never downgrades");
                     string downloaded=updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult();
-                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.13.0.0","Launcher installer download verifies checksum and embedded product version");
+                    Check(File.Exists(downloaded) && System.Diagnostics.FileVersionInfo.GetVersionInfo(downloaded).FileVersion=="1.14.0.0","Launcher installer download verifies checksum and embedded product version");
                     File.Delete(downloaded);
                     launcherHandler.Installer=new byte[]{1,2,3};
                     Reject(()=>updater.DownloadLauncherUpdate(release,new QuietProgress(),CancellationToken.None).GetAwaiter().GetResult(),"Corrupted launcher installer cannot be executed");
@@ -378,6 +385,17 @@ namespace TMApps {
                 Check(socialReload.socialAccounts.Count==2 && socialReload.socialAccounts[0].platform=="Instagram" && socialReload.socialAccounts[0].account=="@example" && socialReload.shareWithSocialApps,"Social account sharing round-trips, trims values, and deduplicates accounts");
                 foreach(var invalidSocial in new[]{"http://example.com/user","https://user:secret@example.com/user","https://example.com/user?token=secret","https://example.com/user#secret","bad\nname"}) Reject(()=>TMAppsShared.SuiteProfileStore.Save(socialPath,new TMAppsShared.SuiteProfile { socialAccounts=new System.Collections.Generic.List<TMAppsShared.SocialAccount> { new TMAppsShared.SocialAccount { platform="Example",account=invalidSocial } } }),"Invalid or credential-bearing social entry is rejected before writing");
                 Check(TMAppsShared.SuiteProfileStore.Load(socialPath).revision==socialReload.revision,"Rejected social edits preserve the last saved profile");
+                var authRoot=Path.Combine(root,"auth-test");Directory.CreateDirectory(authRoot);File.WriteAllText(Path.Combine(authRoot,"auth-config.json"),"{\"url\":\"https://auth.example.test\",\"publicKey\":\"sb_publishable_test\"}");
+                var authHandler=new AuthHandler();using(var auth=new SuiteSignIn(authRoot,authHandler)) {
+                    Check(auth.Configured,"Prepared sign-in accepts only explicit public service configuration");
+                    Reject(()=>auth.Send("not an email").GetAwaiter().GetResult(),"Sign-in validates an email before making a request");
+                    Check(auth.Verify("verified@example.com","123456").GetAwaiter().GetResult().Contains("tma-cut") && auth.Email=="verified@example.com","Email code verification returns verified identity and selected app access");
+                    Check(!System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(authRoot,"auth-session.bin"))).Contains("private-refresh"),"Windows session persistence uses OS protection instead of plaintext");
+                    auth.Access(new[]{"tma-cut"}).GetAwaiter().GetResult();Reject(()=>auth.Access(new[]{"unknown"}).GetAwaiter().GetResult(),"Sign-in cannot grant access to an unknown app");auth.Logout().GetAwaiter().GetResult();Check(!File.Exists(Path.Combine(authRoot,"auth-session.bin")),"Sign-out removes the protected local session");
+                }
+                Check(ExperienceContent.Current.articles.Count==12 && ExperienceContent.Current.apps.Values.All(a=>a.screenshots.Count<=10 && a.screenshots.All(m=>ExperienceContent.Media(m.url))),"Knowledge articles and app galleries have trusted bounded content");
+                var redacted=LauncherDiagnostics.Redact("token=secret Bearer access user@example.com\nC:\\Users\\Person\\private.txt");Check(!redacted.Contains("secret")&&!redacted.Contains("user@example.com")&&!redacted.Contains("Person"),"Crash reports redact tokens, emails and local paths");
+                Check(LauncherDiagnostics.Issue("bug",redacted).StartsWith("https://github.com/DaddyTylerXO/TMApps/issues/new?") && LauncherDiagnostics.Issue("feature",null).Contains("Requested"),"Support actions use prefilled matching GitHub issue forms");
                 string uiRoot=Path.Combine(root,"ui-profile"); Directory.CreateDirectory(uiRoot);
                 var uiCatalog=LauncherService.ParseCatalog(original);
                 using(var sha=SHA256.Create()) uiCatalog.apps[0].sha256=BitConverter.ToString(sha.ComputeHash(handler.Bytes)).Replace("-","").ToLowerInvariant();
@@ -501,6 +519,17 @@ namespace TMApps {
                 }));
                 profileButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent,profileButton));
                 Check(TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).revision==savedProfile.revision && TMAppsShared.SuiteProfileStore.Load(Path.Combine(uiRoot,"shared-profile.json")).socialAccounts.Count==1,"Cancelling profile edits leaves sync state unchanged");
+                var neutralPreference=new Preferences {theme="Grey",includeKbSearch=false};neutralPreference.Normalize();Check(neutralPreference.theme=="Grey"&&!neutralPreference.includeKbSearch,"Preference normalization preserves the chosen theme and KB search opt-out");
+                string originalBackground=window.Background.ToString();
+                LauncherThemes.Apply(window,"Grey");Check(window.Background.ToString()=="#FF25272B","Grey palette updates the rendered launcher");LauncherThemes.Apply(window,"Black");Check(window.Background.ToString()=="#FF08090B","Black palette updates the rendered launcher");LauncherThemes.Apply(window,"Orange");Check(window.Background.ToString()==originalBackground,"Returning to Orange restores the original palette");
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=>{
+                    var popup=application.Windows.OfType<ThemedDialog>().Single();var search=popup.Body.Children.OfType<TextBox>().Single();var body=popup.Body.Children.OfType<StackPanel>().Single();body.Children.OfType<ComboBox>().First().SelectedItem="Grey";Check(((Border)((StackPanel)((Border)popup.Content).Child).Children[0]).Background.ToString()=="#FF202226","Grey palette updates the modal header as well as the window background");SaveDialog(popup,Path.Combine(args[0],"build","settings-preview.png"));search.Text="Launcher-KB6";Check(body.Children.OfType<Button>().Any(b=>Convert.ToString(b.Content).Contains("Launcher-KB6")),"Settings search locates KB numbers");SaveDialog(popup,Path.Combine(args[0],"build","settings-search-preview.png"));popup.Actions.Children.OfType<Button>().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }));
+                ((Button)window.FindName("SettingsButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=>{var popup=application.Windows.OfType<ThemedDialog>().Single();Check(popup.Body.Children.OfType<Button>().Any(b=>Convert.ToString(b.Content)=="Bug report"),"Help exposes feature, bug, issue, and crash-report actions");SaveDialog(popup,Path.Combine(args[0],"build","help-preview.png"));popup.Actions.Children.OfType<Button>().Last().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}));
+                ((Button)window.FindName("HelpButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(()=>{var popup=application.Windows.OfType<ThemedDialog>().Single();Check(popup.Title.Contains("TMA-Mail") && popup.Body.Children.OfType<TextBlock>().Count(t=>t.Text.StartsWith("Screenshot "))==10,"App details displays a versioned screen with ten gallery slots");SaveDialog(popup,Path.Combine(args[0],"build","details-preview.png"));popup.Actions.Children.OfType<Button>().Last().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}));
+                Buttons(cards).First(b=>Convert.ToString(b.Content)=="Details" && Convert.ToString(b.Tag)=="tma-mail").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Console.WriteLine(count + " checks passed. Preview: build/launcher-preview.png");
                 window.Close(); application.Shutdown(); return 0;
             } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }
