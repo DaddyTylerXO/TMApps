@@ -1,0 +1,56 @@
+# Repository maintenance
+
+Initial cross-branch audit: **21 October 2026**. This is a dated evidence record, not a claim that every application meets every shared standard or has passed an independent security audit.
+
+## Repository and distribution
+
+All ten branches were inspected: `main`, `TMApps-Launcher`, `TMA-Mail`, `TMA-Safe`, `TMA-Padlock`, `TMA-Cut`, `TMA-Finance`, `TMA-Libraries`, `TMA-SocialsManager` and `TMA-AgentOffice`. Branch instructions, root documentation, package versions, file trees and available publishing workflows were reviewed. Finance and Libraries contain project/template documents rather than an application implementation.
+
+The shared `tma-apps` release contained **370 assets** after Cut's 0.2.0 publication completed. The audit compared all **26 package references** in the application catalog and launcher update feeds with GitHub's uploaded-asset SHA-256 digests and checksum sidecars. All 26 matched. This check did not download or execute those release binaries, inspect historical packages, or independently reproduce their builds.
+
+The [public GitHub Packages page](https://github.com/DaddyTylerXO/TMApps/packages) showed the registry getting-started screen with no published packages. Installers/archives are GitHub Release assets. Authenticated registry inventory and private vulnerability/Dependabot alert settings were not inspected; no claim of zero private alerts is made.
+
+| Application | Source/published version observed | Published architecture coverage |
+| --- | --- | --- |
+| Launcher | 1.14.1 | Windows x64; macOS x64/ARM64; Linux x64/ARM64 |
+| Mail | 0.16.5-beta | Windows x64 |
+| Safe | 0.2.2 | Windows x64; macOS x64/ARM64; Linux x64/ARM64 |
+| Padlock | 0.2.1 | Windows x64; macOS x64/ARM64; Linux x64/ARM64 |
+| Cut | 0.2.0 | Windows x64; macOS x64/ARM64; Linux x64 |
+| SocialsManager | 0.3.0 | Windows x64; macOS x64/ARM64; Linux x64/ARM64 |
+| Agent Office | 0.2.0 | Windows x64 |
+| Finance / Libraries | No application release | None |
+
+Versions matching does not prove that every source commit is included in the published package. Asset timestamps, source commits, build-run revisions and actual release notes must also be checked for app changes.
+
+## Corrections and follow-up
+
+- Replaced the main three-link README with a full branch/project index and published-platform information. Added [DOWNLOADS.md](DOWNLOADS.md) with actual package and checksum links.
+- Replaced the example security version table with a suite-wide [security policy](SECURITY.md), verified private reporting destination and release-integrity guidance. Preserved the existing sensitive-data publishing restrictions.
+- Added [SUPPORT.md](SUPPORT.md), a general issue template and security contact links. Copied the launcher's four existing bug/crash/feature/issue forms onto the actual default branch so its template URLs can resolve.
+- Found an obsolete `AI-Agent-Dashboard` branch name in both launcher source catalogs and the live release catalog. The corrected source catalogs were verified locally; publication status is recorded below as work completes.
+- Found template security policies on Cut, SocialsManager, Finance and Libraries; Launcher and Agent Office lacked a root policy. Branch policy alignment is part of this maintenance pass. Mail/Safe/Padlock have substantive app-specific security documentation that must be preserved.
+- The launcher README incorrectly described only Mail and Office as published apps. Its platform paragraph needs to include the now-published security, social and video apps.
+- Two legacy default-branch issue-template filenames contain `*`, which prevents a normal Windows checkout. They are retained because existing Cut releases link to those exact filenames. Migrate app links before removing/renaming them; do not silently break installed app report buttons. This local checkout excludes that directory with sparse checkout.
+- Branch protection is off for all ten observed branches and the repository has no rulesets. This audit did not change repository governance settings.
+- The shared release body is maintained by the launcher publishing workflow and currently concentrates on launcher changes. Keep the full app/download index linked from that body and use app branches for individual change history.
+
+## Verification
+
+The launcher catalog branch correction passed **188 Windows checks**, including the real installer, UI and update flows. Measured startup was **598 ms**, working set **96.97 MiB**, idle CPU **0.049%**, within the existing check's budgets. Desktop tests passed **37 checks**, with **one native macOS/Linux process check skipped on Windows**. An initial sandboxed desktop run was blocked by fixture file-rename permissions; the same suite passed outside that sandbox. Native runner/package checks remain the publishing workflow's responsibility.
+
+The launcher's locked dependency advisory check reported **one moderate development/optional dependency advisory**: [`sprintf-js` <=1.1.3, GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c), through electron-builder's build tooling. The registry reported no published patched version. This is an open dependency-maintenance item; no unsupported override or application security-clean claim is made. This check covered the launcher lockfile, not every app's full dependency graph.
+
+This pass changes repository/distribution documentation and source-link metadata. It does not add UI features or change app versions. Existing in-app KB articles, screenshots and Word documents do not require new content for these changes; their published files are preserved. Further app functionality or dependency fixes require their own relevant functional/performance/KB checks.
+
+## Ongoing maintenance procedure
+
+The owner requested daily checks at **09:00 Europe/London**. The chat's maintenance automation holds that schedule; it is not a GitHub Actions schedule. Notify only for meaningful changes, completed fixes, failures or required action.
+
+1. Enumerate all branches and read current instructions. Compare current remote heads before publishing; preserve concurrent work and never force-push.
+2. Review changed source/package versions, lockfiles, branch READMEs, security documents, KBs, build results and platform limitations. Keep placeholders distinct from published apps.
+3. Fetch the live release catalog and both launcher update feeds. Validate URLs, branches, package availability, platform/architecture selection and checksum agreement before updating the primary page.
+4. Use `python tools/audit-releases.py --output <local-report.json>` for a repeatable public distribution check. Exit 0 means metadata checks passed, 1 means findings, and 2 means an incomplete audit. This checks asset metadata and sidecars, not binary contents or runtime behaviour.
+5. Review relevant dependency advisories and resolve supported updates with app-specific tests. Never equate a package version bump with a tested release, or claim unavailable alert/registry access was checked.
+6. Update the README/download index and this dated record when facts change. Preserve historical release assets unless the owner authorizes cleanup. Follow app-specific release/version requirements and never publish a build that has not passed its required checks.
+7. Run redacted secret scanning and review the actual outgoing changes and artifacts. Keep credentials, real account data, local test output and build products out of commits/releases.

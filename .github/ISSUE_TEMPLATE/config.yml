@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/DaddyTylerXO/TMApps/security/advisories/new
+    about: Use private security reporting for vulnerabilities. Never include secrets in public issues.
+  - name: Downloads and checksums
+    url: https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md
+    about: Find the current published app packages and platform information.
