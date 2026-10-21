@@ -47,7 +47,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $cut = Start-Process -FilePath node_modules/electron/dist/electron.exe -ArgumentList @('.', '--smoke', '"'+$PWD+'/smoke/report.json"') -WindowStyle Hidden -PassThru -Wait
+          $report = Join-Path $PWD 'smoke/report.json'
+          $cutArguments = @('.', '--smoke', ('"' + $report + '"'))
+          $cut = Start-Process -FilePath (Resolve-Path node_modules/electron/dist/electron.exe) -ArgumentList $cutArguments -WindowStyle Hidden -PassThru -Wait
           if ($cut.ExitCode -ne 0) { throw 'Desktop smoke check failed' }
           if (!(Get-Content smoke/report.json -Raw | ConvertFrom-Json).ok) { throw 'Desktop smoke report failed' }
       - name: Verify desktop UI on Linux
