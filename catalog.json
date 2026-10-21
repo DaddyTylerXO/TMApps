@@ -88,7 +88,7 @@
         "windows"
       ],
       "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip",
-      "sha256": "3d775cf9e762a41619f6440d14de8e5d4000fa965ac076d428e895f117a271d6"
+      "sha256": "64dc2fa3eddc55555853f12080bae944683a9cecdfcf8194a35d3a1b993ac29d"
     },
     {
       "id": "tma-finance",
@@ -103,7 +103,7 @@
         "windows"
       ],
       "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.0-windows.zip",
-      "sha256": "7499c112f04d68b962ad0e7f965553d979ae92a517239922d105dfcfaa51afe7"
+      "sha256": "f3ea2de64b4cc87b616828c285f98f18379aef97db32fd87bcb9f76390fb7a53"
     }
   ]
 }
