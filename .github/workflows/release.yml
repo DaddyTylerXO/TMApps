@@ -77,7 +77,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           app=$(find dist -maxdepth 2 -name TMA-Cut.app -type d -print -quit)
-          "$app/Contents/MacOS/TMA-Cut" --smoke "$PWD/smoke/packaged.json"
+          "$app/Contents/MacOS/TMA-Cut" --smoke "$PWD/smoke/packaged.json" || { cat smoke/packaged.json; exit 1; }
       - name: Verify packaged Linux application
         if: runner.os == 'Linux'
         run: xvfb-run -a dist/linux-unpacked/TMA-Cut --no-sandbox --smoke "$PWD/smoke/packaged.json"
