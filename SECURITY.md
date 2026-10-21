@@ -1,3 +1,5 @@
+> Repository-wide reporting, supported-version guidance and publishing requirements: [suite security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md). Send vulnerabilities through [private vulnerability reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new); keep sensitive details out of public issues.
+
 # Security model
 
 TMA-Padlock keeps authenticator secrets and metadata encrypted in `vault.tmapadlock` under Electron's per-user application-data directory (`app.getPath('userData')`). It makes no network requests and has no telemetry or cloud recovery.
