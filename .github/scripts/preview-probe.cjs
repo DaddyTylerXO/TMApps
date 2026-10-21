@@ -9,3 +9,4 @@ const file=path.resolve(__dirname,'../../electron/main.cjs'),unit=new Module(fil
 unit.filename=file;unit.paths=Module._nodeModulePaths(path.dirname(file));
 let code=fs.readFileSync(file,'utf8');if(process.env.SMOKE_VISIBLE==='1')code=code.replace('offscreen:smokeIndex>=0','offscreen:false').replace('show:smokeIndex<0','show:true');
 unit._compile(code,file);
+// Keep the visible/offscreen comparison available for media-protocol regressions.
