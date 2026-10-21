@@ -1,21 +1,9 @@
-# Security Policy
+# TMA-Libraries security
 
-## Supported Versions
+The [suite security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md) covers this branch, its source and any published release packages. Use [private vulnerability reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new) for vulnerabilities. Do not include real passwords, tokens, authenticator seeds, vaults, mailbox data or private files in public issues, logs or test examples.
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+This branch is in preparation and has no published application package. It does not have a supported released version yet.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+Follow [.cursor/rules/security-data.mdc](.cursor/rules/security-data.mdc) before every commit, push or release. Keep credentials in appropriate local/server secret stores and review actual source, history and generated artifacts before publication. If exposure is suspected, stop the affected publication and notify the owner with redacted locations; coordinate credential rotation and cleanup without rewriting shared history unless explicitly authorized.
 
-## Reporting a Vulnerability
-
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+See this branch's [README](README.md) for actual capabilities and platform limitations, and the suite policy for private reporting instructions and checksum verification limits.
