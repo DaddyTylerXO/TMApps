@@ -1,22 +1,13 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {JSDOM}=require('jsdom');
-function setup(){
-  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8'),{runScripts:'outside-only',url:'file:///tma-cut/ui/index.html'}),w=dom.window;
-  const a={id:'a',kind:'video',name:'<script>not HTML</script>.mp4',duration:5,width:1920,height:1080,url:'cut-media://asset/a'};
-  w.HTMLMediaElement.prototype.pause=function(){};w.HTMLMediaElement.prototype.play=async function(){};w.confirm=()=>true;
-  w.cut={importVideos:async()=>({ok:true,data:{media:[a],errors:[]}}),onProgress:()=>{},onCommand:()=>{}};
-  w.eval(fs.readFileSync(path.join(__dirname,'../ui/renderer.js'),'utf8'));return dom;
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
+async function setup(){
+  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8'),{runScripts:'outside-only',url:'file:///cut/ui/index.html'}),w=dom.window;
+  w.requestAnimationFrame=()=>0;w.setInterval=()=>0;w.confirm=()=>true;w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({getImageData:()=>({data:new Uint8ClampedArray(96*54*4)})},{get:(target,key)=>target[key]||(()=>{})});w.HTMLMediaElement.prototype.pause=function(){};w.HTMLMediaElement.prototype.play=async function(){};
+  w.eval(fs.readFileSync(path.join(__dirname,'../ui/model.js'),'utf8'));const settings={...w.CutModel.defaults(),tourDone:true,showSuggestions:false};
+  const asset={id:'a',kind:'video',name:'<script>literal asset</script>.mp4',duration:8,width:1920,height:1080,audio:true,size:1000,url:'cut-media://asset/a'};const calls=[];
+  w.cut=new Proxy({onProgress:()=>{},onCommand:()=>{},filePath:()=>'/local/file.mp4'}, {get:(target,key)=>target[key]|| (async value=>{calls.push([key,value]);const data={bootstrap:{settings,connections:{},version:'0.2.0'},importFiles:{media:[asset],errors:[]},settings:value,saveProject:{name:'saved.tmacut',time:new Date().toISOString()},previewState:null};return {ok:true,data:data[key]??null};})});
+  for(const file of ['kb.js','compositor.js','studio.js'])w.eval(fs.readFileSync(path.join(__dirname,'../ui',file),'utf8'));await w.cutReady;return {dom,w,calls,$:id=>w.document.getElementById(id)};
 }
-test('editor imports media, trims, reorders, undoes, and renders captions without interpreting HTML',async()=>{
-  const dom=setup(),w=dom.window,$=id=>w.document.getElementById(id);
-  try{
-    assert.equal(w.cutSmoke().nodeAvailable,false);assert.equal($('export-open').disabled,true);
-    await w.cutTest.importVideos();assert.equal(w.cutTest.total(),5);assert.equal($('timeline-track').querySelectorAll('button').length,1);assert.equal($('export-open').disabled,false);assert.equal($('media-list').querySelector('script'),null);
-    $('trim-in').value='1';$('trim-out').value='3';await $('apply-trim').onclick();assert.equal(w.cutTest.total(),2);
-    $('undo').click();assert.equal(w.cutTest.total(),5);$('redo').click();assert.equal(w.cutTest.total(),2);
-    $('caption-text').value='<b>literal caption</b>';$('caption-start').value='0';$('caption-end').value='1';await $('add-caption').onclick();w.cutTest.seek(.5);assert.equal($('preview-caption').textContent,'<b>literal caption</b>');assert.equal($('preview-caption').children.length,0);
-    $('media-list').querySelector('button').click();assert.equal(w.cutTest.getProject().clips.length,2);$('move-left').click();assert.equal(w.cutTest.getProject().clips[0].out,5);$('remove-clip').click();assert.equal(w.cutTest.total(),2);
-    $('trim-in').value='-1';await $('apply-trim').onclick();assert.match($('notice').textContent,/Trim points/);assert.equal(w.cutTest.total(),2);
-  }finally{w.close();}
-});
+test('studio imports, highlights selection, splits, copies, pastes and undoes edits through public controls',async()=>{const {w,$}=await setup();try{assert.equal(w.cutSmoke().nodeAvailable,false);await w.cutTest.actions.import();assert.equal(w.cutTest.total(),8);assert.equal($('tracks').querySelectorAll('.asset.selected').length,1);assert.equal($('panel').querySelector('script'),null);const id=w.cutTest.getProject().items[0].id;w.cutTest.setTime(3);w.cutTest.actions.split();assert.equal(w.cutTest.getProject().items.length,2);assert.equal(w.cutTest.total(),8);w.cutTest.actions.undo();assert.equal(w.cutTest.getProject().items.length,1);w.cutTest.actions.redo();assert.equal(w.cutTest.getProject().items.length,2);w.cutTest.select(w.cutTest.getProject().items.map(i=>i.id));w.cutTest.actions.group();assert.ok(w.cutTest.getProject().items.every(i=>i.group));w.cutTest.actions.copy();w.cutTest.setTime(10);w.cutTest.actions.paste();assert.equal(w.cutTest.getProject().items.length,4);assert.equal(w.cutTest.total(),18);assert.ok(w.cutTest.getProject().items.slice(2).every(i=>i.group!==w.cutTest.getProject().items[0].group));w.cutTest.actions.remove();assert.equal(w.cutTest.getProject().items.length,2);assert.ok(w.cutTest.keyMatches({code:'KeyB',key:'b',ctrlKey:true,metaKey:false,shiftKey:false,altKey:false},'Mod+B'));}finally{w.close();}});
+test('settings search finds KBs and actions expose accessible icon labels and report drafts',async()=>{const {w,$,calls}=await setup();try{const b=w.document.querySelector('[data-action=settings]');b.click();const input=$('modal').querySelector('input[type=search]');assert.ok(input);input.value='Cut-KB10';input.dispatchEvent(new w.Event('change'));const articles=[...$('modal').querySelectorAll('[data-kb]')].filter(n=>!n.hidden);assert.equal(articles.length,1);assert.equal(articles[0].dataset.kb,'Cut-KB10');assert.equal($('modal').querySelectorAll('input[type=password]').length,5);const close=[...$('modal').querySelectorAll('.modal-actions button')].find(b=>b.textContent.includes('Cancel'));close.click();assert.equal($('modal').open,false);await w.cutTest.actions.import();const asset=$('tracks').querySelector('.asset');asset.dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,clientX:100,clientY:100}));assert.equal($('context-menu').hidden,false);assert.ok($('context-menu').textContent.includes('Reduce noise'));assert.ok($('context-menu').textContent.includes('Copy'));assert.ok(calls.some(c=>c[0]==='previewState'));}finally{w.close();}});

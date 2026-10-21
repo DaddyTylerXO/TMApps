@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [TMA-Cut]
-    paths: ['electron/**', 'ui/**', 'assets/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/release.yml']
+    paths: ['electron/**', 'ui/**', 'assets/**', 'docs/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/release.yml']
 permissions:
   contents: read
 concurrency:
