@@ -5,3 +5,7 @@
 - Keep `README.md` setup and capability descriptions consistent with the implementation.
 - Run the checks appropriate to a change. The automated suite is `npm test`. Real Codex generation checks consume account allowance; distinguish their results from fixtures.
 - Keep secrets, local credentials, runtime profiles, job data, build outputs, and verification artifacts out of Git.
+
+## KB maintenance
+
+For every app update, follow the standing KB maintenance requirements in [.cursor/rules/kb-maintenance.mdc](.cursor/rules/kb-maintenance.mdc).
