@@ -28,6 +28,11 @@ async function capture(destination) {
 }
 try {
   window = await application.firstWindow();
+  await application.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows()[0];
+    w.show();
+    w.focus();
+  });
   window.setDefaultTimeout(15000);
   window.on("pageerror", (e) => errors.push(e.message));
   window.on("console", (m) => {
@@ -130,23 +135,30 @@ try {
     .waitFor({ state: "hidden", timeout: 60000 });
   await capture(".qa/document.png");
   console.log("PASS DOCX editor opens");
+  await window.waitForTimeout(700);
   await window.locator(".rich-surface").click({ position: { x: 350, y: 180 } });
   await window.keyboard.press("Control+End");
   await window.keyboard.type(" Synthetic edited text");
   await window.getByRole("button", { name: "Save", exact: true }).click();
-  const editedBinary = await window.evaluate(async () => {
-    const state = (await window.libraries.invoke("state")).value;
-    const d = state.documents.find((d) => d.kind === "document");
-    return (await window.libraries.invoke("get", d.id)).value.payload.binary;
-  });
   const { default: JSZip } = await import("jszip");
-  const editedPackage = await JSZip.loadAsync(
-    Buffer.from(editedBinary, "base64"),
-  );
+  let containsEdit = false;
+  for (let attempt = 0; attempt < 60 && !containsEdit; attempt++) {
+    const editedBinary = await window.evaluate(async () => {
+      const state = (await window.libraries.invoke("state")).value;
+      const d = state.documents.find((d) => d.kind === "document");
+      return (await window.libraries.invoke("get", d.id)).value.payload.binary;
+    });
+    const editedPackage = await JSZip.loadAsync(
+      Buffer.from(editedBinary, "base64"),
+    );
+    containsEdit = (
+      await editedPackage.file("word/document.xml").async("string")
+    ).includes("Synthetic edited text");
+    if (!containsEdit) await window.waitForTimeout(250);
+  }
   assert.ok(
-    (await editedPackage.file("word/document.xml").async("string")).includes(
-      "Synthetic edited text",
-    ),
+    containsEdit,
+    "Saved DOCX must contain the typed text after the asynchronous save commits",
   );
   console.log("PASS real DOCX editing and saved OOXML content");
   await window.getByRole("button", { name: "Home", exact: true }).click();

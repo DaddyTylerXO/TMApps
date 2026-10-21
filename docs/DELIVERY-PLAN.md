@@ -51,3 +51,7 @@ Verify: Word document rendering, links and KB search, launcher install/start/upd
 ## Recurring update gate
 
 For every application update: run checks appropriate to the changed behaviour, optimise/test performance, inspect changes for sensitive data exposure, update relevant KB articles/screenshots, record new features by version, and refresh tour content. Record actual results and unresolved limitations; do not substitute a checklist for evidence.
+
+## Approved Electron rebuild status
+
+The five user-approved rebuild milestones supersede the earlier implementation sequence above. Version 0.2.0-dev.1 supplies a development implementation across all ten document choices; it does not close the milestone gates. See VERIFICATION-0.2.0.md for measured results and unfinished editor, recovery, performance, accessibility, Word KB and distribution checks. Preserve every original backlog requirement, including excluded boards, portfolios, databases and project dashboards, for later work.

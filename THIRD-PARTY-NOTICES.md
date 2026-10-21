@@ -23,3 +23,5 @@ The lockfile records exact versions. Runtime and bundled renderer components inc
 | DM Sans / Manrope through Fontsource | SIL Open Font License | Bundled offline typography |
 
 Dependency notices remain in the installed packages. Before release, review the complete dependency licence inventory and include applicable notices in the package. No commercial licence key, paid SDK, hosted editor, analytics service or cloud conversion service is required. This list is not a claim that dependency vulnerabilities or every transitive licence have been independently audited.
+
+Corresponding rebuild source: https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries (development preview 0.2.0-dev.1). Source publication does not constitute verification of every transitive licence or a public binary release.

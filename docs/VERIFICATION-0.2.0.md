@@ -31,3 +31,11 @@ After exercising all editor families, process working-set memory totalled approx
 - Windows packaging is unsigned development output. Matching-runner macOS/Linux checks, verified public artifact URLs/checksums and Launcher registration remain pending.
 
 Original specifications remain authoritative; partial implementation does not complete a requirement.
+
+## Final packaged Windows workflow
+
+The rebuilt unpacked Windows x64 executable passed the complete isolated Electron workflow, including actual DOCX typing and inspection of the saved OOXML text. The test waits for asynchronous save commitment rather than reading immediately after clicking Save. The application window was visible for canvas keyboard focus and fresh screenshots. No renderer exceptions were recorded.
+
+Packaged startup measured 1,341 ms. After all editor families, working-set total was approximately 905 MiB and sampled CPU total approximately 0.71%. Memory remains over target; an earlier CPU sample was over target, so neither result should be generalized. Fresh Home and DOCX screenshots were visually inspected. Screenshots are synthetic local QA artifacts, not private user documents.
+
+A first package was correctly rejected because renderer assets were missing while build and packaging overlapped. The replacement was packaged after build completion, checked for the renderer index and exercised as an actual executable. Use build.ps1 or package:win, which build sequentially before packaging.
