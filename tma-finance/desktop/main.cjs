@@ -14,6 +14,7 @@ const { pathToFileURL } = require("node:url");
 const { writeFile, readFile } = require("node:fs/promises");
 const { createMarketClient } = require("./market.cjs");
 const market = createMarketClient();
+const { sharedMarket } = require("./shared-market.cjs");
 app.setName("TMA-Finance");
 nativeTheme.themeSource = "dark";
 // Separate storage for a disposable QA run, never touching the personal profile.
@@ -156,17 +157,8 @@ app.whenReady().then(() => {
       if (!payload || JSON.stringify(payload).length > 2000)
         throw Error("Invalid market request.");
       let data;
-      if (payload.source === "shared") {
-        if (payload.provider !== "alphavantage")
-          throw Error("Shared access supports Alpha Vantage only.");
-        if (payload.action === "request")
-          throw Error(
-            "Shared Alpha Vantage is awaiting backend setup. Choose a personal key in Settings to connect now.",
-          );
-        if (!["status", "disconnect"].includes(payload.action))
-          throw Error("Shared access does not accept personal keys.");
-        data = { configured: false, source: "shared", pending: true };
-      } else if (payload.action === "status")
+      if (payload.source === "shared") data = sharedMarket(payload);
+      else if (payload.action === "status")
         data = market.status(payload.provider);
       else if (payload.action === "connect")
         data = market.connect(payload.provider, payload.key);

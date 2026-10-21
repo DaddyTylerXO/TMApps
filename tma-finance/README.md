@@ -79,4 +79,10 @@ Tax sources checked on 21 October 2026:
 
 ## Appearance and startup guide
 
-See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the forest-green interface, and [release notes](docs/RELEASE-NOTES.md) for 0.1.2.
+See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the forest-green interface, and [release notes](docs/RELEASE-NOTES.md) for 0.1.3.
+
+## Provider KB Library
+
+Open **Help and KB Library** in the app for offline searchable guides. See the [KB index](docs/KB-INDEX.md) for the same articles on GitHub. Alpha Vantage is the only shared default (awaiting deployment). Personal choices are Alpha Vantage, Finnhub, Twelve Data, Financial Modeling Prep and Marketstack. The last three currently support quotes only, default to manual refresh, and remain subject to provider plan and symbol limits.
+
+The Word library generator is `scripts/build-kb.py`. Its local draft requires rendering and visual review before publication; no Word download is advertised for 0.1.3.

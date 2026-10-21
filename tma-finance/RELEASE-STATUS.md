@@ -34,7 +34,7 @@ The following compulsory standards remain acceptance work; they are not claimed 
 - macOS and Linux native builds/tests, signing, a standalone installer, and verification of future version upgrades. The current Windows ZIP install/launch/uninstall path is verified through the launcher.
 - Themed tray/close-to-tray menu and native notification lifecycle/preferences.
 - Persisted Grey/Black dark palettes, settings/KB search and settings performance explanations.
-- In-app Help/KB articles, verified feature/bug/general issue destinations, reviewed crash-report drafts.
+- Verified feature/bug/general issue destinations and reviewed crash-report drafts. In-app Help and eight offline searchable KB articles are implemented in 0.1.3; settings-wide KB search remains pending.
 - The maintained, rendered and visually checked `KB Library.docx` with sanitized real app screenshots and stable `Finance-KB` article links.
 - Broader workload performance testing. The current packaged Windows startup/idle path is now measured and guarded in launcher release CI; this does not establish every workload or computer.
 - The other suite acceptance gaps above remain open; Windows launcher publication is verified.
@@ -42,3 +42,9 @@ The following compulsory standards remain acceptance work; they are not claimed 
 The native Windows helper lost its target-window binding during further UI checking, so full CRUD, export-dialog, persistence and responsive UI acceptance remain unverified. Do not treat a successful packaging command or a source upload as passing these checks.
 
 Source publishing review excludes caches, local profiles, API keys, logs, generated dependency trees and build-tool credentials. The packaged app contains synthetic sample records only; session keys and user records are not baked into its source.
+
+## 0.1.3 refresh-bypass testing
+
+Twenty tests pass, including 25 simultaneous same-symbol requests with varying irrelevant parameters (one upstream call), repeated shared refresh rejection, key-injection rejection, same-key reconnects, exact 24-hour expiry and central-policy rejection (zero upstream calls). The prepared shared adapter fails closed without both authorization and central policy hooks. Durable cross-server and restart policy is not implemented or live-tested; backend remains undeployed. Local desktop caches still reset on application restart. No native UI or new workload performance measurement is claimed for this follow-up; package checks run in CI.
+
+The 0.1.3 source includes five personal-provider choices (the three new adapters are quote-only), offline KB search and eight numbered articles. New adapter tests use synthetic provider responses; live account entitlements have not been verified. The Word KB draft and source generator were created, but rendering failed because LibreOffice is unavailable; the unverified DOCX remains in the ignored local cache and is excluded from releases. Browser-preview UI verification was unavailable after a connection failure; no new screenshot or visual acceptance claim is made.

@@ -154,7 +154,7 @@ test("prepared backend rejects missing configuration and unauthenticated callers
     new Request("https://example.invalid/market", {
       method: "POST",
       body: JSON.stringify({
-        provider: "finnhub",
+        provider: "alphavantage",
         operation: "quote",
         params: { symbol: "IBM" },
       }),
@@ -174,6 +174,7 @@ test("prepared backend rejects missing configuration and unauthenticated callers
   const allowed = createMarketHandler({
     authorize: async () => ({ userId: "synthetic-user" }),
     client,
+    enforcePolicy: async (_request, upstream) => upstream(),
   });
   assert.equal((await allowed(request())).status, 200);
   assert.equal(calls, 1);
@@ -217,4 +218,262 @@ test("Alpha quote lock survives reconnects and expires after 24 hours", async ()
     3,
     "different keys do not share cached responses",
   );
+});
+
+test("concurrent and cache-busting quote requests cannot bypass the Alpha lock", async () => {
+  let calls = 0,
+    release;
+  const wait = new Promise((resolve) => {
+    release = resolve;
+  });
+  const client = createMarketClient({
+    env: { ALPHAVANTAGE_API_KEY: fake },
+    fetchImpl: async () => {
+      calls++;
+      await wait;
+      return response({
+        "Global Quote": {
+          "05. price": "123",
+          "07. latest trading day": "2026-10-20",
+        },
+      });
+    },
+  });
+  const requests = Array.from({ length: 25 }, (_, i) =>
+    client.request("alphavantage", "quote", {
+      symbol: i % 2 ? "ibm" : "IBM",
+      q: String(i),
+      from: i,
+      to: i + 1,
+      refresh: i,
+      force: true,
+    }),
+  );
+  assert.equal(
+    calls,
+    1,
+    "all concurrent requests share a single in-flight fetch",
+  );
+  release();
+  const values = await Promise.all(requests);
+  values[0].c = 999;
+  assert.equal(values[1].c, 123, "callers cannot mutate another response");
+  await client.request("alphavantage", "quote", {
+    symbol: "IBM",
+    q: "different",
+    from: 999,
+    to: 1000,
+  });
+  assert.equal(
+    calls,
+    1,
+    "irrelevant parameters cannot create a new quote cache entry",
+  );
+});
+
+test("shared desktop route rejects refresh and key injection while awaiting setup", () => {
+  const { sharedMarket } = createRequire(import.meta.url)(
+    "../desktop/shared-market.cjs",
+  );
+  for (let i = 0; i < 25; i++)
+    assert.throws(
+      () =>
+        sharedMarket({
+          provider: "alphavantage",
+          action: "request",
+          params: { symbol: "IBM", force: true, refresh: 1 },
+        }),
+      /awaiting backend/,
+    );
+  assert.throws(
+    () =>
+      sharedMarket({ provider: "alphavantage", action: "connect", key: fake }),
+    /does not accept/,
+  );
+  assert.throws(
+    () => sharedMarket({ provider: "finnhub", action: "status" }),
+    /Alpha Vantage only/,
+  );
+  assert.equal(
+    sharedMarket({ provider: "alphavantage", action: "disconnect" }).configured,
+    false,
+  );
+  assert.equal(
+    sharedMarket({ provider: "alphavantage", action: "status" }).configured,
+    false,
+  );
+});
+
+test("shared backend fails closed without a central policy and cannot bypass a policy rejection", async () => {
+  const { createMarketHandler } = createRequire(import.meta.url)(
+    "../backend/market-handler.cjs",
+  );
+  let calls = 0;
+  const client = {
+    request: async () => {
+      calls++;
+      return { c: 123 };
+    },
+  };
+  const request = () =>
+    new Request("https://example.invalid/market", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: "alphavantage",
+        operation: "quote",
+        params: { symbol: "ibm", force: true, from: 123 },
+      }),
+    });
+  const authorize = async () => ({ userId: "synthetic-user" });
+  const missing = createMarketHandler({ authorize, client });
+  assert.equal((await missing(request())).status, 503);
+  assert.equal(calls, 0);
+  const blocked = createMarketHandler({
+    authorize,
+    client,
+    enforcePolicy: async (input) => {
+      assert.deepEqual(input.params, {
+        symbol: "IBM",
+        q: "",
+        from: undefined,
+        to: undefined,
+      });
+      throw Error("refresh locked");
+    },
+  });
+  for (let i = 0; i < 25; i++)
+    assert.equal((await blocked(request())).status, 400);
+  assert.equal(
+    calls,
+    0,
+    "a rejected central policy never invokes the provider",
+  );
+});
+
+for (const [id, host, path, body, price, change] of [
+  [
+    "twelvedata",
+    "api.twelvedata.com",
+    "/quote",
+    {
+      symbol: "IBM",
+      currency: "USD",
+      close: "105",
+      previous_close: "100",
+      percent_change: "5",
+      timestamp: 1792497600,
+    },
+    105,
+    5,
+  ],
+  [
+    "fmp",
+    "financialmodelingprep.com",
+    "/stable/quote",
+    [
+      {
+        symbol: "IBM",
+        exchange: "NYSE",
+        price: 105,
+        previousClose: 100,
+        changePercentage: 5,
+        timestamp: 1792497600,
+      },
+    ],
+    105,
+    5,
+  ],
+  [
+    "marketstack",
+    "api.marketstack.com",
+    "/v2/eod",
+    {
+      data: [
+        {
+          symbol: "IBM",
+          exchange: "XNYS",
+          close: 100,
+          date: "2026-10-19T00:00:00Z",
+        },
+        {
+          symbol: "IBM",
+          exchange: "XNYS",
+          close: 105,
+          date: "2026-10-20T00:00:00Z",
+        },
+      ],
+    },
+    105,
+    5,
+  ],
+])
+  test(
+    id +
+      " personal quote uses fixed HTTPS host, normalizes data and rejects unsupported features",
+    async () => {
+      let calls = 0;
+      const client = createMarketClient({
+        env: {},
+        fetchImpl: async (url) => {
+          calls++;
+          assert.equal(url.protocol, "https:");
+          assert.equal(url.hostname, host);
+          assert.equal(url.pathname, path);
+          assert.equal(
+            url.searchParams.get(
+              id === "marketstack" ? "access_key" : "apikey",
+            ),
+            fake,
+          );
+          if (id === "marketstack")
+            assert.equal(url.searchParams.get("limit"), "2");
+          return response(body);
+        },
+      });
+      client.connect(id, fake);
+      const value = await client.request(id, "quote", { symbol: "IBM" });
+      assert.equal(value.c, price);
+      assert.ok(Math.abs(value.dp - change) < 0.00001);
+      await client.request(id, "quote", { symbol: "ibm", force: true });
+      assert.equal(calls, 1);
+      await assert.rejects(client.request(id, "news"), /quotes only/);
+      assert.equal(calls, 1);
+      assert.equal(JSON.stringify(client.status(id)).includes(fake), false);
+      client.disconnect(id);
+      await assert.rejects(
+        client.request(id, "quote", { symbol: "IBM" }),
+        /Connect/,
+      );
+    },
+  );
+
+test("personal providers reject foreign currency, malformed quotes and provider errors without leaking bodies", async () => {
+  for (const [id, body] of [
+    ["twelvedata", { currency: "GBP", close: "100", percent_change: "1" }],
+    ["twelvedata", { status: "error", message: fake }],
+    [
+      "fmp",
+      [{ symbol: "IBM", exchange: "LSE", price: 100, changePercentage: 1 }],
+    ],
+    ["fmp", []],
+    ["marketstack", { error: { info: fake } }],
+    [
+      "marketstack",
+      {
+        data: [
+          { symbol: "IBM", exchange: "XNYS", close: 100, date: "2026-10-20" },
+        ],
+      },
+    ],
+  ]) {
+    const client = createMarketClient({
+      env: {},
+      fetchImpl: async () => response(body),
+    });
+    client.connect(id, fake);
+    await assert.rejects(
+      client.request(id, "quote", { symbol: "IBM" }),
+      (e) => !e.message.includes(fake),
+    );
+  }
 });

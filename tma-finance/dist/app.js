@@ -1,3 +1,4 @@
+import { kbArticles } from "./kb.js";
 import {
   monthly,
   dateISO,
@@ -91,8 +92,16 @@ const amount = (label, name, value = "", extra = "") =>
   field(label, name, value, "number", `min="0" step="0.01" required ${extra}`);
 // Always open the real workspace. Sample data is an explicit, session-only preview.
 let mode = "personal";
+let helpArticleId = "",
+  kbQuery = "";
 const providerName = () =>
-  provider === "alphavantage" ? "Alpha Vantage" : "Finnhub";
+  ({
+    alphavantage: "Alpha Vantage",
+    finnhub: "Finnhub",
+    twelvedata: "Twelve Data",
+    fmp: "Financial Modeling Prep",
+    marketstack: "Marketstack",
+  })[provider] || "Market provider";
 const profileName = () =>
   mode === "demo"
     ? "Demo workspace"
@@ -190,6 +199,7 @@ const nav = [
     [
       ["tax", "Tax calculator", "calculator"],
       ["currency", "Currency converter", "exchange"],
+      ["help", "Help and KB Library", "info"],
     ],
   ],
   [
@@ -203,6 +213,10 @@ const nav = [
   ],
 ];
 const titles = {
+  help: [
+    "Help and KB Library",
+    "Provider setup, data coverage and practical guides.",
+  ],
   dashboard: [
     "Your money, in perspective.",
     "A little clarity today. A little more freedom tomorrow.",
@@ -722,9 +736,12 @@ function settings() {
         ["shared", "Alpha Vantage - shared (awaiting backend setup)"],
         ["alphavantage", "Alpha Vantage - personal key"],
         ["finnhub", "Finnhub - personal key"],
+        ["twelvedata", "Twelve Data - personal key (quotes only)"],
+        ["fmp", "Financial Modeling Prep - personal key (quotes only)"],
+        ["marketstack", "Marketstack - personal key (end-of-day quotes only)"],
       ],
       marketSource === "shared" ? "shared" : provider,
-    )}<p class="note">${providerConnected ? providerName() + " is configured." : "Shared Alpha Vantage awaits backend setup. Choose a personal connection to use your own key."}</p><label>Personal API key (session only; leave blank for shared)<input name="key" type="password" autocomplete="off" placeholder="Enter the selected provider’s key"></label><div class="toolbar"><button type="submit" class="primary">Connect provider</button>${button("Disconnect", "disconnect")}</div></form><div class="info-box">Both providers offer limited free personal tiers. Alpha Vantage’s standard free tier allows 25 requests per day; standard quotes are daily, not streaming. Alpha Vantage quote refresh is locked to 24 hours. Repeated refreshes reuse the running app's quote cache. The 25-request allowance is per key, shared across everyone using it; searches and company data also count. Finnhub may restrict history and other datasets. No paid plan is purchased or enabled by this app.</div><p class="note">Keys are passed to the desktop connection in memory, excluded from backups and never bundled with the app. Shared Alpha Vantage is the default selection, awaiting a hosted service and provider permission. No shared key is included in this build.</p><div class="link-row"><a href="https://finnhub.io/" target="_blank" rel="noopener">Finnhub</a><a href="https://www.alphavantage.co/support/" target="_blank" rel="noopener">Alpha Vantage free tier</a></div>${button("Add manual USD quote", "manual-quote", "plus")}`,
+    )}<p class="note">${providerConnected ? providerName() + " is configured." : "Shared Alpha Vantage awaits backend setup. Choose a personal connection to use your own key."}</p><label>Personal API key (session only; leave blank for shared)<input name="key" type="password" autocomplete="off" placeholder="Enter the selected provider’s key"></label><div class="toolbar"><button type="submit" class="primary">Connect provider</button>${button("Disconnect", "disconnect")}</div></form><div class="info-box">Providers offer limited free tiers and paid datasets; users must check their own plan and permissions. Twelve Data, Financial Modeling Prep and Marketstack currently support quote refresh only in this app; search, history, company data and news use Alpha Vantage or Finnhub. These additional personal providers default to manual refresh. Marketstack is end-of-day with a small monthly allowance. Alpha Vantage’s standard free tier allows 25 requests per day; standard quotes are daily, not streaming. Alpha Vantage quote refresh is locked to 24 hours. Repeated refreshes reuse the running app's quote cache. The 25-request allowance is per key, shared across everyone using it; searches and company data also count. Finnhub may restrict history and other datasets. No paid plan is purchased or enabled by this app.</div><p class="note">Keys are passed to the desktop connection in memory, excluded from backups and never bundled with the app. Shared Alpha Vantage is the default selection, awaiting a hosted service and provider permission. No shared key is included in this build.</p><div class="link-row"><a href="https://finnhub.io/" target="_blank" rel="noopener">Finnhub</a><a href="https://www.alphavantage.co/support/" target="_blank" rel="noopener">Alpha Vantage free tier</a></div>${button("Add manual USD quote", "manual-quote", "plus")}`,
   )}${panel("Data & workspace", `<p class="note">Finance data is stored on this device only. This version has no cloud sync or bank access. Removing the app’s data folder removes local records.</p><div class="toolbar">${button("Export finance CSV", "export", "download")}${button("Export JSON backup", "backup", "download")}${button("Import backup", "import", "plus")}</div><input id="backup-file" type="file" accept="application/json,.json" hidden><div class="rule"><div><strong>${mode === "demo" ? "Demo workspace" : "Personal workspace"}</strong><small>Sample and personal data are stored separately.</small></div>${button(mode === "demo" ? "Use personal" : "View demo", "toggle-mode")}</div>${button("Reset this workspace", "reset", "trash", "danger")}`)}</div><div class="stack">${panel(
     "Quote checks & market alerts",
     `<form id="settings-form">${
@@ -744,7 +761,45 @@ function settings() {
     }${amount("Large fall threshold (%)", "crashPercent", state.settings.crashPercent, 'max="100"')}<label style="margin:10px 0 20px"><input type="checkbox" name="monthlyInsights" ${state.settings.monthlyInsights ? "checked" : ""}> Show monthly spending insights</label><button type="submit" class="primary">Save preferences</button></form><p class="note">Large-fall alerts use the daily movement of your followed stocks, not a market-wide crash feed. Automatic checks pause when you close the page.</p>`,
   )}${panel("Stock price alerts", `<p class="note">Get an in-app notification when a fetched quote reaches your threshold. An alert describes a condition; it does not recommend or execute a trade.</p>${state.alerts.map((a) => `<div class="rule"><div><strong>${esc(a.symbol)} ${a.direction === "above" ? "≥" : "≤"} ${money(a.price, "USD")}</strong><small>${a.triggered ? "Triggered · edit to re-arm" : "Armed for next quote check"}</small></div><div>${button("", "alert", "edit", "quiet", `data-id="${a.id}" aria-label="Edit alert"`)}${button("", "delete-alert", "trash", "quiet danger", `data-id="${a.id}" aria-label="Delete alert"`)}</div></div>`).join("")}<div style="margin-top:15px">${button("Add price alert", "alert", "plus")}</div>`)}${panel("Coming later", `<p class="note">Bank linking, cloud sync, background notification delivery, configurable news sensitivity, a complete Top 100 feed and financial-statement history are planned integrations.</p>`)}</div></div>`;
 }
+function helpPage() {
+  const article = kbArticles.find((a) => a.id === helpArticleId);
+  if (article)
+    return panel(
+      esc(article.id + " " + article.title),
+      button("Back to KB index", "kb-index", "arrow") +
+        article.sections
+          .map(
+            ([heading, text]) =>
+              `<h3 style="margin-top:24px">${esc(heading)}</h3><p class="note">${esc(text)}</p>`,
+          )
+          .join("") +
+        article.links
+          .map(
+            ([label, url]) =>
+              `<p><a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)} ↗</a></p>`,
+          )
+          .join("") +
+        `<p class="note">Applies to version 0.1.3. Provider information checked 21 October 2026.</p>`,
+    );
+  const matches = kbArticles.filter((a) =>
+    JSON.stringify(a).toLowerCase().includes(kbQuery.toLowerCase()),
+  );
+  return panel(
+    "Find a guide",
+    `<form id="kb-search" class="toolbar"><label>Search guides<input name="query" value="${esc(kbQuery)}" placeholder="Provider name, setup, quota or profile"></label><button type="submit" class="primary">Search</button></form><p class="note">Alpha Vantage is the only shared default, awaiting backend setup. All guides are available offline; provider websites need an internet connection.</p>` +
+      matches
+        .map(
+          (a) =>
+            `<div class="rule"><div><strong>${esc(a.id)}</strong><small>${esc(a.title)}</small></div>${button("Read guide", "kb-open", "info", "", `data-id="${a.id}"`)}</div>`,
+        )
+        .join("") +
+      (!matches.length
+        ? `<p class="note">No guides match this search.</p>`
+        : ""),
+  );
+}
 const pages = {
+  help: helpPage,
   dashboard,
   budget,
   subscriptions,
@@ -870,6 +925,10 @@ function bindLocalForms() {
         await fn(f);
       });
   };
+  bind("#kb-search", (f) => {
+    kbQuery = formValues(f).query.trim();
+    render();
+  });
   bind("#budget-form", (f) => {
     const v = formValues(f);
     state.budgets[month] = { income: +v.income, limit: +v.limit };
@@ -902,6 +961,8 @@ function bindLocalForms() {
       f.reset();
       provider = selected;
       marketSource = source;
+      if (["twelvedata", "fmp", "marketstack"].includes(selected))
+        state.settings.refresh = "manual";
       state.settings.marketSource = source;
       providerConnected = status.configured;
       state.settings.provider = provider;
@@ -1075,6 +1136,14 @@ document.addEventListener("click", async (e) => {
       break;
     case "close-modal":
       $("#modal").close();
+      break;
+    case "kb-open":
+      helpArticleId = id;
+      go("help");
+      break;
+    case "kb-index":
+      helpArticleId = "";
+      render();
       break;
     case "edit-profile":
       openModal(
@@ -1526,6 +1595,18 @@ function validateBackup(s) {
     s.settings.crashPercent > 100
   )
     throw Error("Invalid preferences.");
+  if (
+    s.settings.provider != null &&
+    !["alphavantage", "finnhub", "twelvedata", "fmp", "marketstack"].includes(
+      s.settings.provider,
+    )
+  )
+    throw Error("Invalid market provider.");
+  if (
+    s.settings.marketSource != null &&
+    !["shared", "personal"].includes(s.settings.marketSource)
+  )
+    throw Error("Invalid market connection.");
   return s;
 }
 async function importBackup(e) {
@@ -1622,7 +1703,7 @@ async function refreshQuotes() {
   const requestSource = marketSource;
   let loaded = 0,
     error = "";
-  for (const sym of symbols.slice(0, provider === "alphavantage" ? 5 : 25)) {
+  for (const sym of symbols.slice(0, provider === "finnhub" ? 25 : 5)) {
     try {
       if (provider !== requestProvider || marketSource !== requestSource) break;
       const q = await api("quote", { symbol: sym });

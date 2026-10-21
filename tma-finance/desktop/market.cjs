@@ -1,5 +1,23 @@
 const { createHash } = require("node:crypto");
 const providers = Object.freeze({
+  twelvedata: {
+    name: "Twelve Data",
+    origin: "https://api.twelvedata.com/quote",
+    variable: "TWELVE_DATA_API_KEY",
+    quoteOnly: true,
+  },
+  fmp: {
+    name: "Financial Modeling Prep",
+    origin: "https://financialmodelingprep.com/stable/quote",
+    variable: "FMP_API_KEY",
+    quoteOnly: true,
+  },
+  marketstack: {
+    name: "Marketstack",
+    origin: "https://api.marketstack.com/v2/eod",
+    variable: "MARKETSTACK_API_KEY",
+    quoteOnly: true,
+  },
   finnhub: {
     name: "Finnhub",
     origin: "https://finnhub.io/api/v1/",
@@ -27,6 +45,11 @@ const number = (value) => {
 function validate(provider, operation, params = {}) {
   if (!Object.hasOwn(providers, provider) || !operations.has(operation))
     throw Error("Unsupported market-data request.");
+  if (providers[provider].quoteOnly && operation !== "quote")
+    throw Error(
+      providers[provider].name +
+        " supports quotes only in TMA-Finance. Select Alpha Vantage or Finnhub for other datasets.",
+    );
   if (!params || typeof params !== "object" || Array.isArray(params))
     throw Error("Invalid request parameters.");
   const symbol = String(params.symbol || "").toUpperCase();
@@ -41,10 +64,14 @@ function validate(provider, operation, params = {}) {
   )
     throw Error("Enter a search of 1–80 characters.");
   return {
-    symbol,
-    q: String(params.q || "").trim(),
-    from: params.from,
-    to: params.to,
+    symbol: operation === "search" || operation === "news" ? "" : symbol,
+    q: operation === "search" ? String(params.q || "").trim() : "",
+    from: ["stock/candle", "company-news"].includes(operation)
+      ? params.from
+      : undefined,
+    to: ["stock/candle", "company-news"].includes(operation)
+      ? params.to
+      : undefined,
   };
 }
 function createMarketClient({
@@ -54,7 +81,8 @@ function createMarketClient({
 } = {}) {
   const keys = new Map(),
     cache = new Map(),
-    usage = new Map();
+    usage = new Map(),
+    pending = new Map();
   const keyFor = (id) =>
     keys.has(id) ? keys.get(id) : env[providers[id]?.variable];
   function status(id) {
@@ -78,7 +106,7 @@ function createMarketClient({
     keys.set(id, null);
     return status(id);
   }
-  async function request(id, operation, params = {}) {
+  async function performRequest(id, operation, params = {}) {
     const p = validate(id, operation, params),
       key = keyFor(id);
     if (!key)
@@ -87,22 +115,40 @@ function createMarketClient({
     const cacheId = JSON.stringify([id, scope, operation, p]);
     const hit = cache.get(cacheId);
     if (hit && hit.expires > now()) return structuredClone(hit.value);
-    const stamp =
-      id === "alphavantage"
-        ? new Date(now()).toISOString().slice(0, 10)
+    const stamp = ["alphavantage", "fmp"].includes(id)
+      ? new Date(now()).toISOString().slice(0, 10)
+      : id === "marketstack"
+        ? new Date(now()).toISOString().slice(0, 7)
         : Math.floor(now() / 60000);
     const bucket = id + ":" + scope + ":" + stamp,
       count = usage.get(bucket) || 0,
-      limit = id === "alphavantage" ? 25 : 30;
+      limit = {
+        alphavantage: 25,
+        fmp: 250,
+        marketstack: 100,
+        twelvedata: 8,
+        finnhub: 30,
+      }[id];
     if (count >= limit)
       throw Error(
         id === "alphavantage"
           ? "Alpha Vantage daily request budget reached. Try tomorrow."
-          : "Finnhub request budget reached. Wait a minute.",
+          : providers[id].name +
+              " local request budget reached. Wait for its budget window to reset.",
       );
     const url = new URL(providers[id].origin),
       headers = { Accept: "application/json" };
-    if (id === "finnhub") {
+    if (providers[id].quoteOnly) {
+      url.searchParams.set(id === "marketstack" ? "access_key" : "apikey", key);
+      url.searchParams.set(
+        id === "marketstack" ? "symbols" : "symbol",
+        p.symbol,
+      );
+      if (id === "marketstack") {
+        url.searchParams.set("limit", "2");
+        url.searchParams.set("sort", "DESC");
+      }
+    } else if (id === "finnhub") {
       url.pathname += operation;
       headers["X-Finnhub-Token"] = key;
       if (p.symbol) url.searchParams.set("symbol", p.symbol);
@@ -176,7 +222,7 @@ function createMarketClient({
     if (!data || typeof data !== "object")
       throw Error("The provider returned an invalid response.");
     // Never echo provider error bodies: they can include credentials or request URLs.
-    if (data.error || data["Error Message"])
+    if (data.error || data["Error Message"] || data.status === "error")
       throw Error(
         "The provider rejected the request. Check the API key, ticker and account permissions.",
       );
@@ -185,7 +231,64 @@ function createMarketClient({
         "Alpha Vantage has limited this request. Check your daily quota and the endpoint’s plan requirements.",
       );
     let value = data;
-    if (id === "alphavantage") {
+    if (providers[id].quoteOnly) {
+      if (id === "twelvedata") {
+        if (data.currency !== "USD")
+          throw Error("This workspace supports USD stock quotes only.");
+        value = {
+          c: number(data.close),
+          dp: number(data.percent_change),
+          pc: number(data.previous_close),
+          t: number(data.timestamp),
+        };
+      } else if (id === "fmp") {
+        const q = Array.isArray(data)
+          ? data.find((q) => q.symbol === p.symbol)
+          : null;
+        if (
+          !q ||
+          !["NASDAQ", "NYSE", "AMEX", "NYSEARCA", "BATS", "CBOE"].includes(
+            q.exchange,
+          )
+        )
+          throw Error(
+            "No supported US exchange quote returned. Check the ticker and account plan.",
+          );
+        value = {
+          c: number(q.price),
+          dp: number(q.changePercentage),
+          pc: number(q.previousClose),
+          t: number(q.timestamp),
+        };
+      } else {
+        const rows = (Array.isArray(data.data) ? data.data : [])
+          .filter(
+            (q) =>
+              q.symbol === p.symbol &&
+              ["XNAS", "XNYS", "XASE", "ARCX", "BATS", "IEXG"].includes(
+                q.exchange,
+              ),
+          )
+          .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+        if (!rows.length)
+          throw Error(
+            "No supported US exchange quote returned. Check the ticker and plan.",
+          );
+        const current = number(rows[0].close),
+          previous = number(rows[1]?.close);
+        value = {
+          c: current,
+          pc: previous,
+          dp: previous > 0 ? (current / previous - 1) * 100 : undefined,
+          t: Date.parse(rows[0].date) / 1000,
+          frequency: "daily",
+        };
+      }
+      if (!(value.c > 0) || !Number.isFinite(value.dp))
+        throw Error(
+          "The provider did not return a complete USD quote with daily movement. Check coverage and plan.",
+        );
+    } else if (id === "alphavantage") {
       if (operation === "quote") {
         const q = data["Global Quote"];
         if (!q || !number(q["05. price"]))
@@ -281,6 +384,23 @@ function createMarketClient({
           : 60000),
     });
     return structuredClone(value);
+  }
+  async function request(id, operation, params = {}) {
+    const p = validate(id, operation, params);
+    const key = keyFor(id);
+    if (!key)
+      throw Error("Connect " + providers[id].name + " in Settings first.");
+    const scope = createHash("sha256").update(key).digest("hex");
+    const pendingId = JSON.stringify([id, scope, operation, p]);
+    if (pending.has(pendingId))
+      return structuredClone(await pending.get(pendingId));
+    const job = performRequest(id, operation, p);
+    pending.set(pendingId, job);
+    try {
+      return structuredClone(await job);
+    } finally {
+      pending.delete(pendingId);
+    }
   }
   return { status, connect, disconnect, request };
 }

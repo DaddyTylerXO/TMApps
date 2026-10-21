@@ -1,5 +1,16 @@
 # TMA-Finance release notes
 
+## 0.1.3 - 21 October 2026
+
+- Add personal quote adapters for Twelve Data, Financial Modeling Prep and Marketstack, alongside personal Alpha Vantage and Finnhub. Alpha Vantage remains the only shared default. New personal adapters start in manual refresh mode and explicitly limit coverage to quotes.
+- Add eight offline searchable in-app KB articles and matching Markdown provider guides, including setup, data coverage, default shared advantages and limitations. The Word library draft could not pass its required render review because LibreOffice is unavailable, so it is not distributed.
+
+- Close quote-refresh bypasses through concurrent requests and irrelevant cache-busting parameters. Requests for the same key, provider and normalized quote share one in-flight fetch and then the 24-hour cache.
+- Test repeated shared refreshes, personal-key injection, reconnects, precise cache expiry, response isolation and central-policy rejection. Twenty automated test groups pass.
+- Fail closed in the prepared backend until both session authorization and a central policy handler are supplied. Production enforcement must use durable atomic quotas, shared caching and concurrent-request coordination across server instances and restarts. Shared service remains undeployed; no live multi-user enforcement is claimed.
+
+
+
 ## 0.1.2 — 21 October 2026
 
 - Move market requests to an allowlisted desktop connection, avoiding renderer cross-origin failures without weakening browser security.
