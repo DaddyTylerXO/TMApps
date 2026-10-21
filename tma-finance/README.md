@@ -35,6 +35,10 @@ If a package manager blocks Electron’s installation script, allow the `electro
 - Finnhub connection for session quotes, ticker search, company profiles, available fundamentals, general/company news and five-year daily candles where the subscription allows them.
 - In-app stock price thresholds, large daily falls in followed stocks, manual/interval quote checks while open, and monthly spending comparisons.
 
+## Install through TMApps Launcher
+
+Update [TMApps Launcher](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) to 1.14.2 or later and choose Install app for Finance. The [Windows development ZIP](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.0-windows.zip) uses SHA-256 verification, a custom install folder, and optional startup/desktop shortcuts. This integration does not claim production readiness or completion of the roadmap. macOS/Linux app builds remain unavailable. Uninstall keeps the standard profile by default; deletion requires consent. See [Launcher-KB14 in the Word library](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/KB.Library.docx).
+
 ## Data and provider setup
 
 Records persist in the desktop profile’s local storage and are not synchronised. Export JSON backups regularly; CSV is for analysis rather than lossless restoration. Local storage is not an encrypted financial database. Removing the app profile removes saved records. API keys are held in renderer memory for the session and excluded from exports.

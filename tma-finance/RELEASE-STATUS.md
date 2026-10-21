@@ -10,6 +10,10 @@ This is an initial desktop implementation, not a completed production release. V
 - A Windows portable development EXE was built. The final branded package is rebuilt from the uploaded source; SHA-256 sidecars identify its exact bytes.
 - A constrained preload bridge implements native file export/import. Renderer Node integration is disabled and context isolation/sandboxing are enabled.
 
+## Launcher distribution verification
+
+Launcher 1.14.2 publishes the checked Windows development ZIP and its version/date/icon metadata. The real launcher engine installed it into an isolated custom folder, its packaged renderer loaded with Node integration disabled, its disposable window closed, and uninstall removed only the test copy. No personal profile was used. A local sample measured about 0.9 seconds to readiness, 353 MB for the process family and 0.04 percent normalized idle CPU. CI enforces startup under 30 seconds, working set under 800 MB and idle CPU under 30 percent. These are regression ceilings, not universal performance promises. The initial feature/KB/tray/native-platform gaps remain documented.
+
 ## Incomplete original feature scope
 
 Bank import remains deferred. Market-wide Top 100 data, full fundamental screening, financial-statement history/PEG/median earnings, intraday widgets, background schedules and custom news-sensitivity notifications are not implemented. Finnhub requests need a user key and suitable plan; they have not been verified with a paid provider account. Currency conversion uses daily published rates and still needs live verification in the delivered app environment. The tax tool is a planning estimate rather than a tax-return filing service.
@@ -18,13 +22,13 @@ Bank import remains deferred. Market-wide Top 100 data, full fundamental screeni
 
 The following compulsory standards remain acceptance work; they are not claimed complete:
 
-- Packaged lifecycle/installation/update/uninstall checks, macOS and Linux native builds/tests, signing and installer distribution.
+- macOS and Linux native builds/tests, signing, a standalone installer, and verification of future version upgrades. The current Windows ZIP install/launch/uninstall path is verified through the launcher.
 - Themed tray/close-to-tray menu and native notification lifecycle/preferences.
 - Persisted Grey/Black dark palettes, settings/KB search and settings performance explanations.
 - In-app Help/KB articles, verified feature/bug/general issue destinations, reviewed crash-report drafts.
 - The maintained, rendered and visually checked `KB Library.docx` with sanitized real app screenshots and stable `Finance-KB` article links.
-- Quantified startup/idle performance baseline and regression budgets. Startup/idle performance has **not** been measured; no performance pass is claimed.
-- Published tested package URLs and verified launcher catalog integration.
+- Broader workload performance testing. The current packaged Windows startup/idle path is now measured and guarded in launcher release CI; this does not establish every workload or computer.
+- The other suite acceptance gaps above remain open; Windows launcher publication is verified.
 
 The native Windows helper lost its target-window binding during further UI checking, so full CRUD, export-dialog, persistence and responsive UI acceptance remain unverified. Do not treat a successful packaging command or a source upload as passing these checks.
 
