@@ -1,0 +1,15 @@
+---
+description: Mandatory TMApps standards and TMA-Libraries product requirements
+alwaysApply: true
+---
+
+# TMA-Libraries requirements
+
+- Follow the repository-wide instructions in `AGENTS.md`.
+- Apply all mandatory standards in `docs/TMAPPS-STANDARDS.md`.
+- Preserve application scope in `docs/TMA-LIBRARIES-SPEC.md`.
+- Use `docs/DELIVERY-PLAN.md` for delivery order and unresolved dependencies.
+- Keep completion claims tied to implemented and verified behaviour.
+- Use Leather Brown `#97572B` and a white folder on a brown background.
+- No feature may require incurred costs; use a free alternative or defer it.
+- Update KB documentation, tours, release notes, performance evidence, and security checks with application changes.

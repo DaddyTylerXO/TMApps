@@ -2,8 +2,8 @@
 
 - Project branch: [TMA-Libraries](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries)
 - Launcher branch: [TMApps-Launcher](https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher)
-- App colour: Awaiting owner colour selection.
-- App icon: Awaiting owner white icon selection; use the selected app colour for its rounded tile.
+- App colour: Leather Brown `#97572B`, selected by the owner.
+- App icon: White folder on the selected brown background, selected by the owner. Consistent rounded-tile treatment across distribution surfaces remains pending.
 - KB numbering: Libraries-KB1, Libraries-KB2 and onward; preserve any established IDs.
 
 ## Compulsory requirements
