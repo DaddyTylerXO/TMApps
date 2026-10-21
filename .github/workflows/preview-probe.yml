@@ -1,0 +1,36 @@
+name: Diagnose Linux preview rendering
+on:
+  workflow_dispatch:
+  push:
+    branches: [TMA-Cut]
+    paths: ['.github/workflows/preview-probe.yml', '.github/scripts/preview-probe.cjs']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: |
+          node node_modules/electron/install.js
+          node node_modules/ffmpeg-static/install.js
+      - name: Compare offscreen and visible previews on a virtual display
+        run: |
+          xvfb-run -a pnpm exec electron .github/scripts/preview-probe.cjs --no-sandbox --smoke "$PWD/smoke/offscreen.json" || true
+          SMOKE_VISIBLE=1 xvfb-run -a pnpm exec electron .github/scripts/preview-probe.cjs --no-sandbox --smoke "$PWD/smoke/visible.json" || true
+          cat smoke/*.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-preview-probe
+          path: |
+            smoke/*.json
+            smoke/*.png
