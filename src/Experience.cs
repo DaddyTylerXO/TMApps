@@ -82,7 +82,7 @@ namespace TMApps {
             d.AddAction("Cancel",false,()=>d.Close(),"CancelAction");d.AddAction("Upload to GitHub Issues…",true,()=>Browse(LauncherDiagnostics.Issue("crash",edit.Text)),"ConfirmAction");d.ShowDialog();
         }
         void ShowDetails(AppView app) {
-            var d=new ThemedDialog(window,app.Name,"Version "+app.Info.version+" · Updated "+app.UpdatedLabel);d.Width=800;
+            var d=new ThemedDialog(window,app.Name,(app.Id=="tma-libraries" && !app.Info.Available ? "Version not published" : "Version "+app.Info.version)+" · Updated "+app.UpdatedLabel);d.Width=800;
             d.Body.Children.Add(Paragraph(app.Description));AppPresentation presentation;ExperienceContent.Current.apps.TryGetValue(app.Id,out presentation);if(presentation==null)presentation=new AppPresentation {screenshots=new List<AppScreenshot>()};
             d.Body.Children.Add(new Expander { Header="New features and release notes from the app branch",Foreground=Brushes.LightGray,Content=Paragraph(presentation.releaseNotes ?? "Release notes not published yet."),Margin=new Thickness(0,10,0,10) });
             MediaElement video=null;

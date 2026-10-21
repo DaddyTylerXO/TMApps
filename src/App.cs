@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.14.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.14.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.14.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.14.1.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -21,10 +21,10 @@ namespace TMApps {
         public AppInfo Info;
         public string Id { get { return Info.id; } } public string Name { get { return Info.name; } }
         public string Category { get { return Info.category; } } public string Description { get { return Info.description; } }
-        public string Accent { get { return Id == "tma-cut" ? "#F39AA5" : Id == "tma-socialsmanager" ? "#E5B92F" : Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
-        public string PreviewBackground { get { return Icon != null ? "Transparent" : "#2B253A"; } }
-        public string Glyph { get { return Id == "tma-socialsmanager" ? "\uE8F2" : Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
-        public string GlyphFont { get { return Id == "tma-socialsmanager" ? "Segoe UI" : "Segoe MDL2 Assets"; } }
+        public string Accent { get { return Id == "tma-libraries" ? "#A9B0C0" : Id == "tma-cut" ? "#F39AA5" : Id == "tma-socialsmanager" ? "#E5B92F" : Id == "tma-mail" ? "#BEF18A" : Id == "tma-padlock" ? "#F09CBB" : Id == "tma-safe" ? "#CBA6F4" : "#BBA6F4"; } }
+        public string PreviewBackground { get { return Icon != null ? "Transparent" : Id == "tma-libraries" ? "#2D313B" : "#2B253A"; } }
+        public string Glyph { get { return Id == "tma-libraries" ? "?" : Id == "tma-socialsmanager" ? "\uE8F2" : Id == "tma-mail" ? "\uE715" : Id == "tma-padlock" ? "\uE72E" : Id == "tma-safe" ? "\uE8D7" : "\uE902"; } }
+        public string GlyphFont { get { return Id == "tma-libraries" || Id == "tma-socialsmanager" ? "Segoe UI" : "Segoe MDL2 Assets"; } }
         public int Position { get; set; }
         public string Number { get { return Position.ToString("00") + " / " + (Id == "tma-mail" ? "MAIL & COMMUNICATION" : Id == "tma-socialsmanager" ? "YOUR SOCIAL WORKSPACE" : Id == "tma-padlock" ? "YOUR AUTHENTICATORS" : Id == "tma-safe" ? "YOUR PRIVATE SPACE" : Id == "tma-agent-office" ? "YOUR AI TEAM" : Category.ToUpperInvariant()); } }
         static readonly ImageSource cutIcon = LoadAppIcon("TMApps.cut.png");
@@ -202,7 +202,7 @@ namespace TMApps {
                     app.Status = installed == null ? (app.Info.Available ? "READY TO INSTALL" : "COMING SOON") : update ? "UPDATE AVAILABLE" : "INSTALLED · UP TO DATE";
                     app.Action = installed == null ? (app.Info.Available ? "↓  Install app" : "Coming soon") : update ? "↓  Update app" : "↗  Open app";
                     app.CanAct = !refreshing && (app.Info.Available || installed != null);
-                    app.VersionLabel = app.Id == "tma-socialsmanager" && !app.Info.Available ? "Version not published" : "v" + app.Info.version;
+                    app.VersionLabel = (app.Id == "tma-socialsmanager" || app.Id == "tma-libraries") && !app.Info.Available ? "Version not published" : "v" + app.Info.version;
                     if (String.IsNullOrEmpty(app.Detail)) app.Detail = installed != null ? "Installed v" + installed.version : app.Info.Available ? "Windows x64 · Beta" : "In development · Coming soon";
                 }
                 app.Changed();

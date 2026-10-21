@@ -1,6 +1,6 @@
 # TMApps Launcher
 
-A launcher for **TMA-Mail** and **TMA-Agent Office**, available on **Windows, macOS, and Linux**. Windows keeps its existing native installer and interface; macOS and Linux use the companion desktop client. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
+A launcher for the **TMApps application suite**, available on **Windows, macOS, and Linux**. Windows keeps its existing native installer and interface; macOS and Linux use the companion desktop client. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
 
 ![TMApps Launcher library](docs/launcher-preview.png)
 
@@ -9,10 +9,10 @@ A launcher for **TMA-Mail** and **TMA-Agent Office**, available on **Windows, ma
 | Launcher download | Architecture | Install |
 | --- | --- | --- |
 | [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
-| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
-| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
-| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
-| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.0-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.1-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
 
 **Launcher support and app support are separate.** The Windows, Apple, and Linux logos under each app show the operating systems with published app builds. Both current app packages (**TMA-Mail and TMA-Agent Office**) are **Windows-only**. The Mac/Linux launchers display the library, profiles, settings, support badges, and release checks, and block incompatible EXE installations. Porting the launcher does not port the Mail or Office applications. Native app installation becomes available when that app has a verified package for the user's OS and CPU architecture.
 
@@ -167,3 +167,9 @@ Settings now searches controls and optional KB article results, offers Orange, G
 The requested Word document is [KB Library](docs/KB%20Library.docx), also attached to the release. The in-app articles and Word library share `content/experience.json`. See [release status](docs/update-status.md), [performance checks](docs/performance.md), and [sign-in deployment](backend/README.md).
 
 TMApps email-code sign-in clients, protected session storage, app access grants and a backend handoff service are prepared. They stay disabled until a Supabase project is deployed/configured; individual apps also need their broker/consumer integration before they reuse sign-in. No provider passwords or session tokens are written to the shared profile. Ratings were excluded at the user's request.
+
+## TMA Libraries
+
+TMA-Libraries is listed as **Coming soon** with a neutral question-mark placeholder. Its branch currently contains project guidance but no application build, published icon, version or update date. Install is disabled and no OS support is claimed. Use Details or the source menu to review its [project branch](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries). It appears before SocialsManager and Agent Office; Agent Office remains last. Launcher 1.14.1 or later is required for the expanded catalog. See Launcher-KB13.
+
+![TMA-Libraries coming-soon listing](docs/libraries-preview.png)

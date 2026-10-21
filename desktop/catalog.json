@@ -74,6 +74,17 @@
       "branch": "TMA-Cut",
       "executable": "TMA-Cut.exe",
       "platforms": []
+    },
+    {
+      "id": "tma-libraries",
+      "name": "TMA-Libraries",
+      "category": "LIBRARIES",
+      "description": "TMA-Libraries is being prepared. Installation will be available when a verified build is published.",
+      "version": "0.0.0",
+      "updatedAt": "",
+      "branch": "TMA-Libraries",
+      "executable": "TMA-Libraries.exe",
+      "platforms": []
     }
   ]
 }

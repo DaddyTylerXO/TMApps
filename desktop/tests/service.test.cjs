@@ -108,7 +108,7 @@ test('native launcher updates select the exact OS/CPU installer and require its 
 });
 test('a corrupted native cache falls back to the bundled catalog',async t=>{
   const f=await fixture(t); await atomic(path.join(f.library.root,'catalog.json'),{schemaVersion:999});
-  assert.equal((await f.library.load()).apps.length,6);
+  assert.equal((await f.library.load()).apps.length,7);
 });
 test('native close detection finds managed background processes and preserves other copies', {skip:process.platform==='win32'},async t=>{
   const f=await fixture(t,process.platform); const folder=crypto.randomUUID();

@@ -1,3 +1,10 @@
+TMApps Launcher 1.14.1 adds TMA-Libraries as a coming-soon application.
+
+- Libraries has a neutral question-mark placeholder, working Details/source options and no install or OS badges until verified packages are published. No unpublished version or date is invented.
+- Libraries appears before SocialsManager and Agent Office. Agent Office remains last with its number adjusted automatically.
+- Adds Launcher-KB13 with a screenshot and linked references in the Word KB Library.
+- Functional and startup/idle resource checks run for Windows and native macOS/Linux builds.
+
 TMApps Launcher 1.14.0 adds app detail screens, searchable settings and help, neutral dark palettes, and reviewed crash-report drafts.
 
 - Download Windows Setup.exe, a matching macOS Intel/Apple Silicon DMG, or a Linux x64/ARM64 AppImage below. macOS/Linux source and packaged launchers are checked in CI. OS badges under each app show its actual published builds; a launcher port does not port a Windows-only application.

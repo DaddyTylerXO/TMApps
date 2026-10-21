@@ -11,7 +11,7 @@
       "id": "Launcher-KB2",
       "title": "Install and update applications",
       "keywords": "apps update install location uninstall tray",
-      "body": "Use Install or Update in the library. Select an empty app folder and choose startup and desktop options. Updates check hashes before replacing files. Allow a running app to close before updating; force close is a separate choice. Uninstall can preserve or delete standard local data. External work folders are preserved. See Launcher-KB1 and Launcher-KB10."
+      "body": "Use Install or Update in the library. Select an empty app folder and choose startup and desktop options. Updates check hashes before replacing files. Allow a running app to close before updating; force close is a separate choice. Uninstall can preserve or delete standard local data. External work folders are preserved. See Launcher-KB1 and Launcher-KB10. See Launcher-KB13 for coming-soon apps."
     },
     {
       "id": "Launcher-KB3",
@@ -72,6 +72,12 @@
       "title": "Troubleshoot platform compatibility",
       "keywords": "macos mac linux windows fuse gatekeeper tray unsupported install",
       "body": "Choose x64 for Intel/AMD and arm64 for Apple Silicon or ARM Linux. Do not install a Windows EXE on macOS or Linux. Only published matching app packages can be installed. macOS packages currently use ad-hoc signing and are not notarized; OS approval may be required. Linux tray support depends on the desktop. See Launcher-KB1 and Launcher-KB7."
+    },
+    {
+      "id": "Launcher-KB13",
+      "title": "Coming soon applications",
+      "keywords": "libraries coming soon unavailable question mark source install version date order",
+      "body": "Coming soon means no compatible installable build has been published. TMA-Libraries currently has a source branch only and uses a neutral question-mark placeholder until its app icon is available. Its version and update date are shown as not published, and no OS support badges are advertised. You can open its Details screen or View source on GitHub from the options menu; installation stays disabled until a verified package is published. Libraries appears before SocialsManager, which stays immediately before Agent Office. Agent Office is always last and its number moves down when apps are added. Check for updates to refresh published app availability. If you are using launcher 1.14.0 or earlier, accept the launcher update to support the expanded catalog. See Launcher-KB2 and Launcher-KB12."
     }
   ],
   "apps": {
@@ -125,6 +131,11 @@
       "video": null,
       "screenshots": [],
       "releaseNotes": "Release notes have not been published for this app yet."
+    },
+    "tma-libraries": {
+      "video": null,
+      "screenshots": [],
+      "releaseNotes": "No application build or release notes have been published for TMA-Libraries yet."
     }
   }
 }
