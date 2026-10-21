@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
-const M=require('../ui/model.js');
+const M=require('../ui/model.js'),{redact}=require('./redact.cjs');
 async function read(file,fallback){try{return JSON.parse((await fs.readFile(file,'utf8')).replace(/^\uFEFF/,''));}catch{return fallback;}}
 async function atomic(file,value){await fs.mkdir(path.dirname(file),{recursive:true});const temp=file+'.'+crypto.randomUUID()+'.tmp';try{await fs.writeFile(temp,JSON.stringify(value,null,2),{mode:0o600});await fs.rename(temp,file);}finally{await fs.rm(temp,{force:true});}}
 function validateSettings(value){
@@ -29,9 +29,9 @@ class Store{
   async save(value){const s=validateSettings(value);await atomic(path.join(this.root,'settings.json'),s);this.settings=s;return s;}
   async snapshot(project){const dir=path.join(this.root,'autosaves',project.id);await fs.mkdir(dir,{recursive:true});const file=path.join(dir,Date.now()+'.tmacut');await atomic(file,project);await atomic(path.join(this.root,'recovery.json'),{file,name:project.name,time:new Date().toISOString()});const files=(await fs.readdir(dir)).filter(f=>/^\d+\.tmacut$/.test(f)).sort();for(const f of files.slice(0,-this.settings.backupCount))await fs.rm(path.join(dir,f));return {time:new Date().toISOString(),file};}
   async recovery(){return read(path.join(this.root,'recovery.json'),null);}
-  async crash(error,details={}){const data={id:crypto.randomUUID(),time:new Date().toISOString(),version:require('../package.json').version,platform:process.platform,arch:process.arch,error:String(error?.stack||error).slice(0,16000),details};await atomic(path.join(this.root,'crash-report.json'),data);return data;}
+  async crash(error,details={}){const data={id:crypto.randomUUID(),time:new Date().toISOString(),version:require('../package.json').version,platform:process.platform,arch:process.arch,error:redact(error?.stack||error).slice(0,16000),details:JSON.parse(redact(JSON.stringify(details)))};await atomic(path.join(this.root,'crash-report.json'),data);return data;}
 }
-const workspaceKeys=['theme','scheduledTheme','dayTheme','nightTheme','dayStart','nightStart','themeTransitionMinutes','timelineZoom','timeDisplay','wheelZoom','showFPS','analytics','resources','showSuggestions','searchKB','showIcons','videoColor','audioColor','textColor','noteColor','toolbar','toolbarEdge','inspectorWidth','previewHeight','shortcuts','customShortcuts','defaultVideo','defaultAudio','previewQuality','colorPresets'];
+const workspaceKeys=['closeToTray','desktopNotifications','theme','scheduledTheme','dayTheme','nightTheme','dayStart','nightStart','themeTransitionMinutes','timelineZoom','timeDisplay','wheelZoom','showFPS','analytics','resources','showSuggestions','searchKB','showIcons','videoColor','audioColor','textColor','noteColor','toolbar','toolbarEdge','inspectorWidth','previewHeight','shortcuts','customShortcuts','defaultVideo','defaultAudio','previewQuality','colorPresets'];
 function workspaceProfile(settings){return {schemaVersion:1,workspace:Object.fromEntries(workspaceKeys.map(key=>[key,settings[key]]))};}
 function mergeWorkspace(settings,value){if(value?.schemaVersion!==1||!value.workspace||typeof value.workspace!=='object')throw new Error('Invalid workspace profile.');return validateSettings({...settings,...Object.fromEntries(workspaceKeys.filter(key=>Object.hasOwn(value.workspace,key)).map(key=>[key,value.workspace[key]]))});}
 module.exports={Store,read,atomic,validateSettings,workspaceProfile,mergeWorkspace};

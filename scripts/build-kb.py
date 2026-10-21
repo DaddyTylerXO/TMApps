@@ -9,6 +9,28 @@ from docx.oxml.ns import qn
 root = Path(__file__).resolve().parents[1]
 articles = json.loads((root / 'docs/kb.json').read_text(encoding='utf-8'))
 doc = Document()
+def bookmark(paragraph, name, number):
+    start = OxmlElement('w:bookmarkStart')
+    start.set(qn('w:id'), str(number))
+    start.set(qn('w:name'), name)
+    end = OxmlElement('w:bookmarkEnd')
+    end.set(qn('w:id'), str(number))
+    paragraph._p.insert(0, start)
+    paragraph._p.append(end)
+
+def link(paragraph, text, target):
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('w:anchor'), target)
+    run = OxmlElement('w:r')
+    properties = OxmlElement('w:rPr')
+    color = OxmlElement('w:color'); color.set(qn('w:val'), '9C2430')
+    underline = OxmlElement('w:u'); underline.set(qn('w:val'), 'single')
+    properties.append(color); properties.append(underline)
+    run.append(properties)
+    content = OxmlElement('w:t'); content.text = text
+    run.append(content); hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+
 section = doc.sections[0]
 section.page_width, section.page_height = Inches(8.5), Inches(11)
 section.top_margin = section.bottom_margin = Inches(.75)
@@ -38,17 +60,19 @@ doc.add_paragraph('TMA Cut KB Library', 'Title')
 doc.add_paragraph('User guides and setup information', 'Subtitle')
 doc.add_paragraph('Version 0.2.0  |  21 October 2026')
 doc.add_paragraph('Use this library to create, edit, recover and export projects in TMA-Cut. The articles explain how local editing works, which services need setup, and where preview or analysis has limits. Find an article by its Cut-KB number in the app’s Settings search. Review generated captions, tracking and service upload drafts before publishing.')
-doc.add_paragraph('Article index', 'Heading 1')
+bookmark(doc.add_paragraph('Article index', 'Heading 1'), 'KB_Index', 0)
 for article in articles:
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(4)
-    r = p.add_run(article['id'] + '  ')
-    r.bold = True
-    p.add_run(article['title'])
+    link(p, article['id'] + '  ' + article['title'], article['id'].replace('-', '_'))
 doc.add_page_break()
 
-for article in articles:
-    doc.add_paragraph(article['id'] + ' ' + article['title'], 'Heading 1')
+for number, article in enumerate(articles, 1):
+    bookmark(doc.add_paragraph(article['id'] + ' ' + article['title'], 'Heading 1'), article['id'].replace('-', '_'), number)
+    if number == 1:
+        doc.add_picture(str(root / 'docs/screenshots/editing-studio.png'), width=Inches(6.8))
+        caption = doc.add_paragraph('Figure 1. Editing studio with synthetic demo footage, a video overlay and an editable caption.')
+        caption.runs[0].font.size = Pt(9)
     sentences = article['body'].split('. ')
     groups = []
     current = []
@@ -63,10 +87,14 @@ for article in articles:
         if index < len(groups)-1 and not group.endswith('.'):
             group += '.'
         doc.add_paragraph(group)
-    p = doc.add_paragraph('Related articles  ' + ', '.join(article['related']))
+    p = doc.add_paragraph('Related articles  ')
+    for index, related in enumerate(article['related']):
+        if index: p.add_run('  |  ')
+        link(p, related, related.replace('-', '_'))
     p.paragraph_format.space_after = Pt(14)
     for run in p.runs:
         run.font.size = Pt(10)
+    link(doc.add_paragraph(), 'Back to index', 'KB_Index')
 
 footer = section.footer.paragraphs[0]
 footer.alignment = 2
@@ -77,4 +105,8 @@ footer._p.append(field)
 for run in footer.runs:
     run.font.size = Pt(9)
     run.font.color.rgb = RGBColor(0, 0, 0)
+targets = {node.get(qn('w:name')) for node in doc.element.xpath('//w:bookmarkStart')}
+anchors = [node.get(qn('w:anchor')) for node in doc.element.xpath('//w:hyperlink')]
+assert len(targets) == 17 and all(anchor in targets for anchor in anchors)
 doc.save(root / 'docs/KB Library.docx')
+print(f'Validated {len(anchors)} internal links and {len(targets)} bookmarks.')

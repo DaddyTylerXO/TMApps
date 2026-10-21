@@ -36,7 +36,8 @@
       "THIRD_PARTY.md",
       "docs/KB Library.md",
       "docs/KB Library.docx",
-      "docs/kb.json"
+      "docs/kb.json",
+      "docs/screenshots/**"
     ],
     "artifactName": "TMA-Cut-${version}-${os}-${arch}.${ext}",
     "directories": {

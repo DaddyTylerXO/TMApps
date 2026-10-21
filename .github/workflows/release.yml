@@ -43,6 +43,8 @@ jobs:
           node node_modules/electron/install.js
           node node_modules/ffmpeg-static/install.js
       - run: pnpm test
+      - name: Scan tracked files for credentials
+        run: node scripts/scan-secrets.cjs
       - name: Verify desktop UI on Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -62,6 +64,30 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      - name: Verify packaged Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $report = Join-Path $PWD 'smoke/packaged.json'
+          $cutArguments = @('--smoke', ('"' + $report + '"'))
+          $cut = Start-Process -FilePath (Resolve-Path 'dist/win-unpacked/TMA-Cut.exe') -ArgumentList $cutArguments -WindowStyle Hidden -PassThru -Wait
+          if ($cut.ExitCode -ne 0) { throw 'Packaged smoke check failed' }
+          if (!(Get-Content $report -Raw | ConvertFrom-Json).ok) { throw 'Packaged smoke report failed' }
+      - name: Verify packaged macOS application
+        if: runner.os == 'macOS'
+        run: |
+          app=$(find dist -maxdepth 2 -name TMA-Cut.app -type d -print -quit)
+          "$app/Contents/MacOS/TMA-Cut" --smoke "$PWD/smoke/packaged.json"
+      - name: Verify packaged Linux application
+        if: runner.os == 'Linux'
+        run: xvfb-run -a dist/linux-unpacked/TMA-Cut --no-sandbox --smoke "$PWD/smoke/packaged.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            smoke/*.json
+            smoke/*.png
       - uses: actions/upload-artifact@v4
         with:
           name: cut-${{ matrix.platform }}-${{ matrix.arch }}
@@ -94,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download tma-apps --repo "$GITHUB_REPOSITORY" --pattern catalog.json --dir release-output
+          cp 'docs/KB Library.docx' release-output/TMA-Cut-KB-Library.docx
           node scripts/release-metadata.cjs release-output
       - name: Publish binaries before catalog
         env:
