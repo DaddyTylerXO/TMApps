@@ -17,7 +17,7 @@ A local video editor for the TMApps suite, with a red camera icon, rounded contr
 
 See the complete [feature coverage and limits](FEATURES.md), [KB Library](docs/KB%20Library.md), [Word user guide](docs/KB%20Library.docx), [change log](CHANGELOG.md) and [performance checks](docs/Performance.md). Recording identification through AcoustID is **not copyright clearance**. Tracking is a limited local patch matcher; GPU utilisation, executable plugins and embedded MP4 cover art are not provided. External services require separate setup.
 
-The red tray popup follows TMA-Mail's 14px rounded container and 19px button shapes. Linux DBus StatusNotifier hosts receive a native menu; the desktop theme controls that fallback's colours. Closing asks before discarding edits or cancelling an export.
+The red tray popup follows TMA-Mail's 14px rounded container and 19px button shapes. Linux DBus StatusNotifier hosts receive a native menu; the desktop theme controls that fallback's colours. Closing can retain the app in the tray. Quitting asks before discarding edits or cancelling an export.
 
 ## Run and verify
 

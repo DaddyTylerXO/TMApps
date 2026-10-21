@@ -12,5 +12,5 @@ const linux=`TMA-Cut-${version}-linux-x64.AppImage`;entry.packages['linux-x64']=
 for(const arch of ['x64','arm64'])asset(`TMA-Cut-${version}-mac-${arch}.dmg`);
 const existing=catalog.apps.findIndex(a=>a.id===entry.id);if(existing>=0)catalog.apps[existing]=entry;else catalog.apps.push(entry);
 asset('TMA-Cut-KB-Library.docx');
-for(const name of ['SocialsManager','Agent Office']){const index=catalog.apps.findIndex(a=>a.name===name);if(index>=0)catalog.apps.push(...catalog.apps.splice(index,1));}
+for(const id of ['tma-socialsmanager','tma-agent-office']){const index=catalog.apps.findIndex(a=>a.id===id);if(index>=0)catalog.apps.push(...catalog.apps.splice(index,1));}
 fs.writeFileSync(path.join(root,'catalog.json'),JSON.stringify(catalog,null,2)+'\n');
