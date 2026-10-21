@@ -1,3 +1,5 @@
+> Repository-wide reporting, supported-version guidance and publishing requirements: [suite security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md). Send vulnerabilities through [private vulnerability reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new); keep sensitive details out of public issues.
+
 # Security policy and format
 
 TMA-Safe 0.2.x is an experimental, unaudited beta. Report vulnerabilities through the repository's private security advisory flow if available; otherwise contact the owner privately. Do not put real vaults, passwords, keys, CSV exports or pairing codes in issues.
