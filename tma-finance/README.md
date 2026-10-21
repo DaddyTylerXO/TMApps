@@ -4,7 +4,7 @@ An Electron application for Windows with a GBP finance workspace and USD equity 
 
 ## Run
 
-Open `release/TMA-Finance-0.1.1-Windows.exe`. This is a portable, unsigned development build. It stores its application profile in Electron’s `userData` directory, normally `%APPDATA%/TMA-Finance`. It is portable in the sense of requiring no installer; its data is not stored beside the executable.
+Open `release/TMA-Finance-0.1.2-Windows.exe`. This is a portable, unsigned development build. It stores its application profile in Electron’s `userData` directory, normally `%APPDATA%/TMA-Finance`. It is portable in the sense of requiring no installer; its data is not stored beside the executable.
 
 The app opens in your personal workspace with no sample records. This also applies when upgrading from a version that remembered demo mode. **Settings & alerts > View demo** opens an optional sample workspace for the current session; reopening the app always returns to your personal workspace. Personal and sample records are stored separately and preserved. Neither sample prices nor invented news are presented as current financial data.
 
@@ -41,9 +41,15 @@ Update [TMApps Launcher](https://github.com/DaddyTylerXO/TMApps/releases/downloa
 
 ## Data and provider setup
 
-Records persist in the desktop profile’s local storage and are not synchronised. Export JSON backups regularly; CSV is for analysis rather than lossless restoration. Local storage is not an encrypted financial database. Removing the app profile removes saved records. API keys are held in renderer memory for the session and excluded from exports.
+Records persist in the desktop profile’s local storage and are not synchronised. Export JSON backups regularly; CSV is for analysis rather than lossless restoration. Local storage is not an encrypted financial database. Removing the app profile removes saved records. API keys are held in the desktop main process for the session and excluded from exports.
 
-In **Settings & alerts**, enter your own Finnhub key. It is sent directly to `https://finnhub.io` in the `X-Finnhub-Token` header. You can instead enter clearly labelled manual USD quotes. Provider permissions, CORS, exchange coverage and rate limits may prevent requests. Quote checks are capped at 25 unique symbols per refresh, request sequentially and stop on the first provider error. Timestamps identify cached quotes. Price history and fundamentals are never fabricated when the provider is unavailable.
+In **Settings & alerts**, shared Alpha Vantage is the default selection, marked **awaiting backend setup**. Choose **Alpha Vantage · personal key** or **Finnhub · personal key** to connect your own API key now. Requests use a restricted native desktop transport with fixed providers/operations, preserving browser security and avoiding renderer cross-origin failures. Neither real credentials nor provider error bodies are written to source, logs or packages. Keys are never returned by connection-status responses. Runtime environment presets are supported for administrators; the public app bundles no keys.
+
+Finnhub refreshes up to 25 unique symbols per click with one-minute caching and a local 30-request/minute budget. Alpha Vantage refreshes at most five symbols per click, caches quotes for 24 hours and other responses for 15 minutes and enforces a local 25-upstream-request/day budget for the current session. Alpha Vantage quote refresh is locked to 24 hours. Cache and local budgets apply to the running session; the future shared backend must enforce them durably across users. All users of one shared free key share its 25-request/day allowance. Provider account quotas remain authoritative across all clients/devices. Standard Alpha Vantage quotes are daily, and its history adapter uses monthly observations. No subscription is purchased or upgraded by this app.
+
+See [Finance-KB2](docs/Finance-KB2.md) for error handling, free-tier limits and switching providers. [Shared backend preparation](backend/README.md) is supplied for later deployment; no shared service is configured. Provider licensing and hosting can cost money, so no free all-user service is promised.
+
+Both profile icons now open an editable local profile: [Finance-KB3](docs/Finance-KB3.md). This is separate from online sign-in.
 
 Core finance functions do not send personal records to an external service. Optional data requests send the chosen currencies or stock tickers to their data provider. Remote Google Fonts are optional for appearance; system fonts provide an offline fallback.
 
@@ -62,7 +68,7 @@ The original plan is broader than this initial desktop build. These items are no
 
 ## Validation
 
-`node --test tests/core.test.mjs` checks UK/Scottish tax bands and tapering, Class 4 boundaries, subscription normalisation/date filtering, monthly expense totals, saving deadlines and CSV formula escaping. JavaScript syntax checks pass. The desktop window and dashboard/tax layouts were inspected in Windows; full UI automation was limited by the native helper losing its window binding. Finnhub integration cannot be end-to-end verified without a user provider key. Currency conversion has an explicit unavailable/error state; the live endpoint still needs verification in the delivered desktop environment.
+`node --test tests/core.test.mjs` checks UK/Scottish tax bands and tapering, Class 4 boundaries, subscription normalisation/date filtering, monthly expense totals, saving deadlines and CSV formula escaping. JavaScript syntax checks pass. The desktop window and dashboard/tax layouts were inspected in Windows; full UI automation was limited by the native helper losing its window binding. Provider adapters are tested using synthetic credentials and mocked responses; the attached real credentials were not placed in files or used for live end-to-end tests. Currency conversion has an explicit unavailable/error state; the live endpoint still needs verification in the delivered desktop environment.
 
 Tax sources checked on 21 October 2026:
 
@@ -73,4 +79,4 @@ Tax sources checked on 21 October 2026:
 
 ## Appearance and startup guide
 
-See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the forest-green interface, and [release notes](docs/RELEASE-NOTES.md) for 0.1.1.
+See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the forest-green interface, and [release notes](docs/RELEASE-NOTES.md) for 0.1.2.

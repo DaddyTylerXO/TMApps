@@ -1443,6 +1443,14 @@ h3,
   background: var(--raised);
   color: var(--text);
 }
+button.avatar {
+  padding: 0;
+  flex-shrink: 0;
+}
+.profile > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 input::placeholder,
 textarea::placeholder {
   color: #b9d1c3;

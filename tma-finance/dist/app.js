@@ -91,6 +91,18 @@ const amount = (label, name, value = "", extra = "") =>
   field(label, name, value, "number", `min="0" step="0.01" required ${extra}`);
 // Always open the real workspace. Sample data is an explicit, session-only preview.
 let mode = "personal";
+const providerName = () =>
+  provider === "alphavantage" ? "Alpha Vantage" : "Finnhub";
+const profileName = () =>
+  mode === "demo"
+    ? "Demo workspace"
+    : String(state.profile?.name || "Your workspace");
+const profileInitial = () =>
+  mode === "demo"
+    ? "D"
+    : Array.from(
+        String(state.profile?.name || "You").trim(),
+      )[0]?.toUpperCase() || "Y";
 function readState() {
   try {
     const raw = localStorage.getItem("tma:" + mode);
@@ -112,7 +124,12 @@ let state = readState(),
   marketSort = "name",
   historyRange = "6",
   portfolioTab = "holdings",
-  apiKey = "",
+  provider =
+    state.settings.marketSource === "personal"
+      ? state.settings.provider || "alphavantage"
+      : "alphavantage",
+  marketSource = state.settings.marketSource || "shared",
+  providerConnected = false,
   pollTimer = null,
   newsItems = [],
   newsLoaded = false,
@@ -241,7 +258,7 @@ function render() {
   const [title, subtitle] = titles[page];
   const s = monthStats(state, month);
   $("#app").innerHTML =
-    `<div class="layout"><aside class="sidebar"><button class="quiet mobile-close" data-action="menu" aria-label="Close navigation">${icon("close")}</button><a href="#dashboard" class="brand"><div class="brandmark"><img src="assets/icon.svg" width="32" height="34" alt=""></div><span>TMA-Finance<small>A LITTLE MORE CLARITY</small></span></a>${nav.map(([heading, links]) => `<div class="nav-label">${heading}</div>${links.map(([id, label, ico]) => button(label, "nav", ico, "nav-link " + (id === page ? "active" : ""), `data-page="${id}"`)).join("")}`).join("")}<div class="sidebar-bottom">${button("Settings & alerts", "nav", "settings", "nav-link " + (page === "settings" ? "active" : ""), 'data-page="settings"')}<div class="local-card">${icon("leaf")}<strong>A healthier money habit.</strong>A little attention goes a long way.</div><div class="profile"><div class="avatar">${mode === "demo" ? "D" : "Y"}</div><div>${mode === "demo" ? "Demo workspace" : "Your workspace"}<small>Personal · GBP</small></div></div></div></aside><main class="main"><header class="topbar"><div class="breadcrumb">${button("", "menu", "menu", "quiet mobile-menu", 'aria-label="Open navigation"')}Your workspace ${icon("chevron")}<strong>${page === "dashboard" ? "Overview" : page === "stock" ? esc(symbol) : nav.flatMap((n) => n[1]).find((n) => n[0] === page)?.[1] || titles[page][0]}</strong></div><div class="top-actions"><span class="status"><i class="dot"></i> Saved on this device</span>${button("", "export", "download", "icon-btn", 'aria-label="Export finance CSV"')}${button(state.notifications.length ? `<span class="notification-count">${state.notifications.length}</span>` : "", "nav", "bell", "icon-btn", 'data-page="notifications" aria-label="Notifications"')}<span class="avatar">${mode === "demo" ? "D" : "Y"}</span></div></header><div class="content page-fade"><div class="eyebrow">${new Date(month + "-01T12:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" })} / ${["investing", "markets", "stock", "watchlist", "news"].includes(page) ? "INVESTING" : "PERSONAL FINANCE"}</div><div class="page-heading"><div><h1>${title}</h1><p class="subtext">${subtitle}</p></div><div class="toolbar">${["dashboard", "budget"].includes(page) ? `<input class="month" type="month" id="month-select" value="${month}" aria-label="Selected budget month">` : ""}${pageAction()}</div></div>${mode === "demo" ? `<div class="banner"><span>${icon("info")} You’re exploring sample data. Make yourself at home.</span>${button("Start my workspace", "personal", "arrow")}</div>` : ""}${pages[page](s)}<footer class="footer"><span>TMA-Finance · A little more clarity.</span><span>Personal data stays on this device. Export a backup to keep it safe.</span></footer></div></main></div>`;
+    `<div class="layout"><aside class="sidebar"><button class="quiet mobile-close" data-action="menu" aria-label="Close navigation">${icon("close")}</button><a href="#dashboard" class="brand"><div class="brandmark"><img src="assets/icon.svg" width="32" height="34" alt=""></div><span>TMA-Finance<small>A LITTLE MORE CLARITY</small></span></a>${nav.map(([heading, links]) => `<div class="nav-label">${heading}</div>${links.map(([id, label, ico]) => button(label, "nav", ico, "nav-link " + (id === page ? "active" : ""), `data-page="${id}"`)).join("")}`).join("")}<div class="sidebar-bottom">${button("Settings & alerts", "nav", "settings", "nav-link " + (page === "settings" ? "active" : ""), 'data-page="settings"')}<div class="local-card">${icon("leaf")}<strong>A healthier money habit.</strong>A little attention goes a long way.</div><div class="profile">${button(esc(profileInitial()), "edit-profile", "", "avatar", 'aria-label="Open profile"')}<div>${esc(profileName())}<small>Personal · GBP</small></div></div></div></aside><main class="main"><header class="topbar"><div class="breadcrumb">${button("", "menu", "menu", "quiet mobile-menu", 'aria-label="Open navigation"')}Your workspace ${icon("chevron")}<strong>${page === "dashboard" ? "Overview" : page === "stock" ? esc(symbol) : nav.flatMap((n) => n[1]).find((n) => n[0] === page)?.[1] || titles[page][0]}</strong></div><div class="top-actions"><span class="status"><i class="dot"></i> Saved on this device</span>${button("", "export", "download", "icon-btn", 'aria-label="Export finance CSV"')}${button(state.notifications.length ? `<span class="notification-count">${state.notifications.length}</span>` : "", "nav", "bell", "icon-btn", 'data-page="notifications" aria-label="Notifications"')}${button(esc(profileInitial()), "edit-profile", "", "avatar", 'aria-label="Open profile"')}</div></header><div class="content page-fade"><div class="eyebrow">${new Date(month + "-01T12:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" })} / ${["investing", "markets", "stock", "watchlist", "news"].includes(page) ? "INVESTING" : "PERSONAL FINANCE"}</div><div class="page-heading"><div><h1>${title}</h1><p class="subtext">${subtitle}</p></div><div class="toolbar">${["dashboard", "budget"].includes(page) ? `<input class="month" type="month" id="month-select" value="${month}" aria-label="Selected budget month">` : ""}${pageAction()}</div></div>${mode === "demo" ? `<div class="banner"><span>${icon("info")} You’re exploring sample data. Make yourself at home.</span>${button("Start my workspace", "personal", "arrow")}</div>` : ""}${pages[page](s)}<footer class="footer"><span>TMA-Finance · A little more clarity.</span><span>Personal data stays on this device. Export a backup to keep it safe.</span></footer></div></main></div>`;
   bindLocalForms();
 }
 function pageAction() {
@@ -473,7 +490,7 @@ const quote = (s) => state.quotes[s],
   getCompany = (s) => companies.find((c) => c[0] === s),
   companyName = (s) => quote(s)?.name || getCompany(s)?.[1] || s;
 function marketNotice() {
-  return `<div class="banner"><span>${apiKey ? "Finnhub connected for this session. Quotes may be delayed or restricted by your plan." : "Market provider disconnected. " + (mode === "demo" ? "Visible prices are illustrative samples." : "Connect Finnhub in Settings, or add a manual quote.")}</span>${link("Data settings", "settings")}</div>`;
+  return `<div class="banner"><span>${providerConnected ? providerName() + " configured. Quotes may be daily or delayed, depending on your plan." : "Market provider disconnected. " + (mode === "demo" ? "Visible prices are illustrative samples." : "Connect a provider in Settings, or add a manual quote.")}</span>${link("Data settings", "settings")}</div>`;
 }
 function portfolio() {
   let cost = 0,
@@ -511,7 +528,7 @@ function quoteLabel(s) {
     ? "No quote available"
     : q.demo
       ? "Illustrative sample · not current market data"
-      : `${q.manual ? "Manual quote" : "Finnhub quote"} · ${new Date(q.at).toLocaleString("en-GB")}${q.marketAt ? " · market timestamp " + new Date(q.marketAt * 1000).toLocaleString("en-GB") : ""}`;
+      : `${q.manual ? "Manual quote" : esc(q.providerName || "Market provider") + " quote"} · ${new Date(q.at).toLocaleString("en-GB")}${q.marketAt ? " · market timestamp " + new Date(q.marketAt * 1000).toLocaleString("en-GB") : ""}`;
 }
 function markets() {
   let rows = Object.values(state.quotes).filter(
@@ -543,11 +560,11 @@ function markets() {
       ],
       marketSort,
     )}<button type="submit" class="primary" style="margin-bottom:16px">${icon("search")} Search</button></form><p class="note">Rankings compare loaded companies only. A full Top 100 market feed and advanced fundamental screening need a market-wide data subscription.</p>${marketTable(rows)}<div id="search-results"></div>`,
-  )}<p class="note">Use Search with a connected Finnhub key to find other US-listed stocks. Without a connection, search filters your local quotes.</p>`;
+  )}<p class="note">Use Search with a connected provider key to find other US-listed stocks. Without a connection, search filters your local quotes.</p>`;
 }
 function marketTable(rows) {
   return rows.length
-    ? `<div class="table-wrap"><table><thead><tr><th>COMPANY</th><th>SECTOR</th><th>PRICE (USD)</th><th>DAY CHANGE</th><th>DATA SOURCE</th><th>FOLLOW</th></tr></thead><tbody>${rows.map((q) => `<tr><td><div class="merchant"><div class="merchant-logo">${esc(q.symbol[0])}</div><div>${button(`<strong>${esc(q.name)}</strong>`, "profile", "", "quiet", `data-symbol="${esc(q.symbol)}"`)}<small>${esc(q.symbol)}</small></div></div></td><td>${esc(q.sector || "—")}</td><td>${money(q.price, "USD")}</td><td class="${q.change >= 0 ? "positive" : "negative"}">${q.change > 0 ? "+" : ""}${num(q.change)}%</td><td><span class="pill neutral">${q.demo ? "Sample" : q.manual ? "Manual" : "Finnhub"}</span></td><td>${button(state.watchlist.includes(q.symbol) ? "Following" : "Follow", "watch", "star", "quiet", `data-symbol="${esc(q.symbol)}"`)}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap"><table><thead><tr><th>COMPANY</th><th>SECTOR</th><th>PRICE (USD)</th><th>DAY CHANGE</th><th>DATA SOURCE</th><th>FOLLOW</th></tr></thead><tbody>${rows.map((q) => `<tr><td><div class="merchant"><div class="merchant-logo">${esc(q.symbol[0])}</div><div>${button(`<strong>${esc(q.name)}</strong>`, "profile", "", "quiet", `data-symbol="${esc(q.symbol)}"`)}<small>${esc(q.symbol)}</small></div></div></td><td>${esc(q.sector || "—")}</td><td>${money(q.price, "USD")}</td><td class="${q.change >= 0 ? "positive" : "negative"}">${q.change > 0 ? "+" : ""}${num(q.change)}%</td><td><span class="pill neutral">${q.demo ? "Sample" : q.manual ? "Manual" : esc(q.providerName || "Provider")}</span></td><td>${button(state.watchlist.includes(q.symbol) ? "Following" : "Follow", "watch", "star", "quiet", `data-symbol="${esc(q.symbol)}"`)}</td></tr>`).join("")}</tbody></table></div>`
     : empty(
         "No matching companies",
         "Connect a provider or add a manual quote in Settings.",
@@ -573,7 +590,7 @@ function stockChart(symbols) {
   if (!series.length)
     return empty(
       "No historical prices loaded",
-      "Connect Finnhub and load history from a company profile. Historical candles may require a paid plan. Sample quotes never generate a fictitious price timeline.",
+      "Connect a provider and load history from a company profile. Historical candles may require a paid plan. Sample quotes never generate a fictitious price timeline.",
     );
   const width = 600,
     height = 160,
@@ -583,7 +600,7 @@ function stockChart(symbols) {
     min = Math.min(0, ...all),
     max = Math.max(1, ...all),
     span = max - min;
-  return `<p class="note">Relative return from first available price · last 5 years, daily observations</p><svg class="spark" viewBox="0 0 640 190" role="img" aria-label="Price return comparison for ${esc(symbols.join(", "))}"><path d="M35 10V170H635" fill="none" stroke="#e3e8da"/>${series.map((s) => `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${s.values.map((v, i) => `${35 + (i / (s.values.length - 1)) * width},${10 + height - (((v / s.values[0] - 1) * 100 - min) / span) * height}`).join(" ")}"/>`).join("")}<text x="0" y="15">${num(max)}%</text><text x="0" y="170">${num(min)}%</text></svg><div class="legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.symbol)}</span>`).join("")}</div>`;
+  return `<p class="note">Relative return from first available price · available provider history (Alpha Vantage: monthly observations)</p><svg class="spark" viewBox="0 0 640 190" role="img" aria-label="Price return comparison for ${esc(symbols.join(", "))}"><path d="M35 10V170H635" fill="none" stroke="#e3e8da"/>${series.map((s) => `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${s.values.map((v, i) => `${35 + (i / (s.values.length - 1)) * width},${10 + height - (((v / s.values[0] - 1) * 100 - min) / span) * height}`).join(" ")}"/>`).join("")}<text x="0" y="15">${num(max)}%</text><text x="0" y="170">${num(min)}%</text></svg><div class="legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.symbol)}</span>`).join("")}</div>`;
 }
 function watchlist() {
   return `${marketNotice()}${panel("Your watchlist comparison", stockChart(state.watchlist), link("Explore stocks", "markets"))}<div style="height:20px"></div>${panel("Companies you follow", state.watchlist.length ? state.watchlist.map((s) => `<div class="watch-row">${button(esc(s), "profile", "", "quiet", `data-symbol="${esc(s)}"`)}<small>${esc(companyName(s))}</small><span>${quote(s) ? money(quote(s).price, "USD") : "No quote"}</span>${button("Unfollow", "watch", "star", "quiet", `data-symbol="${esc(s)}"`)}</div>`).join("") : empty("Keep your favourites close", "Find a company and select Follow.", link("Explore markets", "markets")))}`;
@@ -669,10 +686,10 @@ function stockProfile() {
   const q = quote(symbol),
     p = profileData[symbol] || {},
     m = { ...p.metric, previousClose: q?.previousClose };
-  return `${marketNotice()}<div class="two-col">${panel(`${esc(companyName(symbol))} · ${esc(symbol)}`, `<div class="eyebrow">${esc(q?.sector || p.finnhubIndustry || "US LISTED EQUITY")} / USD</div><div class="big-value">${q ? money(q.price, "USD") : "No quote"}</div><p class="note">${quoteLabel(symbol)}</p><div class="toolbar">${button("Load company data", "load-profile", "repeat", "primary")}${button("Load 5-year history", "load-history", "chart")}${button("Add holding", "holding", "plus", "", `data-symbol="${esc(symbol)}"`)}</div>${p.weburl ? `<p><a href="${esc(safeUrl(p.weburl))}" target="_blank" rel="noopener">Company website ↗</a></p>` : ""}<p class="note">${esc(p.name || "")} ${esc(p.country || "")} ${esc(p.exchange || "")}</p>`)}${panel("Price timeline", stockChart([symbol]))}</div><div style="height:22px"></div>${panel("The numbers behind the company", `<div class="metric-list">${metricDefs.map(([label, key, explanation]) => `<div class="metric"><label>${label}<button class="help" data-action="explain" data-title="${esc(label)}" data-text="${esc(explanation)}" aria-label="Explain ${label}">?</button></label><strong>${m[key] != null ? esc(num(m[key])) : "—"}</strong></div>`).join("")}</div><div class="info-box">Unavailable data is shown as —. Revenue history, balance sheets, PEG and median earnings need additional financial-statement data and remain unconnected. Values are returned in the provider’s units; check the source before comparing.</div>`)}<div style="height:22px"></div>${panel("Company news & research", `<p class="note">Read source articles to understand the context behind price movements.</p>${link("Open market news", "news")}`)}`;
+  return `${marketNotice()}<div class="two-col">${panel(`${esc(companyName(symbol))} · ${esc(symbol)}`, `<div class="eyebrow">${esc(q?.sector || p.finnhubIndustry || "US LISTED EQUITY")} / USD</div><div class="big-value">${q ? money(q.price, "USD") : "No quote"}</div><p class="note">${quoteLabel(symbol)}</p><div class="toolbar">${button("Load company data", "load-profile", "repeat", "primary")}${button("Load price history", "load-history", "chart")}${button("Add holding", "holding", "plus", "", `data-symbol="${esc(symbol)}"`)}</div>${p.weburl ? `<p><a href="${esc(safeUrl(p.weburl))}" target="_blank" rel="noopener">Company website ↗</a></p>` : ""}<p class="note">${esc(p.name || "")} ${esc(p.country || "")} ${esc(p.exchange || "")}</p>`)}${panel("Price timeline", stockChart([symbol]))}</div><div style="height:22px"></div>${panel("The numbers behind the company", `<div class="metric-list">${metricDefs.map(([label, key, explanation]) => `<div class="metric"><label>${label}<button class="help" data-action="explain" data-title="${esc(label)}" data-text="${esc(explanation)}" aria-label="Explain ${label}">?</button></label><strong>${m[key] != null ? esc(num(m[key])) : "—"}</strong></div>`).join("")}</div><div class="info-box">Unavailable data is shown as —. Availability and units depend on the selected provider and plan. Detailed annual statements and median earnings are not connected. Values are returned in the provider’s units; check the source before comparing.</div>`)}<div style="height:22px"></div>${panel("Company news & research", `<p class="note">Read source articles to understand the context behind price movements.</p>${link("Open market news", "news")}`)}`;
 }
 function news() {
-  return `${marketNotice()}${panel("Your market briefing", `<div class="toolbar">${button("Refresh general news", "load-news", "repeat", "primary")}${button("News for " + esc(symbol), "company-news", "news")}</div><div class="info-box">${apiKey ? "Headlines link to the original publisher. No sample news is displayed." : "Connect Finnhub in Settings to load general financial news and company-specific stories."}</div>${newsError ? `<p class="negative note">${esc(newsError)}</p>` : ""}${newsItems.map((n) => `<article class="news-card"><small>${esc(n.source)} · ${new Date(n.datetime * 1000).toLocaleString("en-GB")}</small><h3><a href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener">${esc(n.headline)} ↗</a></h3><p>${esc(n.summary)}</p></article>`).join("") || empty(newsLoaded ? "No news returned" : "Your briefing is ready to connect", "Use the news controls above once your provider is connected.")}`)}`;
+  return `${marketNotice()}${panel("Your market briefing", `<div class="toolbar">${button("Refresh general news", "load-news", "repeat", "primary")}${button("News for " + esc(symbol), "company-news", "news")}</div><div class="info-box">${providerConnected ? "Headlines link to the original publisher. No sample news is displayed." : "Connect a provider in Settings to load general financial news and company-specific stories."}</div>${newsError ? `<p class="negative note">${esc(newsError)}</p>` : ""}${newsItems.map((n) => `<article class="news-card"><small>${esc(n.source)} · ${new Date(n.datetime * 1000).toLocaleString("en-GB")}</small><h3><a href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener">${esc(n.headline)} ↗</a></h3><p>${esc(n.summary)}</p></article>`).join("") || empty(newsLoaded ? "No news returned" : "Your briefing is ready to connect", "Use the news controls above once your provider is connected.")}`)}`;
 }
 function notifications() {
   return `${state.settings.monthlyInsights ? panel("Monthly spending insight", `<div class="info-box">${monthlyInsight()}</div><p class="note">Insights are calculated from your saved expenses and subscription equivalents. Desktop sessions can check quotes and show alerts while the app is open. Background checks, push, email and news-sensitivity alerts require a server and are not active.</p>`) : ""}<div style="height:20px"></div>${panel(
@@ -696,19 +713,35 @@ function monthlyInsight() {
   return `This month: ${money(cur.expenses)} in expenses, including ${money(cur.recurring)} in subscription equivalents. ${prev.expenses ? "That’s " + money(Math.abs(cur.expenses - prev.expenses)) + " " + (cur.expenses >= prev.expenses ? "more" : "less") + " than the previous month." : "Add a previous month to compare your spending."}`;
 }
 function settings() {
-  return `<div class="two-col"><div class="stack">${panel("Your market connection", `<p class="note">Use your own Finnhub key to request USD quotes, company profiles and news. A key stays in memory for this session only and is sent directly to Finnhub. Do not enter a privileged server key.</p><form id="provider-form"><label>Finnhub API key<input name="key" type="password" autocomplete="off" placeholder="${apiKey ? "Connected for this session" : "Enter your API key"}" required></label><div class="toolbar"><button type="submit" class="primary">Connect provider</button>${button("Disconnect", "disconnect")}</div></form><a class="note" href="https://finnhub.io/" target="_blank" rel="noopener">Get a Finnhub account ↗</a><div class="info-box">Plan permissions, exchange coverage and rate limits apply. Historical prices and financial statements may require a paid plan.</div>${button("Add manual USD quote", "manual-quote", "plus")}`)}${panel("Data & workspace", `<p class="note">Finance data is stored on this device only. This version has no cloud sync or bank access. Removing the app’s data folder removes local records.</p><div class="toolbar">${button("Export finance CSV", "export", "download")}${button("Export JSON backup", "backup", "download")}${button("Import backup", "import", "plus")}</div><input id="backup-file" type="file" accept="application/json,.json" hidden><div class="rule"><div><strong>${mode === "demo" ? "Demo workspace" : "Personal workspace"}</strong><small>Sample and personal data are stored separately.</small></div>${button(mode === "demo" ? "Use personal" : "View demo", "toggle-mode")}</div>${button("Reset this workspace", "reset", "trash", "danger")}`)}</div><div class="stack">${panel(
-    "Quote checks & market alerts",
-    `<form id="settings-form">${select(
-      "While this app is open",
-      "refresh",
+  return `<div class="two-col"><div class="stack">${panel(
+    "Your market connection",
+    `<form id="provider-form">${select(
+      "Market data provider",
+      "connection",
       [
-        ["manual", "Manual refresh only"],
-        ["60", "Check every minute"],
-        ["300", "Check every 5 minutes"],
-        ["900", "Check every 15 minutes"],
+        ["shared", "Alpha Vantage - shared (awaiting backend setup)"],
+        ["alphavantage", "Alpha Vantage - personal key"],
+        ["finnhub", "Finnhub - personal key"],
       ],
-      state.settings.refresh,
-    )}${amount("Large fall threshold (%)", "crashPercent", state.settings.crashPercent, 'max="100"')}<label style="margin:10px 0 20px"><input type="checkbox" name="monthlyInsights" ${state.settings.monthlyInsights ? "checked" : ""}> Show monthly spending insights</label><button type="submit" class="primary">Save preferences</button></form><p class="note">Large-fall alerts use the daily movement of your followed stocks, not a market-wide crash feed. Automatic checks pause when you close the page.</p>`,
+      marketSource === "shared" ? "shared" : provider,
+    )}<p class="note">${providerConnected ? providerName() + " is configured." : "Shared Alpha Vantage awaits backend setup. Choose a personal connection to use your own key."}</p><label>Personal API key (session only; leave blank for shared)<input name="key" type="password" autocomplete="off" placeholder="Enter the selected provider’s key"></label><div class="toolbar"><button type="submit" class="primary">Connect provider</button>${button("Disconnect", "disconnect")}</div></form><div class="info-box">Both providers offer limited free personal tiers. Alpha Vantage’s standard free tier allows 25 requests per day; standard quotes are daily, not streaming. Alpha Vantage quote refresh is locked to 24 hours. Repeated refreshes reuse the running app's quote cache. The 25-request allowance is per key, shared across everyone using it; searches and company data also count. Finnhub may restrict history and other datasets. No paid plan is purchased or enabled by this app.</div><p class="note">Keys are passed to the desktop connection in memory, excluded from backups and never bundled with the app. Shared Alpha Vantage is the default selection, awaiting a hosted service and provider permission. No shared key is included in this build.</p><div class="link-row"><a href="https://finnhub.io/" target="_blank" rel="noopener">Finnhub</a><a href="https://www.alphavantage.co/support/" target="_blank" rel="noopener">Alpha Vantage free tier</a></div>${button("Add manual USD quote", "manual-quote", "plus")}`,
+  )}${panel("Data & workspace", `<p class="note">Finance data is stored on this device only. This version has no cloud sync or bank access. Removing the app’s data folder removes local records.</p><div class="toolbar">${button("Export finance CSV", "export", "download")}${button("Export JSON backup", "backup", "download")}${button("Import backup", "import", "plus")}</div><input id="backup-file" type="file" accept="application/json,.json" hidden><div class="rule"><div><strong>${mode === "demo" ? "Demo workspace" : "Personal workspace"}</strong><small>Sample and personal data are stored separately.</small></div>${button(mode === "demo" ? "Use personal" : "View demo", "toggle-mode")}</div>${button("Reset this workspace", "reset", "trash", "danger")}`)}</div><div class="stack">${panel(
+    "Quote checks & market alerts",
+    `<form id="settings-form">${
+      provider === "alphavantage"
+        ? '<label>Quote refresh<input value="Every 24 hours (locked)" disabled></label>'
+        : select(
+            "While this app is open",
+            "refresh",
+            [
+              ["manual", "Manual refresh only"],
+              ["60", "Check every minute"],
+              ["300", "Check every 5 minutes"],
+              ["900", "Check every 15 minutes"],
+            ],
+            state.settings.refresh,
+          )
+    }${amount("Large fall threshold (%)", "crashPercent", state.settings.crashPercent, 'max="100"')}<label style="margin:10px 0 20px"><input type="checkbox" name="monthlyInsights" ${state.settings.monthlyInsights ? "checked" : ""}> Show monthly spending insights</label><button type="submit" class="primary">Save preferences</button></form><p class="note">Large-fall alerts use the daily movement of your followed stocks, not a market-wide crash feed. Automatic checks pause when you close the page.</p>`,
   )}${panel("Stock price alerts", `<p class="note">Get an in-app notification when a fetched quote reaches your threshold. An alert describes a condition; it does not recommend or execute a trade.</p>${state.alerts.map((a) => `<div class="rule"><div><strong>${esc(a.symbol)} ${a.direction === "above" ? "≥" : "≤"} ${money(a.price, "USD")}</strong><small>${a.triggered ? "Triggered · edit to re-arm" : "Armed for next quote check"}</small></div><div>${button("", "alert", "edit", "quiet", `data-id="${a.id}" aria-label="Edit alert"`)}${button("", "delete-alert", "trash", "quiet danger", `data-id="${a.id}" aria-label="Delete alert"`)}</div></div>`).join("")}<div style="margin-top:15px">${button("Add price alert", "alert", "plus")}</div>`)}${panel("Coming later", `<p class="note">Bank linking, cloud sync, background notification delivery, configurable news sensitivity, a complete Top 100 feed and financial-statement history are planned integrations.</p>`)}</div></div>`;
 }
 const pages = {
@@ -850,18 +883,51 @@ function bindLocalForms() {
   });
   bind("#fx-form", convert);
   bind("#provider-form", async (f) => {
-    apiKey = formValues(f).key.trim();
-    f.reset();
-    toast("Connecting to Finnhub…");
-    await refreshQuotes();
-    setupPolling();
+    const v = formValues(f);
+    if (!window.desktop?.market) {
+      toast(
+        "Market connections are available in the desktop app. Open TMA-Finance.exe.",
+      );
+      return;
+    }
+    try {
+      const source = v.connection === "shared" ? "shared" : "personal";
+      const selected = source === "shared" ? "alphavantage" : v.connection;
+      const status = await window.desktop.market({
+        action: source === "personal" && v.key.trim() ? "connect" : "status",
+        source,
+        provider: selected,
+        key: source === "personal" ? v.key.trim() : undefined,
+      });
+      f.reset();
+      provider = selected;
+      marketSource = source;
+      state.settings.marketSource = source;
+      providerConnected = status.configured;
+      state.settings.provider = provider;
+      save();
+      setupPolling();
+      if (!providerConnected) {
+        render();
+        toast(
+          marketSource === "shared"
+            ? "Shared Alpha Vantage is awaiting backend setup. Choose a personal key to connect now."
+            : "Enter a key for " + providerName() + ".",
+        );
+        return;
+      }
+      toast("Checking " + providerName() + "…");
+      await refreshQuotes();
+    } catch (e) {
+      toast(e.message);
+    }
     render();
   });
   bind("#settings-form", (f) => {
     const v = formValues(f);
     state.settings = {
       ...state.settings,
-      refresh: v.refresh,
+      refresh: v.refresh || state.settings.refresh,
       crashPercent: +v.crashPercent,
       monthlyInsights: !!v.monthlyInsights,
     };
@@ -876,7 +942,7 @@ function bindLocalForms() {
     marketSector = v.sector;
     marketSort = v.sort;
     render();
-    if (apiKey && marketFilter) await searchStocks(marketFilter);
+    if (providerConnected && marketFilter) await searchStocks(marketFilter);
   });
   const monthInput = $("#month-select");
   if (monthInput)
@@ -901,6 +967,9 @@ $("#modal").addEventListener("submit", (e) => {
     v = formValues(form),
     id = v.id || uid();
   switch (form.dataset.form) {
+    case "personal-profile":
+      state.profile = { name: v.name.trim(), email: v.email.trim() };
+      break;
     case "expense":
       upsert(state.transactions, {
         id,
@@ -1007,6 +1076,14 @@ document.addEventListener("click", async (e) => {
     case "close-modal":
       $("#modal").close();
       break;
+    case "edit-profile":
+      openModal(
+        "Your profile",
+        "Personal details stored on this device. This does not sign in to a bank or an online account.",
+        `${field("Display name", "name", state.profile?.name || "", "text", 'maxlength="80"')}${field("Email (optional)", "email", state.profile?.email || "", "email", 'maxlength="254"')}`,
+        "personal-profile",
+      );
+      break;
     case "expense":
       editExpense(id);
       break;
@@ -1076,7 +1153,7 @@ document.addEventListener("click", async (e) => {
           "type",
           [
             ["price", "Latest price"],
-            ["chart", "5-year price history"],
+            ["chart", "Price history"],
           ],
           "price",
         )}`,
@@ -1149,7 +1226,13 @@ document.addEventListener("click", async (e) => {
       } else $("#backup-file").click();
       break;
     case "disconnect":
-      apiKey = "";
+      if (window.desktop?.market)
+        await window.desktop.market({
+          action: "disconnect",
+          provider,
+          source: marketSource,
+        });
+      providerConnected = false;
       setupPolling();
       render();
       toast("Provider disconnected.");
@@ -1490,14 +1573,36 @@ async function fetchJson(url, headers = {}) {
   return data;
 }
 async function api(path, params = {}) {
-  if (!apiKey) throw Error("Connect a Finnhub API key in Settings first.");
-  const url = new URL("https://finnhub.io/api/v1/" + path);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  return fetchJson(url, { "X-Finnhub-Token": apiKey });
+  if (!window.desktop?.market)
+    throw Error("Open the desktop app to connect to market data.");
+  if (!providerConnected)
+    throw Error("Connect " + providerName() + " in Settings first.");
+  return window.desktop.market({
+    action: "request",
+    source: marketSource,
+    provider,
+    operation: path,
+    params,
+  });
+}
+async function restoreProvider() {
+  if (!window.desktop?.market) return;
+  try {
+    const status = await window.desktop.market({
+      action: "status",
+      provider,
+      source: marketSource,
+    });
+    providerConnected = status.configured;
+    setupPolling();
+    render();
+  } catch {
+    providerConnected = false;
+  }
 }
 async function refreshQuotes() {
-  if (!apiKey) {
-    toast("Connect Finnhub in Settings to refresh quotes.");
+  if (!providerConnected) {
+    toast("Connect a provider in Settings to refresh quotes.");
     return;
   }
   if (refreshing) return;
@@ -1513,11 +1618,15 @@ async function refreshQuotes() {
   ];
   if (!symbols.length) symbols.push("AAPL");
   const targetState = state;
+  const requestProvider = provider;
+  const requestSource = marketSource;
   let loaded = 0,
     error = "";
-  for (const sym of symbols.slice(0, 25)) {
+  for (const sym of symbols.slice(0, provider === "alphavantage" ? 5 : 25)) {
     try {
+      if (provider !== requestProvider || marketSource !== requestSource) break;
       const q = await api("quote", { symbol: sym });
+      if (provider !== requestProvider || marketSource !== requestSource) break;
       if (!Number.isFinite(q.c) || q.c <= 0)
         throw Error("No quote returned for " + sym);
       if (state !== targetState) break;
@@ -1533,6 +1642,7 @@ async function refreshQuotes() {
         marketAt: q.t,
         demo: false,
         manual: false,
+        providerName: providerName(),
       };
       loaded++;
     } catch (e) {
@@ -1546,7 +1656,11 @@ async function refreshQuotes() {
   }
   refreshing = false;
   render();
-  toast(loaded + " quotes updated." + (error ? " " + error : ""));
+  toast(
+    error && !loaded
+      ? "Connection failed: " + error
+      : loaded + " quotes updated." + (error ? " " + error : ""),
+  );
 }
 function evaluateAlerts() {
   for (const a of state.alerts) {
@@ -1587,12 +1701,17 @@ function evaluateAlerts() {
 }
 function setupPolling() {
   clearInterval(pollTimer);
-  if (apiKey && state.settings.refresh !== "manual")
+  if (
+    providerConnected &&
+    (provider === "alphavantage" || state.settings.refresh !== "manual")
+  )
     pollTimer = setInterval(
       () => {
         if (!document.hidden) refreshQuotes();
       },
-      Number(state.settings.refresh) * 1000,
+      provider === "alphavantage"
+        ? 86400000
+        : Number(state.settings.refresh) * 1000,
     );
 }
 async function loadProfile() {
@@ -1711,3 +1830,5 @@ async function convert(form) {
 window.desktop?.onExport(() => exportCsv());
 save();
 render();
+
+restoreProvider();

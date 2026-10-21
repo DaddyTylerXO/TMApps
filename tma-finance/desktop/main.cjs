@@ -12,6 +12,8 @@ const {
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { writeFile, readFile } = require("node:fs/promises");
+const { createMarketClient } = require("./market.cjs");
+const market = createMarketClient();
 app.setName("TMA-Finance");
 nativeTheme.themeSource = "dark";
 // Separate storage for a disposable QA run, never touching the personal profile.
@@ -146,6 +148,41 @@ app.whenReady().then(() => {
     if (result.canceled) return false;
     await writeFile(result.filePath, payload.data, "utf8");
     return true;
+  });
+  ipcMain.handle("desktop:market", async (event, payload) => {
+    if (!trusted(event))
+      return { ok: false, error: "Untrusted market request." };
+    try {
+      if (!payload || JSON.stringify(payload).length > 2000)
+        throw Error("Invalid market request.");
+      let data;
+      if (payload.source === "shared") {
+        if (payload.provider !== "alphavantage")
+          throw Error("Shared access supports Alpha Vantage only.");
+        if (payload.action === "request")
+          throw Error(
+            "Shared Alpha Vantage is awaiting backend setup. Choose a personal key in Settings to connect now.",
+          );
+        if (!["status", "disconnect"].includes(payload.action))
+          throw Error("Shared access does not accept personal keys.");
+        data = { configured: false, source: "shared", pending: true };
+      } else if (payload.action === "status")
+        data = market.status(payload.provider);
+      else if (payload.action === "connect")
+        data = market.connect(payload.provider, payload.key);
+      else if (payload.action === "disconnect")
+        data = market.disconnect(payload.provider);
+      else if (payload.action === "request")
+        data = await market.request(
+          payload.provider,
+          payload.operation,
+          payload.params,
+        );
+      else throw Error("Unknown market action.");
+      return { ok: true, data };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   });
   ipcMain.handle("desktop:open-backup", async (event) => {
     if (!trusted(event)) throw Error("Untrusted request");
