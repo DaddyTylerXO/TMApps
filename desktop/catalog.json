@@ -204,7 +204,7 @@
       "category": "LIBRARIES",
       "description": "Windows development preview: offline documents, checklists, spreadsheets, slides and PDF tools. Unsigned; advanced compatibility and performance work remain pending.",
       "version": "0.2.0-dev.1",
-      "updatedAt": "2026-10-22T12:00:00Z",
+      "updatedAt": "2026-10-22T00:10:11Z",
       "branch": "TMA-Libraries",
       "executable": "TMA-Libraries.exe",
       "platforms": [
