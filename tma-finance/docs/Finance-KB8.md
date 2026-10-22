@@ -1,6 +1,6 @@
 # Finance-KB8: Marketstack personal end of day setup
 
-Applies to TMA-Finance 0.1.3. Provider plans checked 21 October 2026.
+Applies to TMA-Finance 0.1.4. Sources checked 22 October 2026.
 
 ## Set up
 

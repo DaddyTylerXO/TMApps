@@ -1,3 +1,13 @@
+import {
+  providerCatalog,
+  jobLabels,
+  refreshOptions,
+  connection,
+  migrateProviders,
+  validateProviderPreferences,
+  createProviderController,
+} from "./providers.js";
+import { apiFeatures, appCoverage, providerOffers } from "./api-info.js";
 import { kbArticles } from "./kb.js";
 import {
   monthly,
@@ -94,14 +104,7 @@ const amount = (label, name, value = "", extra = "") =>
 let mode = "personal";
 let helpArticleId = "",
   kbQuery = "";
-const providerName = () =>
-  ({
-    alphavantage: "Alpha Vantage",
-    finnhub: "Finnhub",
-    twelvedata: "Twelve Data",
-    fmp: "Financial Modeling Prep",
-    marketstack: "Marketstack",
-  })[provider] || "Market provider";
+const providerName = (id = providers.route("quotes")) => connection(id).name;
 const profileName = () =>
   mode === "demo"
     ? "Demo workspace"
@@ -139,13 +142,40 @@ let state = readState(),
       : "alphavantage",
   marketSource = state.settings.marketSource || "shared",
   providerConnected = false,
-  pollTimer = null,
   newsItems = [],
   newsLoaded = false,
   newsError = "",
   profileData = {},
   histories = {},
   refreshing = false;
+const quoteBusy = new Set();
+let yahooResult = null,
+  yahooError = "",
+  yahooBusy = false,
+  streamActive = false,
+  streamTicks = {};
+migrateProviders(state.settings);
+const providers = createProviderController({
+  getSettings: () => state.settings,
+  transport: (payload) => {
+    if (!window.desktop?.market)
+      throw Error("Open the desktop app to connect market data.");
+    return window.desktop.market(payload);
+  },
+  onTick: async (id, jobs) => {
+    if (document.hidden) return;
+    if (jobs.includes("quotes")) await refreshQuotes(id, true);
+    if (jobs.includes("news")) await loadNews(false, id, true);
+  },
+});
+function syncQuoteConnection() {
+  const id = providers.route("quotes"),
+    c = connection(id);
+  provider = c.provider;
+  marketSource = c.source;
+  providerConnected = providers.status(id).configured;
+}
+
 let taxValues = { revenue: 50000, expenses: 8000, region: "rest" },
   fxResult = null,
   fxValues = { amount: 1000, from: "GBP", to: "USD" },
@@ -209,10 +239,15 @@ const nav = [
       ["markets", "Explore markets", "globe"],
       ["watchlist", "Watchlist", "star"],
       ["news", "Market news", "news"],
+      ["yahoo", "Yahoo research", "chart"],
     ],
   ],
 ];
 const titles = {
+  yahoo: [
+    "Yahoo personal research",
+    "Market context, company research and personal streaming.",
+  ],
   help: [
     "Help and KB Library",
     "Provider setup, data coverage and practical guides.",
@@ -726,39 +761,235 @@ function monthlyInsight() {
     cur = monthStats(state, month);
   return `This month: ${money(cur.expenses)} in expenses, including ${money(cur.recurring)} in subscription equivalents. ${prev.expenses ? "That’s " + money(Math.abs(cur.expenses - prev.expenses)) + " " + (cur.expenses >= prev.expenses ? "more" : "less") + " than the previous month." : "Add a previous month to compare your spending."}`;
 }
+function infoHelp(label, description) {
+  return `${esc(label)} <button type="button" class="help" title="${esc(description)}" aria-label="Explain ${esc(label)}" data-action="explain" data-title="${esc(label)}" data-text="${esc(description)}">?</button>`;
+}
+function apiInfoSheet() {
+  const heads = providerCatalog
+    .map(
+      (c) =>
+        `<th><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a></th>`,
+    )
+    .join("");
+  const row = (label, help, values) =>
+    `<tr><th>${infoHelp(label, help)}</th>${values.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`;
+  return `<p class="api-important"><strong>IMPORTANT</strong></p><p class="note">Free tiers have limits. Provider features may require paid plans and permission; availability is not a promise of free access. No shared keys are shipped and no paid plan is purchased. Shared Alpha Vantage is awaiting setup. Yahoo is personal use only. Checked 22 October 2026.</p><div class="table-wrap api-comparison"><table><thead><tr><th>Feature</th>${heads}</tr></thead><tbody>${row(
+    "Data type",
+    "How fresh the data is; end-of-day prices are not live quotes.",
+    providerCatalog.map((c) => c.type),
+  )}${row(
+    "History in years",
+    "The provider may offer more history than this app loads. Retention varies by interval, ticker and plan.",
+    providerCatalog.map((c) => c.history),
+  )}${row(
+    "Calls and usage",
+    "One action can make several requests. Limits belong to the key or account across all apps and users.",
+    providerCatalog.map((c) => c.limit),
+  )}${apiFeatures
+    .map(([name, description], i) =>
+      row(
+        name,
+        description,
+        providerCatalog.map(
+          (c) =>
+            "App: " +
+            appCoverage[c.id][i] +
+            ". Provider: " +
+            providerOffers[c.id][i],
+        ),
+      ),
+    )
+    .join(
+      "",
+    )}</tbody></table></div><p class="note">Each feature cell separates data connected in this app from the provider catalogue. Not documented means unverified, not proof that a provider can never offer it. Full provider catalogues and paid features are linked in the column headings. A price quote is not necessarily a bid/ask or individual trade feed. Unconnected features are not silently requested.</p>`;
+}
+function providerConnectionsUI() {
+  return (
+    `<p class="note">Connect any number of personal providers. Connections do not change job assignments or trigger other providers. Keys stay in memory for this app session. Yahoo needs no key.</p>` +
+    providerCatalog
+      .map(
+        (c) =>
+          `<form id="provider-${c.id}" class="provider-card"><strong>${esc(c.name)}</strong><p class="note">${providers.status(c.id).configured ? "Connected for this session" : c.id === "shared" ? "Awaiting backend setup" : "Disconnected"}</p>${c.source === "personal" && c.id !== "yahoo" ? `<label>Personal API key<input name="key" type="password" autocomplete="off" placeholder="Leave blank to reuse this session's key"></label>` : ""}<div class="toolbar"><button class="primary" type="submit">${c.id === "yahoo" ? "Enable personal Yahoo" : c.id === "shared" ? "Check shared service" : "Connect provider"}</button>${button("Disconnect", "disconnect", "", "", `data-id="${c.id}"`)}${button("Refresh this provider's quotes", "provider-refresh", "repeat", "", `data-id="${c.id}"`)}</div></form>`,
+      )
+      .join("") +
+    `<p class="note">Yahoo is an unofficial personal research source with no guaranteed availability or rate allowance. Personal provider costs and account entitlements remain your responsibility.</p>` +
+    button("Add manual USD quote", "manual-quote", "plus") +
+    infoHelp(
+      "Manual USD quote",
+      "Enter a price yourself without calling any market provider.",
+    )
+  );
+}
+function providerAssignmentsUI() {
+  return `<form id="provider-jobs">${Object.entries(jobLabels)
+    .map(([job, label]) =>
+      select(
+        label,
+        job,
+        providerCatalog
+          .filter((c) => c.jobs.includes(job))
+          .map((c) => [c.id, c.name]),
+        state.settings.assignments[job],
+      ),
+    )
+    .join(
+      "",
+    )}<button class="primary" type="submit">Save provider jobs</button></form><p class="note">Each task uses only its assigned connection. A disconnected or limited provider shows an error; there is no automatic fallback. Quotes from other providers are cached separately.</p>`;
+}
+function providerSchedulesUI() {
+  return (
+    providerCatalog
+      .map(
+        (c) =>
+          `<div class="rule"><div><strong>${esc(c.name)}</strong><small>${c.provider === "alphavantage" ? "Every 24 hours (locked)" : "Only scheduled quote and news jobs run automatically."}</small></div>${c.provider === "alphavantage" ? '<input value="Every 24 hours (locked)" disabled aria-label="Alpha Vantage refresh locked">' : select("Refresh for " + c.name, "refresh_" + c.id, refreshOptions, state.settings.providerRefresh[c.id])}</div>`,
+      )
+      .join("") +
+    `<p class="note">Each provider has its own timer. Schedules run while the app is open and visible. Search, company data and history load on demand. Five checks per day means one check every 4 hours 48 minutes of open time, not five individual API requests; each ticker and dataset can use quota.</p>`
+  );
+}
+function researchTable(rows) {
+  if (!Array.isArray(rows) || !rows.length)
+    return '<p class="note">No data returned.</p>';
+  const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].slice(0, 12);
+  return `<div class="table-wrap"><table><thead><tr>${keys.map((k) => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${rows
+    .slice(0, 100)
+    .map(
+      (r) =>
+        `<tr>${keys.map((k) => `<td>${esc(r[k] ?? "Unavailable")}</td>`).join("")}</tr>`,
+    )
+    .join("")}</tbody></table></div>`;
+}
+function researchRows(value, prefix = "") {
+  return Object.entries(value || {})
+    .flatMap(([key, v]) =>
+      v && typeof v === "object" && !Array.isArray(v)
+        ? researchRows(v, prefix + key + " / ")
+        : [
+            {
+              Field: prefix + key,
+              Value: Array.isArray(v) ? v.length + " records" : v,
+            },
+          ],
+    )
+    .slice(0, 60);
+}
+function yahooResearch() {
+  return panel(
+    "Yahoo personal research",
+    `<p class="note">No API key or subscription is purchased. Yahoo availability, delays and personal-use terms apply. Streaming uses extra CPU and network, is manually started, and stops after one hour or when you quit.</p><form id="yahoo-research">${select(
+      "Research task",
+      "operation",
+      [
+        ["batch", "Quotes for up to five tickers"],
+        ["download", "One year of daily history and CSV export"],
+        ["market", "Market summary and status"],
+        ["sector", "Sector overview"],
+        ["industry", "Industry overview"],
+        ["screener", "US equity screener"],
+        ["financials", "Annual financial statements"],
+        ["actions", "Dividends and stock splits"],
+        ["stream", "Live stream"],
+        ["async-stream", "Live stream using async connection"],
+      ],
+      "batch",
+    )}${field("Tickers separated by spaces (up to 5)", "symbols", "AAPL MSFT", "text", 'maxlength="90"')}${select("Market region", "region", ["US", "GB", "DE", "FR", "JP"], "US")}${field("Sector or industry key", "key", "technology", "text", 'maxlength="60"')}${amount("Minimum market cap (USD)", "minMarketCap", 1000000000)}${amount("Maximum P/E", "maxPE", 50)}<button type="submit" class="primary" ${yahooBusy ? "disabled" : ""}>${yahooBusy ? "Loading..." : "Load Yahoo data"}</button></form>${streamActive ? button("Stop Yahoo stream", "yahoo-stop", "close") : ""}${yahooError ? `<p class="negative">${esc(yahooError)}</p>` : ""}<div id="yahoo-stream">${Object.keys(streamTicks).length ? researchTable(Object.values(streamTicks).map((t) => ({ Ticker: t.symbol, Price: t.price, Currency: t.currency, Received: new Date(t.received).toLocaleTimeString() }))) : ""}</div>${yahooResult?.operation === "download" ? button("Export personal history CSV", "yahoo-export", "download") : ""}${renderYahooResult()}`,
+  );
+}
+function renderYahooResult() {
+  if (!yahooResult) return "";
+  const { operation, data } = yahooResult;
+  if (operation === "batch")
+    return researchTable(
+      data.map((q) => ({
+        Ticker: q.symbol,
+        Price: q.c,
+        "Daily change %": q.dp,
+        "Market timestamp": new Date(q.t * 1000).toLocaleString(),
+      })),
+    );
+  if (operation === "download")
+    return data
+      .map((item) => panel(esc(item.symbol), researchTable(item.history)))
+      .join("");
+  if (operation === "financials")
+    return data
+      .map((item) => panel(esc(item.name), researchTable(item.rows)))
+      .join("");
+  if (operation === "screener")
+    return researchTable(
+      data.map((q) => ({
+        Ticker: q.symbol,
+        Name: q.shortName || q.longName,
+        Price: q.regularMarketPrice,
+        "Market cap": q.marketCap,
+        "Trailing P/E": q.trailingPE,
+      })),
+    );
+  if (operation === "actions") return researchTable(data);
+  if (operation === "sector" || operation === "industry")
+    return panel(
+      esc(data.name || "Overview"),
+      researchTable(researchRows(data.overview)) +
+        researchTable(data.companies),
+    );
+  return researchTable(researchRows(data));
+}
+async function runYahooResearch(f) {
+  const v = formValues(f);
+  const targetStatus = providers.status("yahoo"),
+    targetState = state;
+  yahooBusy = true;
+  yahooError = "";
+  render();
+  try {
+    if (!providers.status("yahoo").configured)
+      throw Error("Enable Yahoo personal access in Settings first.");
+    const symbols = v.symbols
+        .toUpperCase()
+        .trim()
+        .split(/[\s,]+/),
+      operation = v.operation;
+    if (operation === "stream" || operation === "async-stream") {
+      await window.desktop.market({
+        action: "stream-start",
+        provider: "yahoo",
+        source: "personal",
+        params: { symbols, asyncMode: operation === "async-stream" },
+      });
+      streamActive = true;
+    } else {
+      const params = {
+        symbols,
+        region: v.region,
+        key: v.key,
+        minMarketCap: +v.minMarketCap,
+        maxPE: +v.maxPE,
+        symbol: symbols[0],
+      };
+      const data = await window.desktop.market({
+        action: "request",
+        provider: "yahoo",
+        source: "personal",
+        operation,
+        params,
+      });
+      if (state === targetState && providers.status("yahoo") === targetStatus)
+        yahooResult = { operation, data };
+    }
+  } catch (e) {
+    yahooError = e.message;
+  } finally {
+    yahooBusy = false;
+    render();
+  }
+}
 function settings() {
   return `<div class="two-col"><div class="stack">${panel(
     "Your market connection",
-    `<form id="provider-form">${select(
-      "Market data provider",
-      "connection",
-      [
-        ["shared", "Alpha Vantage - shared (awaiting backend setup)"],
-        ["alphavantage", "Alpha Vantage - personal key"],
-        ["finnhub", "Finnhub - personal key"],
-        ["twelvedata", "Twelve Data - personal key (quotes only)"],
-        ["fmp", "Financial Modeling Prep - personal key (quotes only)"],
-        ["marketstack", "Marketstack - personal key (end-of-day quotes only)"],
-      ],
-      marketSource === "shared" ? "shared" : provider,
-    )}<p class="note">${providerConnected ? providerName() + " is configured." : "Shared Alpha Vantage awaits backend setup. Choose a personal connection to use your own key."}</p><label>Personal API key (session only; leave blank for shared)<input name="key" type="password" autocomplete="off" placeholder="Enter the selected provider’s key"></label><div class="toolbar"><button type="submit" class="primary">Connect provider</button>${button("Disconnect", "disconnect")}</div></form><div class="info-box">Providers offer limited free tiers and paid datasets; users must check their own plan and permissions. Twelve Data, Financial Modeling Prep and Marketstack currently support quote refresh only in this app; search, history, company data and news use Alpha Vantage or Finnhub. These additional personal providers default to manual refresh. Marketstack is end-of-day with a small monthly allowance. Alpha Vantage’s standard free tier allows 25 requests per day; standard quotes are daily, not streaming. Alpha Vantage quote refresh is locked to 24 hours. Repeated refreshes reuse the running app's quote cache. The 25-request allowance is per key, shared across everyone using it; searches and company data also count. Finnhub may restrict history and other datasets. No paid plan is purchased or enabled by this app.</div><p class="note">Keys are passed to the desktop connection in memory, excluded from backups and never bundled with the app. Shared Alpha Vantage is the default selection, awaiting a hosted service and provider permission. No shared key is included in this build.</p><div class="link-row"><a href="https://finnhub.io/" target="_blank" rel="noopener">Finnhub</a><a href="https://www.alphavantage.co/support/" target="_blank" rel="noopener">Alpha Vantage free tier</a></div>${button("Add manual USD quote", "manual-quote", "plus")}`,
-  )}${panel("Data & workspace", `<p class="note">Finance data is stored on this device only. This version has no cloud sync or bank access. Removing the app’s data folder removes local records.</p><div class="toolbar">${button("Export finance CSV", "export", "download")}${button("Export JSON backup", "backup", "download")}${button("Import backup", "import", "plus")}</div><input id="backup-file" type="file" accept="application/json,.json" hidden><div class="rule"><div><strong>${mode === "demo" ? "Demo workspace" : "Personal workspace"}</strong><small>Sample and personal data are stored separately.</small></div>${button(mode === "demo" ? "Use personal" : "View demo", "toggle-mode")}</div>${button("Reset this workspace", "reset", "trash", "danger")}`)}</div><div class="stack">${panel(
+    providerConnectionsUI(),
+  )}${panel("Data & workspace", `<p class="note">Finance data is stored on this device only. This version has no cloud sync or bank access. Removing the app’s data folder removes local records.</p><div class="toolbar">${button("Export finance CSV", "export", "download")}${button("Export JSON backup", "backup", "download")}${button("Import backup", "import", "plus")}</div><input id="backup-file" type="file" accept="application/json,.json" hidden><div class="rule"><div><strong>${mode === "demo" ? "Demo workspace" : "Personal workspace"}</strong><small>Sample and personal data are stored separately.</small></div>${button(mode === "demo" ? "Use personal" : "View demo", "toggle-mode")}</div>${button("Reset this workspace", "reset", "trash", "danger")}`)}</div><div class="stack">${panel("API information sheet", apiInfoSheet())}${panel("Provider jobs", providerAssignmentsUI())}${panel(
     "Quote checks & market alerts",
-    `<form id="settings-form">${
-      provider === "alphavantage"
-        ? '<label>Quote refresh<input value="Every 24 hours (locked)" disabled></label>'
-        : select(
-            "While this app is open",
-            "refresh",
-            [
-              ["manual", "Manual refresh only"],
-              ["60", "Check every minute"],
-              ["300", "Check every 5 minutes"],
-              ["900", "Check every 15 minutes"],
-            ],
-            state.settings.refresh,
-          )
-    }${amount("Large fall threshold (%)", "crashPercent", state.settings.crashPercent, 'max="100"')}<label style="margin:10px 0 20px"><input type="checkbox" name="monthlyInsights" ${state.settings.monthlyInsights ? "checked" : ""}> Show monthly spending insights</label><button type="submit" class="primary">Save preferences</button></form><p class="note">Large-fall alerts use the daily movement of your followed stocks, not a market-wide crash feed. Automatic checks pause when you close the page.</p>`,
+    `<form id="settings-form">${providerSchedulesUI()}${amount("Large fall threshold (%)", "crashPercent", state.settings.crashPercent, 'max="100"')}<label style="margin:10px 0 20px"><input type="checkbox" name="monthlyInsights" ${state.settings.monthlyInsights ? "checked" : ""}> Show monthly spending insights</label><button type="submit" class="primary">Save preferences</button></form><p class="note">Large-fall alerts use the daily movement of your followed stocks, not a market-wide crash feed. Automatic checks pause when you close the page.</p>`,
   )}${panel("Stock price alerts", `<p class="note">Get an in-app notification when a fetched quote reaches your threshold. An alert describes a condition; it does not recommend or execute a trade.</p>${state.alerts.map((a) => `<div class="rule"><div><strong>${esc(a.symbol)} ${a.direction === "above" ? "≥" : "≤"} ${money(a.price, "USD")}</strong><small>${a.triggered ? "Triggered · edit to re-arm" : "Armed for next quote check"}</small></div><div>${button("", "alert", "edit", "quiet", `data-id="${a.id}" aria-label="Edit alert"`)}${button("", "delete-alert", "trash", "quiet danger", `data-id="${a.id}" aria-label="Delete alert"`)}</div></div>`).join("")}<div style="margin-top:15px">${button("Add price alert", "alert", "plus")}</div>`)}${panel("Coming later", `<p class="note">Bank linking, cloud sync, background notification delivery, configurable news sensitivity, a complete Top 100 feed and financial-statement history are planned integrations.</p>`)}</div></div>`;
 }
 function helpPage() {
@@ -779,7 +1010,7 @@ function helpPage() {
               `<p><a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)} ↗</a></p>`,
           )
           .join("") +
-        `<p class="note">Applies to version 0.1.3. Provider information checked 21 October 2026.</p>`,
+        `<p class="note">Applies to version 0.1.4. Provider information checked 22 October 2026.</p>`,
     );
   const matches = kbArticles.filter((a) =>
     JSON.stringify(a).toLowerCase().includes(kbQuery.toLowerCase()),
@@ -799,6 +1030,7 @@ function helpPage() {
   );
 }
 const pages = {
+  yahoo: yahooResearch,
   help: helpPage,
   dashboard,
   budget,
@@ -941,54 +1173,69 @@ function bindLocalForms() {
     render();
   });
   bind("#fx-form", convert);
-  bind("#provider-form", async (f) => {
-    const v = formValues(f);
-    if (!window.desktop?.market) {
-      toast(
-        "Market connections are available in the desktop app. Open TMA-Finance.exe.",
-      );
-      return;
-    }
-    try {
-      const source = v.connection === "shared" ? "shared" : "personal";
-      const selected = source === "shared" ? "alphavantage" : v.connection;
-      const status = await window.desktop.market({
-        action: source === "personal" && v.key.trim() ? "connect" : "status",
-        source,
-        provider: selected,
-        key: source === "personal" ? v.key.trim() : undefined,
-      });
-      f.reset();
-      provider = selected;
-      marketSource = source;
-      if (["twelvedata", "fmp", "marketstack"].includes(selected))
-        state.settings.refresh = "manual";
-      state.settings.marketSource = source;
-      providerConnected = status.configured;
-      state.settings.provider = provider;
-      save();
-      setupPolling();
-      if (!providerConnected) {
+  for (const c of providerCatalog)
+    bind("#provider-" + c.id, async (f) => {
+      const v = formValues(f);
+      try {
+        await providers.connect(c.id, (v.key || "").trim());
+        f.reset();
+        syncQuoteConnection();
+        save();
         render();
         toast(
-          marketSource === "shared"
-            ? "Shared Alpha Vantage is awaiting backend setup. Choose a personal key to connect now."
-            : "Enter a key for " + providerName() + ".",
+          providers.status(c.id).configured
+            ? c.name + " connected. Other providers are unchanged."
+            : "Shared Alpha Vantage is awaiting backend setup.",
         );
-        return;
+      } catch (e) {
+        toast(e.message);
       }
-      toast("Checking " + providerName() + "…");
-      await refreshQuotes();
+    });
+  bind("#provider-jobs", (f) => {
+    const v = formValues(f),
+      old = { ...state.settings.assignments };
+    state.settings.assignments = Object.fromEntries(
+      Object.keys(jobLabels).map((job) => [job, v[job]]),
+    );
+    try {
+      validateProviderPreferences(state.settings);
     } catch (e) {
+      state.settings.assignments = old;
       toast(e.message);
+      return;
     }
+    if (old.quotes !== v.quotes) {
+      state.quotes = Object.fromEntries(
+        Object.entries(state.quotes).filter(([, q]) => q.manual || q.demo),
+      );
+      Object.assign(state.quotes, state.providerQuotes?.[v.quotes] || {});
+    }
+    if (old.profile !== v.profile) profileData = {};
+    if (old.history !== v.history) histories = {};
+    if (old.news !== v.news) {
+      newsItems = [];
+      newsLoaded = false;
+    }
+    syncQuoteConnection();
+    setupPolling();
+    save();
     render();
+    toast("Provider jobs saved. No requests were triggered.");
   });
+  bind("#yahoo-research", runYahooResearch);
   bind("#settings-form", (f) => {
     const v = formValues(f);
     state.settings = {
       ...state.settings,
-      refresh: v.refresh || state.settings.refresh,
+      refresh: state.settings.refresh,
+      providerRefresh: Object.fromEntries(
+        providerCatalog.map((c) => [
+          c.id,
+          c.provider === "alphavantage"
+            ? "86400"
+            : v["refresh_" + c.id] || "manual",
+        ]),
+      ),
       crashPercent: +v.crashPercent,
       monthlyInsights: !!v.monthlyInsights,
     };
@@ -1003,7 +1250,8 @@ function bindLocalForms() {
     marketSector = v.sector;
     marketSort = v.sort;
     render();
-    if (providerConnected && marketFilter) await searchStocks(marketFilter);
+    if (providers.status(providers.route("search")).configured && marketFilter)
+      await searchStocks(marketFilter);
   });
   const monthInput = $("#month-select");
   if (monthInput)
@@ -1295,17 +1543,41 @@ document.addEventListener("click", async (e) => {
       } else $("#backup-file").click();
       break;
     case "disconnect":
-      if (window.desktop?.market)
-        await window.desktop.market({
-          action: "disconnect",
-          provider,
-          source: marketSource,
-        });
-      providerConnected = false;
-      setupPolling();
-      render();
-      toast("Provider disconnected.");
+      try {
+        await providers.disconnect(id || providers.route("quotes"));
+        syncQuoteConnection();
+        if (id === "yahoo") streamActive = false;
+        render();
+        toast("Selected provider disconnected.");
+      } catch (e) {
+        toast(e.message);
+      }
       break;
+    case "provider-refresh":
+      await refreshQuotes(id);
+      break;
+    case "yahoo-stop":
+      await window.desktop.market({
+        provider: "yahoo",
+        source: "personal",
+        action: "stream-stop",
+      });
+      streamActive = false;
+      render();
+      break;
+    case "yahoo-export":
+      if (yahooResult?.operation === "download")
+        await window.desktop.saveFile({
+          name: "yahoo-history.csv",
+          data: csv([
+            ["Ticker", "Date", "Close"],
+            ...yahooResult.data.flatMap((item) =>
+              item.history.map((row) => [item.symbol, row.date, row.close]),
+            ),
+          ]),
+        });
+      break;
+
     case "swap-fx":
       [fxValues.from, fxValues.to] = [fxValues.to, fxValues.from];
       fxResult = null;
@@ -1381,6 +1653,8 @@ function confirmAction(title, description, fn) {
 }
 function switchMode() {
   state = readState();
+  migrateProviders(state.settings);
+  syncQuoteConnection();
   histories = {};
   profileData = {};
   newsItems = [];
@@ -1597,9 +1871,14 @@ function validateBackup(s) {
     throw Error("Invalid preferences.");
   if (
     s.settings.provider != null &&
-    !["alphavantage", "finnhub", "twelvedata", "fmp", "marketstack"].includes(
-      s.settings.provider,
-    )
+    ![
+      "alphavantage",
+      "finnhub",
+      "twelvedata",
+      "fmp",
+      "marketstack",
+      "yahoo",
+    ].includes(s.settings.provider)
   )
     throw Error("Invalid market provider.");
   if (
@@ -1607,6 +1886,28 @@ function validateBackup(s) {
     !["shared", "personal"].includes(s.settings.marketSource)
   )
     throw Error("Invalid market connection.");
+  if (s.providerQuotes)
+    for (const [id, rows] of Object.entries(s.providerQuotes)) {
+      connection(id);
+      if (
+        !rows ||
+        typeof rows !== "object" ||
+        Array.isArray(rows) ||
+        !Object.entries(rows).every(
+          ([k, q]) =>
+            sym(k) &&
+            q &&
+            q.symbol === k &&
+            txt(q.name) &&
+            finite(q.price) &&
+            Number.isFinite(q.change) &&
+            finite(q.at),
+        )
+      )
+        throw Error("Invalid provider quote cache.");
+    }
+  migrateProviders(s.settings);
+  validateProviderPreferences(s.settings);
   return s;
 }
 async function importBackup(e) {
@@ -1653,41 +1954,32 @@ async function fetchJson(url, headers = {}) {
   if (data.error) throw Error(data.error);
   return data;
 }
-async function api(path, params = {}) {
-  if (!window.desktop?.market)
-    throw Error("Open the desktop app to connect to market data.");
-  if (!providerConnected)
-    throw Error("Connect " + providerName() + " in Settings first.");
-  return window.desktop.market({
-    action: "request",
-    source: marketSource,
-    provider,
-    operation: path,
-    params,
-  });
+const jobFor = (path) =>
+  path === "quote"
+    ? "quotes"
+    : path.includes("news")
+      ? "news"
+      : path === "search"
+        ? "search"
+        : path === "stock/candle"
+          ? "history"
+          : "profile";
+async function api(path, params = {}, explicit) {
+  return providers.request(jobFor(path), path, params, explicit);
 }
 async function restoreProvider() {
-  if (!window.desktop?.market) return;
-  try {
-    const status = await window.desktop.market({
-      action: "status",
-      provider,
-      source: marketSource,
-    });
-    providerConnected = status.configured;
-    setupPolling();
-    render();
-  } catch {
-    providerConnected = false;
-  }
+  await providers.restore();
+  syncQuoteConnection();
+  render();
 }
-async function refreshQuotes() {
-  if (!providerConnected) {
+async function refreshQuotes(id = providers.route("quotes"), silent = false) {
+  if (!providers.status(id).configured) {
     toast("Connect a provider in Settings to refresh quotes.");
     return;
   }
-  if (refreshing) return;
-  refreshing = true;
+  if (quoteBusy.has(id)) return;
+  quoteBusy.add(id);
+  refreshing = id === providers.route("quotes");
   render();
   const symbols = [
     ...new Set([
@@ -1699,19 +1991,23 @@ async function refreshQuotes() {
   ];
   if (!symbols.length) symbols.push("AAPL");
   const targetState = state;
-  const requestProvider = provider;
-  const requestSource = marketSource;
+  const targetAssignment = providers.route("quotes");
+  const targetStatus = providers.status(id);
+  targetState.providerQuotes ||= {};
+  targetState.providerQuotes[id] ||= {};
   let loaded = 0,
     error = "";
-  for (const sym of symbols.slice(0, provider === "finnhub" ? 25 : 5)) {
+  for (const sym of symbols.slice(0, id === "finnhub" ? 25 : 5)) {
     try {
-      if (provider !== requestProvider || marketSource !== requestSource) break;
-      const q = await api("quote", { symbol: sym });
-      if (provider !== requestProvider || marketSource !== requestSource) break;
+      if (providers.status(id) !== targetStatus || !targetStatus.configured)
+        break;
+      const q = await api("quote", { symbol: sym }, id);
+      if (providers.status(id) !== targetStatus || !targetStatus.configured)
+        break;
       if (!Number.isFinite(q.c) || q.c <= 0)
         throw Error("No quote returned for " + sym);
       if (state !== targetState) break;
-      targetState.quotes[sym] = {
+      const row = {
         ...targetState.quotes[sym],
         symbol: sym,
         name: companyName(sym),
@@ -1723,8 +2019,12 @@ async function refreshQuotes() {
         marketAt: q.t,
         demo: false,
         manual: false,
-        providerName: providerName(),
+        providerName: providerName(id),
+        connectionId: id,
       };
+      targetState.providerQuotes[id][sym] = row;
+      if (id === providers.route("quotes") && targetAssignment === id)
+        targetState.quotes[sym] = row;
       loaded++;
     } catch (e) {
       error = e.message;
@@ -1732,16 +2032,18 @@ async function refreshQuotes() {
     }
   }
   if (state === targetState) {
-    evaluateAlerts();
+    if (id === providers.route("quotes")) evaluateAlerts();
     save();
   }
-  refreshing = false;
+  quoteBusy.delete(id);
+  refreshing = quoteBusy.has(providers.route("quotes"));
   render();
-  toast(
-    error && !loaded
-      ? "Connection failed: " + error
-      : loaded + " quotes updated." + (error ? " " + error : ""),
-  );
+  if (!silent)
+    toast(
+      error && !loaded
+        ? "Connection failed: " + error
+        : loaded + " quotes updated." + (error ? " " + error : ""),
+    );
 }
 function evaluateAlerts() {
   for (const a of state.alerts) {
@@ -1781,28 +2083,25 @@ function evaluateAlerts() {
   state.notifications = state.notifications.slice(-100);
 }
 function setupPolling() {
-  clearInterval(pollTimer);
-  if (
-    providerConnected &&
-    (provider === "alphavantage" || state.settings.refresh !== "manual")
-  )
-    pollTimer = setInterval(
-      () => {
-        if (!document.hidden) refreshQuotes();
-      },
-      provider === "alphavantage"
-        ? 86400000
-        : Number(state.settings.refresh) * 1000,
-    );
+  providers.schedule();
 }
 async function loadProfile() {
-  const target = symbol;
+  const target = symbol,
+    targetState = state,
+    id = providers.route("profile"),
+    targetStatus = providers.status(id);
   toast("Loading company data…");
   try {
-    const p = await api("stock/profile2", { symbol: target });
+    const p = await api("stock/profile2", { symbol: target }, id);
     if (!p.name) throw Error("No company profile returned.");
     if (p.currency && p.currency !== "USD")
       throw Error("This version supports USD-listed equities only.");
+    if (
+      state !== targetState ||
+      providers.route("profile") !== id ||
+      providers.status(id) !== targetStatus
+    )
+      return;
     profileData[target] = p;
     if (quote(target)) {
       state.quotes[target].name = p.name;
@@ -1811,7 +2110,17 @@ async function loadProfile() {
     }
     let extraError = "";
     try {
-      const data = await api("stock/metric", { symbol: target, metric: "all" });
+      const data = await api(
+        "stock/metric",
+        { symbol: target, metric: "all" },
+        id,
+      );
+      if (
+        state !== targetState ||
+        providers.route("profile") !== id ||
+        providers.status(id) !== targetStatus
+      )
+        return;
       profileData[target].metric = data.metric || {};
     } catch (e) {
       extraError = " Fundamentals: " + e.message;
@@ -1823,26 +2132,41 @@ async function loadProfile() {
   }
 }
 async function loadHistory() {
-  const target = symbol;
+  const target = symbol,
+    targetState = state,
+    id = providers.route("history"),
+    targetStatus = providers.status(id);
   toast("Loading price history…");
   try {
     const now = Math.floor(Date.now() / 1000),
-      h = await api("stock/candle", {
-        symbol: target,
-        resolution: "D",
-        from: now - 86400 * 365 * 5,
-        to: now,
-      });
+      h = await api(
+        "stock/candle",
+        {
+          symbol: target,
+          resolution: "D",
+          from: now - 86400 * 365 * 5,
+          to: now,
+        },
+        id,
+      );
     if (h.s !== "ok" || !Array.isArray(h.c) || h.c.length < 2)
       throw Error("No price history returned. Check provider plan coverage.");
-    histories[target] = h;
+    if (
+      state !== targetState ||
+      providers.route("history") !== id ||
+      providers.status(id) !== targetStatus
+    )
+      return;
+    histories[target] = { ...h, providerName: providerName(id) };
     render();
     toast("Price history loaded.");
   } catch (e) {
     toast(e.message);
   }
 }
-async function loadNews(company) {
+async function loadNews(company, id = providers.route("news"), silent = false) {
+  const targetState = state,
+    targetStatus = providers.status(id);
   toast("Loading news…");
   newsError = "";
   try {
@@ -1851,12 +2175,19 @@ async function loadNews(company) {
     const items = await api(
       company ? "company-news" : "news",
       company ? { symbol, from, to } : { category: "general" },
+      id,
     );
     if (!Array.isArray(items)) throw Error("Unexpected news response.");
+    if (
+      state !== targetState ||
+      providers.route("news") !== id ||
+      providers.status(id) !== targetStatus
+    )
+      return;
     newsItems = items.slice(0, 30);
     newsLoaded = true;
     render();
-    toast("News updated.");
+    if (!silent) toast("News updated.");
   } catch (e) {
     newsError = e.message;
     render();
@@ -1908,7 +2239,30 @@ async function convert(form) {
   fxBusy = false;
   render();
 }
+window.desktop?.onYahooTick?.((data) => {
+  if (data.error) {
+    streamActive = false;
+    yahooError = data.error;
+    if (page === "yahoo") render();
+    return;
+  }
+  if (!providers.status("yahoo").configured) return;
+  streamTicks[data.symbol] = { ...data, received: Date.now() };
+  if (page === "yahoo") {
+    const container = $("#yahoo-stream");
+    if (container)
+      container.innerHTML = researchTable(
+        Object.values(streamTicks).map((t) => ({
+          Ticker: t.symbol,
+          Price: t.price,
+          Currency: t.currency,
+          Received: new Date(t.received).toLocaleTimeString(),
+        })),
+      );
+  }
+});
 window.desktop?.onExport(() => exportCsv());
+syncQuoteConnection();
 save();
 render();
 

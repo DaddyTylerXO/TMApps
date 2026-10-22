@@ -1,6 +1,6 @@
 # Finance-KB4: Alpha Vantage shared and personal access
 
-Applies to TMA-Finance 0.1.3. Provider plans checked 21 October 2026.
+Applies to TMA-Finance 0.1.4. Sources checked 22 October 2026.
 
 ## Data available in TMA Finance
 
@@ -21,6 +21,10 @@ The standard free allowance is 25 upstream requests per day per key across all u
 ## Use your own allowance
 
 Create your Alpha Vantage account, copy the API key, select Alpha Vantage - personal key in Settings, paste it and Connect provider. This uses your own account allowance instead of the future shared service. The 24-hour quote lock still applies. The app refreshes at most five symbols per action and counts up to 25 local upstream calls per UTC day during the session.
+
+## Independent jobs
+
+Choose shared or personal Alpha Vantage separately for each job in Provider jobs. Other providers can remain connected. Alpha refresh stays locked to 24 hours; do not treat news and search calls as free because quote refresh is locked.
 
 [Alpha Vantage account and limits](https://www.alphavantage.co/support/)
 [Alpha Vantage documentation](https://www.alphavantage.co/documentation/)

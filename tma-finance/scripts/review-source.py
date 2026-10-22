@@ -7,7 +7,7 @@ import sys
 root = Path(__file__).resolve().parents[2]
 files = subprocess.check_output([
     'rg', '--files', '--hidden', '-g', '!.git', '-g', '!node_modules',
-    '-g', '!.cache', '-g', '!release', '-g', '!.desktop-test-data'
+    '-g', '!.cache', '-g', '!release', '-g', '!.desktop-test-data*'
 ], cwd=root, text=True).splitlines()
 patterns = {
     'private key': r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',

@@ -1,6 +1,6 @@
 # Finance-KB5: Finnhub personal setup and coverage
 
-Applies to TMA-Finance 0.1.3. Provider plans checked 21 October 2026.
+Applies to TMA-Finance 0.1.4. Sources checked 22 October 2026.
 
 ## Set up
 

@@ -1480,3 +1480,12 @@ dialog::backdrop {
     transition: none !important;
   }
 }
+.api-important { color: #ff8b8b; font-weight: 800; }
+.api-comparison { max-height: 620px; overflow: auto; }
+.api-comparison table { min-width: 1600px; }
+.api-comparison th, .api-comparison td { min-width: 190px; white-space: normal; vertical-align: top; }
+.api-comparison thead th { position: sticky; top: 0; background: var(--raised); }
+.provider-card { margin-bottom: 20px; padding: 16px; border: 1px solid var(--border); border-radius: 20px; }
+
+.api-comparison tr > th:first-child { position: sticky; left: 0; background: var(--raised); z-index: 1; }
+.api-comparison thead th:first-child { z-index: 2; }

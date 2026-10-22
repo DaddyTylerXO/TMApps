@@ -31,6 +31,15 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
+const { createYahooClient } = require("./yahoo.cjs");
+const yahoo = createYahooClient({
+  executable: app.isPackaged
+    ? path.join(process.resourcesPath, "yahoo", "tma-yahoo.exe")
+    : path.join(__dirname, "../.cache/yahoo-build-env/Scripts/python.exe"),
+  args: app.isPackaged ? [] : [path.join(__dirname, "../yahoo/worker.py")],
+  cacheDir: path.join(app.getPath("userData"), "yahoo-cache"),
+});
+app.on("before-quit", () => yahoo.shutdown());
 let win;
 const root = path.resolve(__dirname, "../dist");
 const trusted = (e) =>
@@ -158,7 +167,30 @@ app.whenReady().then(() => {
         throw Error("Invalid market request.");
       let data;
       if (payload.source === "shared") data = sharedMarket(payload);
-      else if (payload.action === "status")
+      else if (payload.provider === "yahoo") {
+        if (payload.action === "status") data = yahoo.status();
+        else if (payload.action === "connect") data = await yahoo.connect();
+        else if (payload.action === "disconnect") data = yahoo.disconnect();
+        else if (payload.action === "request")
+          data = await yahoo.request(payload.operation, payload.params);
+        else if (payload.action === "stream-stop") {
+          yahoo.stop();
+          data = { active: false };
+        } else if (payload.action === "stream-start")
+          data = yahoo.startStream(
+            payload.params?.symbols,
+            payload.params?.asyncMode === true,
+            (message) => {
+              if (!win.isDestroyed())
+                win.webContents.send("desktop:yahoo-tick", message);
+            },
+            (error) => {
+              if (!win.isDestroyed())
+                win.webContents.send("desktop:yahoo-tick", { error });
+            },
+          );
+        else throw Error("Unsupported Yahoo action.");
+      } else if (payload.action === "status")
         data = market.status(payload.provider);
       else if (payload.action === "connect")
         data = market.connect(payload.provider, payload.key);

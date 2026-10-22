@@ -1,6 +1,6 @@
 # TMA-Finance KB Library
 
-Guides for version 0.1.3. Available offline in the desktop app under Help and KB Library.
+Version 0.1.4. Available offline under Help and KB Library.
 
 - [Finance-KB1 Your workspace and the green interface](Finance-KB1.md)
 - [Finance-KB2 Connect and switch market providers](Finance-KB2.md)
@@ -10,3 +10,5 @@ Guides for version 0.1.3. Available offline in the desktop app under Help and KB
 - [Finance-KB6 Twelve Data personal quote setup](Finance-KB6.md)
 - [Finance-KB7 Financial Modeling Prep personal quote setup](Finance-KB7.md)
 - [Finance-KB8 Marketstack personal end of day setup](Finance-KB8.md)
+- [Finance-KB9 Yahoo Finance personal research with yfinance](Finance-KB9.md)
+- [Finance-KB10 Read the API information sheet](Finance-KB10.md)

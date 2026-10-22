@@ -86,3 +86,11 @@ See [Finance-KB1](docs/Finance-KB1.md) for personal-workspace startup and the fo
 Open **Help and KB Library** in the app for offline searchable guides. See the [KB index](docs/KB-INDEX.md) for the same articles on GitHub. Alpha Vantage is the only shared default (awaiting deployment). Personal choices are Alpha Vantage, Finnhub, Twelve Data, Financial Modeling Prep and Marketstack. The last three currently support quotes only, default to manual refresh, and remain subject to provider plan and symbol limits.
 
 The Word library generator is `scripts/build-kb.py`. Its local draft requires rendering and visual review before publication; no Word download is advertised for 0.1.3.
+
+## Independent providers in 0.1.4
+
+Each provider has a separate connection card. Keep multiple connected and assign quotes, news, search, company data and history under **Provider jobs**. Set its own schedule under **Quote checks & market alerts**. A refresh uses only the assigned provider; it never falls back to another connection. Alpha Vantage remains locked to 24 hours. The **API information sheet** above those settings compares app coverage and provider offerings with cost/plan caveats and question-mark explanations.
+
+Optional **Yahoo personal access** runs yfinance locally. Windows packages include the helper and Python runtime with dependency licences. No Yahoo key or subscription is purchased, and Yahoo is not used as a shared preset. Its personal-use terms, availability and throttling still apply. **Yahoo research** exposes batches, history CSV, market context, sector/industry tables, screening, financial statements, corporate actions and manual sync/async streams. Streaming stops on disconnect, app quit or after an hour and uses extra CPU/network. See [Finance-KB9](docs/Finance-KB9.md) and [Finance-KB10](docs/Finance-KB10.md).
+
+Building the Windows package now requires Python 3.13 at build time. `dist:win` creates an isolated `.cache/yahoo-build-env`, installs pinned dependencies, compiles the helper and collects licences before Electron packaging. End users do not install Python. Cached cookies, profiles and build logs are excluded from publishing.

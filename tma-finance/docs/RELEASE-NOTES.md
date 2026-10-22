@@ -1,5 +1,14 @@
 # TMA-Finance release notes
 
+## 0.1.4 - 22 October 2026
+
+- Add optional personal Yahoo Finance access through bundled yfinance 1.7.0, without an API key or external Python installation. Connect existing quote, search, profile, ratios, daily history and news pages. Add batch quotes, daily-history CSV download, market/sector/industry views, US equity screening, statements, actions and manually controlled sync/async streaming in Yahoo research.
+- Keep multiple personal providers connected, with independent schedules and per-task assignments. Connecting or changing assignments triggers no data calls. A task uses its assigned provider without automatic fallback; provider quote caches stay separate. Alpha Vantage remains the only shared default, awaiting backend setup, with its 24-hour lock.
+- Add the Settings API information sheet above job assignments and quote checks, with bold red IMPORTANT text, app-versus-provider coverage, source links and accessible explanations. Update the KB to ten articles.
+- Pass 25 JavaScript test groups and seven Python worker test groups. Live Yahoo checks cover quotes, batch/history downloads, markets, sectors, industries, screening, statements, actions, search and news. Correct missing numeric values in sector/industry responses before JSON serialization. Streaming lifecycle is tested synthetically; continuous live-market delivery is not claimed verified.
+- Bundle dependency licences and keep user/cache data out of packages. Existing missing Word render, native UI capture and cross-platform acceptance gaps remain open.
+
+
 ## 0.1.3 - 21 October 2026
 
 - Add personal quote adapters for Twelve Data, Financial Modeling Prep and Marketstack, alongside personal Alpha Vantage and Finnhub. Alpha Vantage remains the only shared default. New personal adapters start in manual refresh mode and explicitly limit coverage to quotes.

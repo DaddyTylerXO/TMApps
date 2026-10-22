@@ -1,3 +1,5 @@
+import * as providerModule from "../dist/providers.js";
+import * as infoModule from "../dist/api-info.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
@@ -24,6 +26,8 @@ test("renderer starts, exposes provider guides and rejects shared refresh clicks
     .replace(/^import[\s\S]*?from "\.\/core\.js";\s*/, "");
   const context = vm.createContext({
     ...core,
+    ...providerModule,
+    ...infoModule,
     kbArticles,
     console,
     Date,
@@ -63,8 +67,7 @@ test("renderer starts, exposes provider guides and rejects shared refresh clicks
     },
   });
   vm.runInContext(source, context, { timeout: 1000 });
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   assert.match(app.innerHTML, /Help and KB Library/);
   const click = async (dataset) =>
     events.get("click")({ target: { closest: () => ({ dataset }) } });
