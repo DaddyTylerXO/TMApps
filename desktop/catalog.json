@@ -6,12 +6,12 @@
       "name": "TMA-Mail",
       "category": "COMMUNICATION",
       "description": "A calmer home for your inbox. Connect your accounts, compose beautifully, and keep your day in focus.",
-      "version": "0.14.1-beta",
-      "updatedAt": "2026-10-17T04:57:03+01:00",
+      "version": "0.16.5-beta",
+      "updatedAt": "2026-10-19T06:33:15+01:00",
       "branch": "TMA-Mail",
       "executable": "TMA-Mail.exe",
-      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/3f2510ce13c2884e4ba23b7d42bdaf2e92b374e2/dist/TMA-Mail-0.14.1-beta-windows.zip",
-      "sha256": "cf851a37dcfff9369d6c5a92f40a3b9b3d1cc1a9348e54978a9f566047998119",
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Mail-0.16.5-beta-windows.zip",
+      "sha256": "867b3691e56dd176724d8b4861818ec3c96068bb6eb2b01d64255e637aa641b5",
       "platforms": [
         "windows"
       ]
@@ -22,11 +22,11 @@
       "category": "AI WORKSPACE",
       "description": "Your team, together. Bring AI specialists, projects, and real work into one live office.",
       "version": "0.2.0",
-      "updatedAt": "2026-10-15T19:42:51Z",
+      "updatedAt": "2026-10-21T10:32:48+01:00",
       "branch": "TMA-AgentOffice",
       "executable": "Agent Office.exe",
       "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Agent-Office-0.2.0-windows.zip",
-      "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883",
+      "sha256": "3fb1388a3b650447f754b2b4b5e3022504a6b3cf7676aeb5839bd1846841306c",
       "platforms": [
         "windows"
       ]
@@ -36,74 +36,197 @@
       "name": "TMA-Safe",
       "category": "PRIVACY & SECURITY",
       "description": "A calmer home for your passwords. Keep an encrypted, portable vault with a master password and optional separate key file.",
-      "version": "0.1.0",
-      "updatedAt": "2026-10-20T00:00:00Z",
+      "version": "0.2.2",
+      "updatedAt": "2026-10-20T21:12:58.112Z",
       "branch": "TMA-Safe",
       "executable": "TMA-Safe.exe",
-      "platforms": []
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Safe-0.2.2-win-x64.zip",
+      "sha256": "73842ea2500fa196e40107dbdd135be1ffd40bb73c5fb660fabcbf938b42518c",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "packages": {
+        "macos-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Safe-0.2.2-mac-arm64.tar.gz",
+          "sha256": "ce1311265d9d2c49bc8ed8eb18b8630ae12901780b8c1155b418593056deb524",
+          "format": "tar.gz",
+          "executable": "TMA-Safe.app/Contents/MacOS/TMA-Safe"
+        },
+        "macos-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Safe-0.2.2-mac-x64.tar.gz",
+          "sha256": "ea7b3e8802a1eeeee5c0f41f140d4e0f166dd383e350d1f2c918237878c2a386",
+          "format": "tar.gz",
+          "executable": "TMA-Safe.app/Contents/MacOS/TMA-Safe"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Safe-0.2.2-linux-arm64.AppImage",
+          "sha256": "9982219bb09e104ccf5394ddcd0c1442608681d8c3e9195f78e82ffbb4cde874",
+          "format": "appimage",
+          "executable": "TMA-Safe.AppImage"
+        },
+        "linux-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Safe-0.2.2-linux-x86_64.AppImage",
+          "sha256": "d13724d46dd6f8f4c87e7708b80e4b2bc34b581cde431df461755a57cdfb726a",
+          "format": "appimage",
+          "executable": "TMA-Safe.AppImage"
+        }
+      }
     },
     {
       "id": "tma-padlock",
       "name": "TMA-Padlock",
       "category": "PRIVACY & SECURITY",
       "description": "Your codes, kept close. Encrypted TOTP and HOTP authenticators with optional master-password protection.",
-      "version": "0.1.0",
-      "updatedAt": "2026-10-20T00:00:00Z",
+      "version": "0.2.1",
+      "updatedAt": "2026-10-20T20:57:12.192Z",
       "branch": "TMA-Padlock",
       "executable": "TMA-Padlock.exe",
-      "platforms": []
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Padlock-0.2.1-win-x64.zip",
+      "sha256": "0a9e8e059808a4cd57a6d1d0398065ba0b33ebc391218e44f009f2b7f725e88c",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "packages": {
+        "macos-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Padlock-0.2.1-mac-arm64.tar.gz",
+          "sha256": "7724821a7a7aaa694647f85b8b83be47676eb540bfb7b422e648daa78cfd758b",
+          "format": "tar.gz",
+          "executable": "TMA-Padlock.app/Contents/MacOS/TMA-Padlock"
+        },
+        "macos-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Padlock-0.2.1-mac-x64.tar.gz",
+          "sha256": "532c6dcc9714422eb88d3ce18236a31800b3bd38e5570fd79c742df94ac25997",
+          "format": "tar.gz",
+          "executable": "TMA-Padlock.app/Contents/MacOS/TMA-Padlock"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Padlock-0.2.1-linux-arm64.AppImage",
+          "sha256": "48d54d14c3d1ae176803ed49ee4307f1f5aabbe9fdfbbbce218df7839c1fe0d1",
+          "format": "appimage",
+          "executable": "TMA-Padlock.AppImage"
+        },
+        "linux-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Padlock-0.2.1-linux-x86_64.AppImage",
+          "sha256": "7336fb2a36709e05df4a96298d9e9facff226526e0ec77540474964931f44a0d",
+          "format": "appimage",
+          "executable": "TMA-Padlock.AppImage"
+        }
+      }
     },
     {
       "id": "tma-socialsmanager",
       "name": "TMA-SocialsManager",
       "category": "SOCIAL MEDIA",
       "description": "A calmer home for your socials. Bring account metrics together, save ideas, and publish to supported platforms.",
-      "version": "0.1.0",
+      "version": "0.4.0",
       "branch": "TMA-SocialsManager",
       "executable": "TMA-SocialsManager.exe",
-      "platforms": [],
-      "updatedAt": "2026-10-20T00:00:00Z"
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "updatedAt": "2026-10-21T09:44:32.351Z",
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-SocialsManager-0.4.0-win-x64.zip",
+      "sha256": "0b33b96c2ec5006d10f4f31fdf2d3fa3567c26063151fa3f47676ab25430cce4",
+      "packages": {
+        "linux-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-SocialsManager-0.4.0-linux-arm64.AppImage",
+          "sha256": "dcc19c894a8ffa11c76fde1ba29f22cf674a1956dbd10a428270cc8086f565fd",
+          "format": "appimage",
+          "executable": "TMA-SocialsManager-0.4.0-linux-arm64.AppImage"
+        },
+        "linux-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-SocialsManager-0.4.0-linux-x86_64.AppImage",
+          "sha256": "f20fa624abbda4127e8ccf1ebd602d786740f9fc65cb6dbaa13e24d0b11473f5",
+          "format": "appimage",
+          "executable": "TMA-SocialsManager-0.4.0-linux-x86_64.AppImage"
+        },
+        "macos-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-SocialsManager-0.4.0-mac-arm64.tar.gz",
+          "sha256": "27cf4ccffe9409ae47da075500d1cfb00522cc973dbd7a25c375d3f2e4ec9179",
+          "format": "tar.gz",
+          "executable": "TMA-SocialsManager.app/Contents/MacOS/TMA-SocialsManager"
+        },
+        "macos-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-SocialsManager-0.4.0-mac-x64.tar.gz",
+          "sha256": "888e2f993a7744641269acc53501d5be8269d7b81e08bcacb3022e5d36ce4ca1",
+          "format": "tar.gz",
+          "executable": "TMA-SocialsManager.app/Contents/MacOS/TMA-SocialsManager"
+        }
+      }
     },
     {
       "id": "tma-cut",
       "name": "TMA-Cut",
       "category": "VIDEO & CREATIVITY",
-      "description": "Your clips, your style. Trim videos, add captions and branding, and export your next story.",
-      "version": "0.1.0",
-      "updatedAt": "2026-10-20T00:00:00Z",
+      "description": "A flexible creative studio. Stack video tracks, mix audio, style captions, and export your next story.",
+      "version": "0.2.0",
+      "updatedAt": "2026-10-21T09:17:24.808Z",
       "branch": "TMA-Cut",
+      "releaseNotes": "0.2.0: stacked timeline, colour and audio tools, captions/TTS setup, templates, workspace customisation and illustrated KB guides.",
       "executable": "TMA-Cut.exe",
-      "platforms": []
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Cut-0.2.0-win-x64.zip",
+      "sha256": "2e2fee9d9a3916dabf968b19846bb4c35cdce626abc5ec579f03bdc3a1a84532",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "packages": {
+        "macos-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Cut-0.2.0-mac-x64.tar.gz",
+          "sha256": "7510203d86e008536512699709066ed66630441161430aaa559809c36a9ab404",
+          "format": "tar.gz",
+          "executable": "TMA-Cut.app/Contents/MacOS/TMA-Cut"
+        },
+        "macos-arm64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Cut-0.2.0-mac-arm64.tar.gz",
+          "sha256": "ca65d9dff248cabd260c8e4673e785d2b937c82641bbf1d6d30c53a038cd72bb",
+          "format": "tar.gz",
+          "executable": "TMA-Cut.app/Contents/MacOS/TMA-Cut"
+        },
+        "linux-x64": {
+          "url": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Cut-0.2.0-linux-x64.AppImage",
+          "sha256": "56bd884abad085591afbfa6fcdcd1472aa9d2e2c9d73827eb396303a337b6dd4",
+          "format": "appimage",
+          "executable": "TMA-Cut-0.2.0-linux-x64.AppImage"
+        }
+      }
     },
     {
       "id": "tma-libraries",
       "name": "TMA-Libraries",
       "category": "LIBRARIES",
-      "description": "Offline notes, checklists, folders and workspace import/export. Initial Windows development build; advanced editors and integrations are still pending.",
-      "version": "0.1.0",
-      "updatedAt": "2026-10-21T15:03:39+01:00",
+      "description": "Windows development preview: offline documents, checklists, spreadsheets, slides and PDF tools. Unsigned; advanced compatibility and performance work remain pending.",
+      "version": "0.2.0-dev.1",
+      "updatedAt": "2026-10-22T12:00:00Z",
       "branch": "TMA-Libraries",
       "executable": "TMA-Libraries.exe",
       "platforms": [
         "windows"
       ],
-      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip",
-      "sha256": "64dc2fa3eddc55555853f12080bae944683a9cecdfcf8194a35d3a1b993ac29d"
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.2.0-dev.1-windows.zip",
+      "sha256": "8e3d3bf8a44a7003042a4e0338d06188ed4d05b8c9ed9629a7f1631212b91e75"
     },
     {
       "id": "tma-finance",
       "name": "TMA-Finance",
       "category": "FINANCE",
       "description": "Budgets, expenses, subscriptions, savings and a manual investment workspace. Initial Windows development build with optional market-data providers.",
-      "version": "0.1.0",
-      "updatedAt": "2026-10-21T14:55:05+01:00",
+      "version": "0.1.3",
+      "updatedAt": "2026-10-21T20:15:08+01:00",
       "branch": "TMA-Finance",
       "executable": "TMA-Finance.exe",
       "platforms": [
         "windows"
       ],
-      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.0-windows.zip",
-      "sha256": "f3ea2de64b4cc87b616828c285f98f18379aef97db32fd87bcb9f76390fb7a53"
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.3-windows.zip",
+      "sha256": "e3b428a5a250c2a31dd7a17cfb408d65a9a8042e5f6a6ca8dc41b3ce3419618c"
     }
   ]
 }

@@ -12,8 +12,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 root = Path(__file__).resolve().parent.parent
-content = json.loads((root / 'content/experience.json').read_text())
-version = json.loads((root / 'desktop/package.json').read_text())['version']
+content = json.loads((root / 'content/experience.json').read_text(encoding='utf-8'))
+version = json.loads((root / 'desktop/package.json').read_text(encoding='utf-8'))['version']
 document = Document()
 section = document.sections[0]
 section.page_width, section.page_height = Inches(8.5), Inches(11)
@@ -109,8 +109,8 @@ illustrations = {
                       'The uninstall dialog lets you choose whether the selected app keeps its standard local data.'),
     'Launcher-KB11': ('settings-search-preview.png', None, 5.8,
                       'Search by keywords or a KB number to find relevant knowledge articles.'),
-    'Launcher-KB14': ('libraries-finance-preview.png', None, 6.6,
-                      'Libraries and Finance show their actual app icons, version dates, Windows support and install actions.'),
+    'Launcher-KB14': ('libraries-v02-preview.png', None, 5.5,
+                      'Libraries 0.2.0-dev.1 Windows preview home screen after isolated packaged-app checks.'),
 }
 
 
@@ -132,7 +132,7 @@ def illustrate(article_id):
     paragraph.paragraph_format.space_after = Pt(12)
 document.add_paragraph('TMApps Launcher KB Library', 'Title')
 document.add_paragraph('User guides setup and troubleshooting', 'Subtitle')
-document.add_paragraph(f'Release {version}  |  21 October 2026  |  DaddyTylerXO')
+document.add_paragraph(f'Release {version}  |  22 October 2026  |  DaddyTylerXO')
 document.add_paragraph('Use this library to install the launcher, manage your applications, find settings, and report problems. Each article has a stable KB number that you can type into launcher Help or settings search. Shared TMApps sign-in is prepared for deployment and requires backend configuration before activation. App support varies by operating system.')
 document.add_paragraph('Use the orange KB buttons to jump to an article, then Back to index to return. In Microsoft Word, hold Ctrl while clicking a link if required by your settings. Screenshots illustrate the launcher controls; versions and available apps may change.')
 bookmark(document.add_heading('Article index', 1), 'KB_Index')
@@ -180,8 +180,6 @@ for article in content['articles']:
         referenced_text(paragraph, part)
         paragraph.paragraph_format.keep_with_next = i < len(parts) - 1
     illustrate(article['id'])
-document.add_heading('Maintaining this library', 1)
-document.add_paragraph('The in-app articles and this Word document are generated from content/experience.json. Keep each KB number stable when updating its instructions. Regenerate and visually inspect the Word document when article text changes. Deployment and app-integration details are in backend/README.md and docs/shared-profile.md on the launcher branch.')
 footer = section.footer.paragraphs[0]
 footer.text = 'TMApps Launcher KB Library  •  '
 field = OxmlElement('w:fldSimple')
