@@ -1,0 +1,17 @@
+---
+description: Maintain app KB documentation
+alwaysApply: true
+---
+
+# KB maintenance
+
+## Suite library requirements (23 October 2026)
+
+Publish docs/(App Name) KB Library.docx with app name, approved logo and app colours
+on every page. Retain legacy KB Library.docx links until consumers are migrated.
+Link the main-branch TMApps Master KB Library on page one once published; never
+claim an unpublished document is available. Keep stable KB IDs, working index and
+cross-reference links, setup, user guides, actual errors/resolutions and escalation.
+Include explicit offline/online coverage. Use real sanitized screenshots. Render
+and visually inspect every changed Word page before upload. Keep in-app Help,
+optional KB search results, Wiki articles and the main KB registry aligned.
