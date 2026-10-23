@@ -53,3 +53,7 @@ Libraries rebuild source is AGPL-3.0-only; see LICENSE and THIRD-PARTY-NOTICES.m
 ## Existing legacy Launcher distribution
 
 The branch's existing distribution record identifies Launcher 1.14.2 or later and the unsigned Windows Forms 0.1.0 ZIP at https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip. That record reports isolated install/launch/uninstall and checksum verification, with Launcher-KB14 in the launcher KB. This rebuild does not replace that catalog entry or imply the 0.2 preview has passed Launcher verification.
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.

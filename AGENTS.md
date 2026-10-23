@@ -19,3 +19,13 @@ These instructions apply to the entire repository.
 - Use established encryption and secure redaction implementations; do not equate visual overlays or hidden controls with protection.
 - Perform and record appropriate performance optimisation/testing and security checks for every application update. Explain performance-sensitive settings to users.
 - Verify durable saves, imports/exports, and recovery where affected. Do not claim file-format compatibility without representative round-trip checks.
+
+## Suite update gate (23 October 2026)
+
+Apply every requirement in APP-STANDARDS.md and standards/requirements.json.
+Use TMA-Finance Settings layout, Original Bubble as the default, and implement
+one verified theme per pushed app update in the prescribed order. Update the
+evidence checklist without treating instructions as runtime compliance. Review
+README.md and SECURITY.md on every update and preserve their app-specific detail.
+Carry standards and security/KB guidance into future projects. Licensing,
+usage-rights/legality and legal-policy work are deferred by the owner.
