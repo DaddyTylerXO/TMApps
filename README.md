@@ -58,3 +58,7 @@ The release workflow tests Windows x64, macOS x64/arm64, and Linux x64/arm64. It
 ## Scope
 
 Setup uses manual keys and otpauth URLs. QR images, camera scanning, encrypted WinAuth imports, proprietary Steam/Battle.net enrollment, cloud sync, and an authenticator as an additional vault-unlock factor are not included. The optional extra protection in this version is the master password. See [SECURITY.md](SECURITY.md) for protection boundaries.
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
