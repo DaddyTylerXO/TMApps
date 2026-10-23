@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
+const { constants } = require('node:fs');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const scrypt = promisify(crypto.scrypt);
@@ -39,15 +40,31 @@ function seal(data, key, base) {
   const plain = Buffer.from(JSON.stringify(validateData(data)));
   try { const ciphertext = Buffer.concat([cipher.update(plain), cipher.final()]); if (ciphertext.length > LIMIT / 2) throw Error('Vault is too large.'); return JSON.stringify({ ...h, tag: cipher.getAuthTag().toString('hex'), data: ciphertext.toString('base64') }); } finally { plain.fill(0); }
 }
-async function read(file) { const handle = await fs.open(file, 'r'); try { if ((await handle.stat()).size > LIMIT) throw Error('Vault file is too large.'); return await handle.readFile('utf8'); } finally { await handle.close(); } }
+async function readBytes(file, limit = LIMIT) {
+  const handle = await fs.open(file, constants.O_RDONLY | (constants.O_NONBLOCK || 0)); let bytes;
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > limit) throw Error('Expected a regular file within the size limit.');
+    bytes = Buffer.alloc(limit + 1); let length = 0;
+    while (length < bytes.length) { const result = await handle.read(bytes, length, bytes.length - length, null); if (!result.bytesRead) break; length += result.bytesRead; }
+    if (length > limit) throw Error('File is too large.');
+    return Buffer.from(bytes.subarray(0, length));
+  } finally { bytes?.fill(0); await handle.close(); }
+}
+async function read(file) { const bytes = await readBytes(file); try { return bytes.toString('utf8'); } finally { bytes.fill(0); } }
+async function encryptedTemp(file, content) {
+  const handle = await fs.open(file, 'wx', 0o600);
+  try { await handle.writeFile(content); await handle.sync(); } finally { await handle.close(); }
+}
 async function write(file, content, previous) {
   const lock = file + '.lock'; const guard = await fs.open(lock, 'wx', 0o600).catch(() => { throw Error('Vault is being saved elsewhere, or a stale .lock file needs review.'); });
   const temp = path.join(path.dirname(file), '.' + path.basename(file) + '.' + crypto.randomUUID() + '.tmp');
+  const backupTemp = temp + '.bak';
   try {
-    if (previous) { const old = await read(file); if (digest(old) !== previous) throw Error('Vault changed on disk. Lock and reopen it before editing.'); await fs.copyFile(file, file + '.bak'); }
-    const handle = await fs.open(temp, 'wx', 0o600); try { await handle.writeFile(content); await handle.sync(); } finally { await handle.close(); }
+    if (previous) { const old = await read(file); if (digest(old) !== previous) throw Error('Vault changed on disk. Lock and reopen it before editing.'); await encryptedTemp(backupTemp, old); await fs.rename(backupTemp, file + '.bak'); }
+    await encryptedTemp(temp, content);
     if (previous) await fs.rename(temp, file); else { await fs.link(temp, file); await fs.unlink(temp); }
-  } finally { await fs.rm(temp, { force: true }); await guard.close(); await fs.unlink(lock); }
+  } finally { await fs.rm(temp, { force: true }); await fs.rm(backupTemp, { force: true }); await guard.close(); await fs.unlink(lock); }
 }
 class Vault {
   constructor() { this.epoch = 0; this.lock(); }
@@ -65,12 +82,13 @@ class Vault {
     this.lock(); const epoch = this.epoch; const content = await read(file); const envelope = JSON.parse(content); const base = header(envelope);
     if (base.keyfile && !keyfile) throw Error('This vault also needs its separate key file.');
     if (!/^[a-f\d]{32}$/.test(envelope.tag) || typeof envelope.data !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(envelope.data)) throw Error('Damaged vault.');
-    const key = await derive(password, base.salt, base.keyfile ? keyfile : null); let plain;
+    const key = await derive(password, base.salt, base.keyfile ? keyfile : null); let plain, unauthenticated;
     try {
       const decipher = crypto.createDecipheriv(base.cipher, key, Buffer.from(base.iv, 'hex')); decipher.setAAD(Buffer.from(JSON.stringify(base))); decipher.setAuthTag(Buffer.from(envelope.tag, 'hex'));
-      plain = Buffer.concat([decipher.update(Buffer.from(envelope.data, 'base64')), decipher.final()]); const data = validateData(JSON.parse(plain.toString('utf8')));
+      unauthenticated = decipher.update(Buffer.from(envelope.data, 'base64'));
+      plain = Buffer.concat([unauthenticated, decipher.final()]); const data = validateData(JSON.parse(plain.toString('utf8')));
       if (epoch !== this.epoch) throw Error('Unlock cancelled.'); Object.assign(this, { key, base, file, data, hash: digest(content) });
-    } catch { key.fill(0); throw Error('Could not unlock. Check the master password, key file, and vault integrity.'); } finally { plain?.fill(0); }
+    } catch { key.fill(0); throw Error('Could not unlock. Check the master password, key file, and vault integrity.'); } finally { plain?.fill(0); unauthenticated?.fill(0); }
     return this.list();
   }
   list() { this.require(); return { file: this.file, keyfile: this.base.keyfile, folders: structuredClone(this.data.folders || []), entries: this.data.entries.map(({ password, ...e }) => ({ ...e, expired: e.expiryDays > 0 && Date.now() >= Date.parse(e.passwordChangedAt) + e.expiryDays * 86400000 })) }; }
@@ -96,4 +114,4 @@ function generate(options = {}) {
   // Rejection sampling is uniform over strings satisfying the selected groups.
   for (;;) { const chars = Array.from({ length }, () => all[crypto.randomInt(all.length)]); if (groups.every(g => chars.some(c => g.includes(c)))) return chars.join(''); }
 }
-module.exports = { Vault, generate, entry, origin, read, KDF };
+module.exports = { Vault, generate, entry, origin, read, readBytes, KDF };

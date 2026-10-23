@@ -11,6 +11,6 @@ test('catalog publication preserves existing apps and rejects incomplete or corr
     await fs.writeFile(path.join(root, `safe-metadata-${platform}-${arch}.json`), JSON.stringify({ version: '0.1.0', platform, arch, artifacts: [artifact], package: { ...artifact, executable: platform === 'win32' ? 'TMA-Safe.exe' : platform === 'darwin' ? 'TMA-Safe.app/Contents/MacOS/TMA-Safe' : 'TMA-Safe.AppImage', format: platform === 'win32' ? 'zip' : platform === 'darwin' ? 'tar.gz' : 'appimage' } }));
   }
   const result = run(); assert.equal(result.status, 0, result.stderr); const published = await fs.readFile(output, 'utf8'), catalog = JSON.parse(published);
-  assert.equal(catalog.apps.length, 3); assert.equal(catalog.apps[0].version, '9.0.0'); assert.equal(catalog.apps[1].version, '8.0.0'); assert.equal(Object.keys(catalog.apps[2].packages).length, 4);
+  assert.equal(catalog.apps.length, 3); assert.equal(catalog.apps[0].version, '9.0.0'); assert.equal(catalog.apps.at(-1).version, '8.0.0'); assert.equal(Object.keys(catalog.apps.find(a => a.id === 'tma-safe').packages).length, 4);
   await fs.appendFile(path.join(root, 'fixture-linux-x64'), 'corrupt'); assert.notEqual(run().status, 0); assert.equal(await fs.readFile(output, 'utf8'), published);
 });

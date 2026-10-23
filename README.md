@@ -1,6 +1,6 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Version 0.2.2 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Version 0.2.3 is an unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
@@ -68,3 +68,9 @@ The release workflow tests and packages Windows x64, macOS x64/arm64 and Linux x
 ## Shared standards update — 23 October 2026
 
 [APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
+
+## Security update 0.2.3
+
+Source prepared 23 October 2026. Published packages remain at the version shown in the live launcher catalog until the native release workflow succeeds. This update strengthens locking, reveal handling, file reads and encrypted backup writes. Twenty-five regression tests and Windows source/packaged smoke checks passed with fictional data. Security and performance checks now run in release CI. See the sanitised [verification summary](SECURITY-REVIEW-2026-10-20.md).
+
+The illustrated [TMA-Safe KB Library](docs/TMA-Safe%20KB%20Library.docx) contains Safe-KB1 through Safe-KB4, setup, offline coverage and troubleshooting. [KB Library.docx](docs/KB%20Library.docx) is retained as a compatibility copy. Master-library registration and in-app KB search remain pending.

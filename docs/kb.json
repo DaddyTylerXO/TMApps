@@ -1,0 +1,54 @@
+[
+  {
+    "id": "Safe-KB1",
+    "title": "Create and unlock a vault",
+    "image": "create.png",
+    "caption": "Create a vault with a strong master passphrase and an optional separate key file.",
+    "paragraphs": [
+      "Choose Create a vault, choose a new .tmasafe filename, and enter and confirm a unique master passphrase of at least 14 characters. There is no password reset.",
+      "For an additional possession factor, select Use a separate key file and generate a .tmakey file. Keep it separate from the vault. Both the master password and original key file are needed on another computer. TOTP and Windows Hello are not implemented.",
+      "Always use this vault remembers only the filename on this device. The master password is required at every launch. After locking, choose your key file again when one is required.",
+      "If the saved drive is missing, choose the moved vault again. See Safe-KB4 for unlock errors. This feature works offline."
+    ]
+  },
+  {
+    "id": "Safe-KB2",
+    "title": "Organise and update passwords",
+    "image": "vault.png",
+    "caption": "A fictional example vault showing folders and password update reminders.",
+    "paragraphs": [
+      "Use Add login to save a title, HTTPS website, username and password. Use the eye to reveal a password briefly; it hides after 15 seconds, on leaving the window, or on locking. Generate a password with selected length and character groups.",
+      "Create folders with the plus beside Folders. Choose a folder in the login editor to move a login. Deleting a folder preserves its logins in All logins.",
+      "Set an update reminder in the editor. Due for an update lists expired reminders. Editing notes does not restart a reminder; changing the password does. The app does not change website passwords for you.",
+      "Import passwords accepts browser CSV exports. Review valid and skipped rows before importing. CSVs contain plaintext passwords; remove them afterwards and check cloud/recycle-bin copies. Imports, folders and reminders work offline. See Safe-KB3 for locking and backups."
+    ]
+  },
+  {
+    "id": "Safe-KB3",
+    "title": "Settings locking and portable backups",
+    "image": "settings.png",
+    "caption": "Settings controls for startup, tray behaviour, automatic locking and the clipboard.",
+    "paragraphs": [
+      "Settings is available while locked or unlocked. Startup opens a locked app. Close to tray requires Show tray and locks immediately. Tray availability depends on the desktop environment.",
+      "Idle lock defaults to five minutes. Clipboard text clears after twenty seconds if unchanged; clipboard history or third-party managers may retain it. Shorter limits reduce exposure.",
+      "Use Vault & security then Save an encrypted portable copy. Copy or move a locked .tmasafe file to another device and open it using the same passphrase and any key file. Copies do not synchronise.",
+      "Each save retains an encrypted .bak of the previous version. Keep backups safe because they retain older passwords. Unlocking uses about 128 MiB for scrypt, briefly increasing CPU/RAM usage; it is deliberate password-guessing resistance. This app has no cloud service or paid integration."
+    ]
+  },
+  {
+    "id": "Safe-KB4",
+    "title": "Troubleshooting and safe support",
+    "image": null,
+    "caption": "",
+    "paragraphs": [
+      "Could not unlock: check the master password, original key file and selected vault. Try a known encrypted backup copy. There is no password reset; never upload a vault, key or CSV to obtain help.",
+      "Operation cancelled because the vault locked: an operation was interrupted by locking. Unlock again and repeat it. Closing the editor or leaving the window also cancels a delayed password reveal.",
+      "Vault changed on disk: another writer or sync tool changed the file. Lock and reopen before editing. Preserve both copies and compare manually; avoid simultaneous edits to cloud-synchronised copies.",
+      "Vault is being saved elsewhere, or a stale .lock file needs review: close other app instances and confirm no save is running. Back up the vault before removing an abandoned lock file.",
+      "Expected a regular file within the size limit: choose a normal vault/import file or the original 32-byte key file. Files that grow past the limit or nonregular paths are rejected.",
+      "Browser filling unavailable: unlock, enable filling, pair the companion extension, and visit the exact HTTPS origin of the saved login. Every fill requires native approval. Filling contacts only the local loopback bridge; opening support links or downloading updates requires internet access.",
+      "If an error persists, report the app version, OS, steps and a sanitised error through GitHub Issues. Review the report and remove private account names and paths. Security vulnerabilities belong in private reporting, not a public issue.",
+      "The app is an unsigned beta without an independent audit. AES-256-GCM protects vault data at rest; the provider has no account, recovery key or remote vault access. A compromised computer can capture unlocked data. No dark-web/breach lookup or passkey provider is implemented. See Safe-KB1 for recovery precautions."
+    ]
+  }
+]

@@ -9,4 +9,8 @@ for (const m of metadata) for (const artifact of m.artifacts) { if (path.basenam
 const catalog = JSON.parse(fs.readFileSync(prior, 'utf8').replace(/^\uFEFF/, '')); if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.apps) || !catalog.apps.some(a => a.id === 'tma-mail') || !catalog.apps.some(a => a.id === 'tma-agent-office')) throw Error('Missing existing catalog applications.');
 const windows = metadata.find(m => m.platform === 'win32');
 const safe = { id: 'tma-safe', name: 'TMA-Safe', category: 'PRIVACY & SECURITY', description: 'A calmer home for your passwords. Keep an encrypted, portable vault with a master password and optional separate key file.', version: windows.version, updatedAt: new Date().toISOString(), branch: 'TMA-Safe', executable: 'TMA-Safe.exe', downloadUrl: windows.package.url, sha256: windows.package.sha256, platforms: ['windows', 'macos', 'linux'], packages: Object.fromEntries(metadata.filter(m => m.platform !== 'win32').map(m => [(m.platform === 'darwin' ? 'macos' : 'linux') + '-' + m.arch, { url: m.package.url, sha256: m.package.sha256, format: m.package.format, executable: m.package.executable }])) };
-catalog.apps = [...catalog.apps.filter(a => a.id !== 'tma-safe'), safe]; fs.writeFileSync(output, JSON.stringify(catalog, null, 2) + '\n');
+safe.releaseNotes = 'Security update: stronger locking, password reveal cancellation, safer encrypted backups and bounded file reads. Automated security and performance release checks.';
+const existing = catalog.apps.findIndex(a => a.id === 'tma-safe');
+if (existing >= 0) catalog.apps[existing] = safe;
+else { const before = catalog.apps.findIndex(a => a.id === 'tma-socialsmanager' || a.id === 'tma-agent-office'); catalog.apps.splice(before < 0 ? catalog.apps.length : before, 0, safe); }
+fs.writeFileSync(output, JSON.stringify(catalog, null, 2) + '\n');

@@ -48,3 +48,11 @@ This is a requirements register, not a runtime certification. Source or package 
 ## This maintenance update
 
 Shared instructions, checklist and documentation only. No application code or packages changed; runtime/performance tests were not run for this policy update. README and SECURITY were reviewed and received the maintenance gate below. Existing app-specific security and release requirements are preserved. Licensing, usage-rights/legality and legal policies remain deferred. Record code-update functional/performance/security results and native OS/build/architecture evidence here as work is completed.
+
+## Security update evidence 23 October 2026
+
+Source version 0.2.3 is prepared; publication is not implied. The 25-test suite, Windows source smoke and packaged smoke passed. See SECURITY-REVIEW-2026-10-20.md for a sanitised summary and measured performance. Release CI now requires security regressions, an advisory gate and performance ceilings on each native build. Existing Original Bubble appearance and approved key icon are retained; no additional theme is claimed.
+
+The first illustrated child KB library has Safe-KB1 through Safe-KB4, internal index and cross-links, logo/branding on every page and offline/error coverage. All five pages were rendered through native Word and the document skill page pipeline and visually reviewed. Master library/registry and Wiki publication remain open because no published master was found at main.
+
+README and SECURITY were reviewed against the current source; no provider has a recovery key or remote vault access. Runtime limitations remain explicit. Current source and packaged payload are reviewed for outgoing sensitive data; detailed vulnerability notes stay local. Features requested in the job list and unchecked shared standards remain open unless separately evidenced.

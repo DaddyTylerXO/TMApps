@@ -17,3 +17,15 @@ test('locking revokes an in-flight approved fill', async t => {
   const request = fetch(`http://127.0.0.1:${bridge.port}/fill`, { method: 'POST', headers: { Origin: 'chrome-extension://' + 'a'.repeat(32), Authorization: 'Bearer ' + bridge.token }, body: JSON.stringify({ origin: 'https://example.com' }) }).catch(() => null);
   await waiting; bridge.close(); release(); const response = await request; if (response) assert.notEqual(response.status, 200);
 });
+
+test('bridge rejects malformed payloads, DNS rebinding hosts, and overlapping approvals', async t => {
+  let release, started, calls = 0; const waiting = new Promise(r => { started = r; });
+  const bridge = await startBridge({ port: 0, unlocked: () => true, approve: async site => { calls++; started(); await new Promise(r => { release = r; }); return { origin: site, password: 'fictional' }; } }); t.after(() => bridge.close());
+  const url = `http://127.0.0.1:${bridge.port}/fill`, headers = { Origin: 'chrome-extension://' + 'a'.repeat(32), Authorization: 'Bearer ' + bridge.token };
+  for (const body of ['null', '{}', '[]', '{', 'x'.repeat(4097), JSON.stringify({ origin: 'https://example.com.evil/path' }), JSON.stringify({ origin: 'https://user@example.com' })]) assert.equal((await fetch(url, { method: 'POST', headers, body })).status, 403);
+  const reboundStatus = await new Promise((resolve, reject) => { const req = require('node:http').request(url, { method: 'POST', headers: { ...headers, Host: 'attacker.example' } }, res => { res.resume(); resolve(res.statusCode); }); req.on('error', reject); req.end(JSON.stringify({ origin: 'https://example.com' })); });
+  assert.equal(reboundStatus, 403); assert.equal(calls, 0);
+  const first = fetch(url, { method: 'POST', headers, body: JSON.stringify({ origin: 'https://example.com' }) }); await waiting;
+  assert.equal((await fetch(url, { method: 'POST', headers, body: JSON.stringify({ origin: 'https://example.com' }) })).status, 429); assert.equal(calls, 1);
+  release(); assert.equal((await first).status, 200);
+});

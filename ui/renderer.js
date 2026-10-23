@@ -1,12 +1,12 @@
 'use strict';
 (() => {
   const $ = id => document.getElementById(id), raw = window.safe;
-  const api = async (name, value) => { const result = await raw[name](value); if (name === 'lock' || name === 'activity') return result; if (!result.ok) throw Error(result.error); return result.value; };
+  const api = async (name, value) => { const epoch = session, result = await raw[name](value); if (name === 'lock' || name === 'activity') return result; if (epoch !== session) throw Error('Operation cancelled because the vault locked.'); if (!result.ok) throw Error(result.error); return result.value; };
   const node = (tag, text, className) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (className) e.className = className; return e; };
   const notice = text => { $('notice').textContent = text; };
   const button = (text, fn, primary) => { const b = node('button', text, primary ? 'primary' : ''); b.type = 'button'; b.addEventListener('click', async () => { b.disabled = true; try { await fn(); } catch (e) { notice(e.message); } finally { b.disabled = false; } }); return b; };
   let state = null, create = false, view = 'all', editing = null, dirtyPassword = false, generated = '', generatorCleanup, revealTimer, session = 0, folderEditing = null;
-  const eyeTimers = new Map(); let preferences = { idleMinutes: 5, clipboardSeconds: 20 };
+  const eyeTimers = new Map(); let preferences = { idleMinutes: 5, clipboardSeconds: 20 }, visibilityRevision = 0;
   function visibility(id, visible) {
     const input = $(id), toggle = document.querySelector(`[data-eye="${id}"]`); input.type = visible ? 'text' : 'password';
     toggle.setAttribute('aria-pressed', String(visible)); toggle.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} ${toggle.dataset.label}`); toggle.title = toggle.getAttribute('aria-label');
@@ -14,16 +14,16 @@
     if (visible) eyeTimers.set(id, setTimeout(() => visibility(id, false), 15000));
     else if (id === 'entry-password' && editing && !dirtyPassword) input.value = '';
   }
-  function hidePasswords() { document.querySelectorAll('[data-eye]').forEach(b => visibility(b.dataset.eye, false)); }
+  function hidePasswords() { visibilityRevision++; document.querySelectorAll('[data-eye]').forEach(b => visibility(b.dataset.eye, false)); }
   document.querySelectorAll('[data-eye]').forEach(b => b.onclick = async () => {
-    const id = b.dataset.eye, epoch = session, visible = $(id).type === 'password';
-    try { if (id === 'entry-password' && visible && editing && !dirtyPassword) { const secret = await api('reveal', editing.id); if (epoch !== session || !$('editor').open) return; $(id).value = secret; } visibility(id, visible); } catch (e) { $('entry-error').textContent = e.message; }
+    const id = b.dataset.eye, epoch = session, revision = ++visibilityRevision, visible = $(id).type === 'password';
+    try { if (id === 'entry-password' && visible && editing && !dirtyPassword) { const secret = await api('reveal', editing.id); if (epoch !== session || revision !== visibilityRevision || !$('editor').open) return; $(id).value = secret; } visibility(id, visible); } catch (e) { $('entry-error').textContent = e.message; }
   });
   window.addEventListener('blur', hidePasswords);
   function locked() {
     session++; state = null; editing = null; generated = ''; generatorCleanup?.(); generatorCleanup = null; clearTimeout(revealTimer); hidePasswords(); $('folders').replaceChildren();
     for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-    $('entry-form').reset(); $('entry-folder').replaceChildren(); $('folder-form').reset(); folderEditing = null; $('view-title').textContent = 'All logins'; $('vault-name').textContent = ''; $('all-count').textContent = '0'; $('due-count').textContent = '0'; $('entry-password').type = 'password'; $('master').value = ''; $('confirm-master').value = ''; $('workspace').hidden = true; $('gate').hidden = false; $('view-content').replaceChildren(); $('generator-modal-content').replaceChildren(); $('notice').textContent = ''; $('master').focus();
+    $('entry-form').reset(); $('entry-folder').replaceChildren(); $('folder-form').reset(); folderEditing = null; $('view-title').textContent = 'All logins'; $('vault-name').textContent = ''; $('all-count').textContent = '0'; $('due-count').textContent = '0'; $('entry-password').type = 'password'; $('master').value = ''; $('confirm-master').value = ''; $('use-key').checked = false; $('key-controls').hidden = true; $('key-name').textContent = 'Keep the key file separate from your vault.'; $('workspace').hidden = true; $('gate').hidden = false; $('view-content').replaceChildren(); $('generator-modal-content').replaceChildren(); $('notice').textContent = ''; $('master').focus();
   }
   window.addEventListener('safe-locked', locked);
   function mode(value) { create = value; $('open-mode').classList.toggle('active', !value); $('create-mode').classList.toggle('active', value); $('gate-title').textContent = value ? 'Make yourself a safe' : 'Unlock your vault'; $('gate-description').textContent = value ? 'Choose a strong master passphrase. Only you will know it.' : 'A familiar place for the things only you should know.'; $('confirm-label').hidden = !value; $('confirm-master').required = value; $('create-key').hidden = !value; $('master').minLength = value ? 14 : 0; $('unlock-submit').textContent = value ? 'Create encrypted vault →' : 'Unlock vault →'; $('gate-note').textContent = value ? 'There is no password reset. Keep a secure backup of your master password and any key file.' : 'Your master password is required each time you open TMA-Safe.'; $('gate-error').textContent = ''; }
@@ -82,7 +82,7 @@
     $('editor').showModal(); $('entry-title').focus();
   }
   $('add-button').onclick = () => edit(); $('entry-cancel').onclick = () => $('editor').close();
-  $('editor').addEventListener('close', () => { visibility('entry-password', false); $('entry-password').value = ''; clearTimeout(revealTimer); });
+  $('editor').addEventListener('close', () => { visibilityRevision++; visibility('entry-password', false); $('entry-password').value = ''; clearTimeout(revealTimer); });
   $('entry-password').oninput = () => { dirtyPassword = true; };
   $('entry-expiry').onchange = () => { $('custom-expiry-label').hidden = $('entry-expiry').value !== 'custom'; };
   $('entry-form').onsubmit = async event => {
@@ -122,7 +122,7 @@
   }
   let activity = 0; for (const event of ['pointerdown', 'keydown']) window.addEventListener(event, () => { if (state && Date.now() - activity > 10000) { activity = Date.now(); api('activity'); } }, { passive: true });
   document.addEventListener('keydown', event => { if (event.ctrlKey && event.key.toLowerCase() === 'l' && state) { event.preventDefault(); api('lock'); } });
-  window.addEventListener('safe-refresh', async () => { const result = await api('state'); if (!result) return; state = result; $('gate').hidden = true; $('workspace').hidden = false; view = 'all'; render(); });
+  window.addEventListener('safe-refresh', async () => { try { const result = await api('state'); if (!result) return; state = result; $('gate').hidden = true; $('workspace').hidden = false; view = 'all'; render(); } catch (e) { if (state) notice(e.message); } });
   function editFolder(folder) { folderEditing = folder || null; $('folder-name').value = folder?.name || ''; $('folder-title').textContent = folder ? 'Rename folder' : 'New folder'; $('folder-error').textContent = ''; $('folder-dialog').showModal(); $('folder-name').focus(); }
   $('add-folder').onclick = () => editFolder(); $('folder-cancel').onclick = () => $('folder-dialog').close();
   $('folder-form').onsubmit = async event => { event.preventDefault(); const submit = event.submitter; if (submit) submit.disabled = true; try { const result = await api('folder',{ id: folderEditing?.id, name: $('folder-name').value }); if (!state) return; state = result; $('folder-dialog').close(); render(); } catch (e) { $('folder-error').textContent = e.message; } finally { if (submit) submit.disabled = false; } };
