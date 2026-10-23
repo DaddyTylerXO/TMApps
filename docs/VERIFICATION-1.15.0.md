@@ -24,4 +24,4 @@ The workflow preserves current published companion catalog entries, packages and
 
 ## Patch 1.15.1
 
-Corrected historical fixed-version wording for Finance in the KB and README; the live catalog already had 0.1.3. Legacy spaced, dotted and app-named Word attachments are synchronized. No companion application package is changed. Runtime version/installer checks and the native release pipeline are repeated for the patch.
+Corrected historical fixed-version wording for Finance in the KB and README; the live catalog already had 0.1.3. The spaced source compatibility file is preserved; dotted and app-named release downloads are synchronized. GitHub normalizes release filenames, so no separate spaced release asset is uploaded. No companion application package is changed. Runtime version/installer checks and the native release pipeline are repeated for the patch.

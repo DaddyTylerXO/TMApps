@@ -3,7 +3,7 @@
 ## 1.15.1
 
 - Correct stale Finance version wording in KB articles and README.
-- Keep the spaced legacy Word release attachment synchronized with the canonical and dotted filenames.
+- Keep the legacy spaced source document and canonical/dotted release downloads synchronized.
 
 ## 1.15.0
 

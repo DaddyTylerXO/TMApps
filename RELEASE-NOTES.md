@@ -1,4 +1,4 @@
-1.15.1 also corrects historical Finance version wording in the KB and maintains both legacy and app-named Word download attachments. Companion packages remain unchanged.
+1.15.1 also corrects historical Finance version wording in the KB and maintains both legacy dotted and app-named Word download attachments. Companion packages remain unchanged.
 
 TMApps Launcher 1.15.1 adds profile email rows and a local photo, a showcase-style app details screen, Service Status, Spotify playback modes, themed window controls and shared profile autofill.
 
