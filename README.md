@@ -139,3 +139,7 @@ The app must be open, but may be minimized, for work to execute. The main-proces
 `npm test` checks live file creation and specialist handoffs using controlled model responses, permissions, app-action approval, cancellation, limits, restart recovery, encrypted credential handling, safe result rendering, and UI behavior. The tests do not consume paid OpenAI tokens. `scripts/verify-secure-storage.cjs`, run with Electron, verifies the real Windows encryption facility using a non-secret test value. A real OpenAI generation check requires your API key and a user-created live job.
 
 The Electron renderer has no Node integration, runs sandboxed with context isolation, blocks navigation and new windows, and uses a content security policy that prevents remote connections. Local desktop integrations execute in the main process through a fixed preload API.
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
