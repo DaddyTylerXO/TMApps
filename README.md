@@ -1,6 +1,6 @@
 # TMApps Launcher
 
-Launcher 1.15.0 adds Spotify playback modes, a dark title bar and themed controls, reorganized settings, and local profile autofill for compatible app icons. Companion source updates are prepared locally for their next releases; this launcher release preserves their current downloadable packages. See [Spotify setup](docs/spotify.md) and [shared profile contract](docs/shared-profile.md).
+Launcher 1.15.1 adds Spotify playback modes, a dark title bar and themed controls, reorganized settings, and local profile autofill for compatible app icons. Companion source updates are prepared locally for their next releases; this launcher release preserves their current downloadable packages. See [Spotify setup](docs/spotify.md) and [shared profile contract](docs/shared-profile.md).
 
 A launcher for the **TMApps application suite**, available on **Windows, macOS, and Linux**. Windows keeps its existing native installer and interface; macOS and Linux use the companion desktop client. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
 
@@ -172,7 +172,7 @@ TMApps email-code sign-in clients, protected session storage, app access grants 
 
 ## Libraries and Finance
 
-Launcher **1.14.2 and later** can install the published Windows development packages for **TMA-Libraries 0.2.0-dev.1** and **TMA-Finance 0.1.0**. Use **Check updates**, accept the launcher update/restart if needed, and choose **Install app**. Both use their actual app icons, source versions/dates and SHA-256-checked ZIP packages, with custom installation folders and optional startup/desktop shortcuts. Neither app has a published macOS/Linux build yet; those launchers show the Windows badge and disable incompatible installation.
+Launcher **1.14.2 and later** can install the published Windows development packages for **TMA-Libraries 0.2.0-dev.1** and **TMA-Finance 0.1.3**. Use **Check updates**, accept the launcher update/restart if needed, and choose **Install app**. Both use their actual app icons, source versions/dates and SHA-256-checked ZIP packages, with custom installation folders and optional startup/desktop shortcuts. Neither app has a published macOS/Linux build yet; those launchers show the Windows badge and disable incompatible installation.
 
 Libraries provides offline text notes and checklists with local workspace recovery. Its brown folder icon matches the app. Advanced editors, encryption, notifications and several suite settings/help features remain incomplete. Finance provides budgets, subscriptions, savings and a manual investment workspace, with optional data-provider connections. Its green bills icon matches the app; provider credentials are entered only in Finance. Bank linking, cloud sync and the full suite tray/help/settings features remain incomplete. Both are development builds, not a claim that all compulsory standards are finished.
 

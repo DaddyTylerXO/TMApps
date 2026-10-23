@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1
+
+- Correct stale Finance version wording in KB articles and README.
+- Keep the spaced legacy Word release attachment synchronized with the canonical and dotted filenames.
+
 ## 1.15.0
 
 - Individual email rows, optional local profile photo, showcase details and bounded screenshot navigation.

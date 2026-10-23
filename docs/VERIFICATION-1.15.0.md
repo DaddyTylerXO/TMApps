@@ -21,3 +21,7 @@ The launcher update adds individual email fields, an optional local profile phot
 - Resource checks are short startup/idle measurements and targeted UI/fixture workloads, not long-duration stress tests or a complete security audit.
 
 The workflow preserves current published companion catalog entries, packages and checksums. Versioned native installers and stable download aliases are uploaded before the native update manifest. The macOS bundle version is checked against package.json to reject stale DMGs.
+
+## Patch 1.15.1
+
+Corrected historical fixed-version wording for Finance in the KB and README; the live catalog already had 0.1.3. Legacy spaced, dotted and app-named Word attachments are synchronized. No companion application package is changed. Runtime version/installer checks and the native release pipeline are repeated for the patch.

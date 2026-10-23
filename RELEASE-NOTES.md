@@ -1,4 +1,6 @@
-TMApps Launcher 1.15.0 adds profile email rows and a local photo, a showcase-style app details screen, Service Status, Spotify playback modes, themed window controls and shared profile autofill.
+1.15.1 also corrects historical Finance version wording in the KB and maintains both legacy and app-named Word download attachments. Companion packages remain unchanged.
+
+TMApps Launcher 1.15.1 adds profile email rows and a local photo, a showcase-style app details screen, Service Status, Spotify playback modes, themed window controls and shared profile autofill.
 
 - Open Spotify to connect through browser authorization using PKCE. Choose an active Spotify/Connect device or browser streaming with in-app controls. Browser mode opens Spotify's web player; start a track there. Premium and developer-app user access are required. No client secret is bundled. Authorization stays in protected local storage, or in memory if no secure Linux keyring is available. Refresh stops when the music window closes.
 - The launcher and Windows installer use dark window chrome. Scrollbars and checkboxes follow the theme. List-mode Details sits below the main app actions. Settings has focused section buttons, dedicated KB Help and a Compact Navigation Bar control.
