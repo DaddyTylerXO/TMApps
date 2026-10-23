@@ -12,13 +12,17 @@ function secret(value) {
 function entry(value) {
   if(!value || typeof value!=='object') throw Error('Invalid authenticator.');
   let v={...value};
+  if(typeof v.secret!=='string'||v.secret.length>4096||(v.name!==undefined&&(typeof v.name!=='string'||v.name.length>120))||(v.issuer!==undefined&&(typeof v.issuer!=='string'||v.issuer.length>120))||(v.id!==undefined&&(typeof v.id!=='string'||!v.id.length||v.id.length>128||/[\x00-\x1f\x7f]/.test(v.id))))throw Error('Invalid authenticator fields.');
   if(typeof v.secret==='string' && v.secret.startsWith('otpauth://')) {
-    const u=new URL(v.secret); if(!['totp','hotp'].includes(u.hostname)) throw Error('Unsupported authenticator type.');
+    const u=new URL(v.secret); if(!['totp','hotp'].includes(u.hostname)||u.username||u.password||u.port||u.hash) throw Error('Unsupported authenticator URL.');
     const p=u.searchParams, label=decodeURIComponent(u.pathname.slice(1));if(u.hostname==='hotp'&&!p.has('counter'))throw Error('HOTP URLs must include an initial counter.');
     v={...v,name:v.name||label,issuer:p.get('issuer')||'',secret:p.get('secret'),type:u.hostname,algorithm:(p.get('algorithm')||'SHA1').toLowerCase(),digits:Number(p.get('digits')||6),period:Number(p.get('period')||30),counter:Number(p.get('counter')||0)};
   }
-  const e={id:typeof v.id==='string'?v.id:crypto.randomUUID(),name:String(v.name||'').trim(),issuer:String(v.issuer||'').trim(),secret:secret(v.secret).text,type:v.type||'totp',algorithm:(v.algorithm||'sha1').toLowerCase(),digits:Number(v.digits??6),period:Number(v.period??30),counter:Number(v.counter??0)};
+  const decoded=secret(v.secret);const normalized=decoded.text;decoded.bytes.fill(0);
+  const e={id:typeof v.id==='string'?v.id:crypto.randomUUID(),name:String(v.name||'').trim(),issuer:String(v.issuer||'').trim(),secret:normalized,type:v.type||'totp',algorithm:(v.algorithm||'sha1').toLowerCase(),digits:Number(v.digits??6),period:Number(v.period??30),counter:Number(v.counter??0)};
   if(!e.name || e.name.length>120 || e.issuer.length>120 || !['totp','hotp'].includes(e.type) || !['sha1','sha256','sha512'].includes(e.algorithm) || ![6,8].includes(e.digits) || !Number.isInteger(e.period) || e.period<15 || e.period>120 || !Number.isSafeInteger(e.counter) || e.counter<0) throw Error('Check the name and advanced authenticator settings.');
+  if(v.icon!==undefined){if(typeof v.icon!=='string'||!(/^(initial|shield|mail|cloud|work|game|key)$/.test(v.icon)||/^data:image\/png;base64,[A-Za-z0-9+/]{1,32768}={0,2}$/.test(v.icon)))throw Error('Invalid account icon.');e.icon=v.icon;}
+  for(const field of ['hidden','autoRefresh'])if(v[field]!==undefined){if(typeof v[field]!=='boolean')throw Error('Invalid account option.');e[field]=v[field];}
   return e;
 }
 function code(e,time=Date.now()) {

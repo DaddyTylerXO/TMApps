@@ -59,6 +59,10 @@ jobs:
           node node_modules/electron/install.js
           node -e "if(process.platform!=='${{ matrix.platform }}'||process.arch!=='${{ matrix.arch }}')throw Error('Wrong native build runner')"
       - run: pnpm test
+      - name: Dependency security gate
+        run: pnpm audit --audit-level moderate
+      - name: Performance regression gate
+        run: pnpm test:performance
       - name: Allow Chromium user namespaces on the ephemeral Linux runner
         if: matrix.platform == 'linux'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
@@ -72,6 +76,8 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: pnpm exec electron-builder ${{ matrix.args }} --publish never
+      - name: Verify packaged security fuses
+        run: node scripts/verify-fuses.cjs
       - name: Prepare macOS launcher archive
         if: matrix.platform == 'darwin'
         run: |
@@ -106,6 +112,7 @@ jobs:
           name: checks-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             build/*smoke/*
+            build/performance.json
   publish:
     needs: build
     runs-on: ubuntu-latest

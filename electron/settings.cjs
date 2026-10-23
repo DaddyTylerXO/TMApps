@@ -1,10 +1,11 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
-const defaults=Object.freeze({openAtLogin:false,showTray:true,closeToTray:false,startMinimized:false,autoLockMinutes:5});
+const defaults=Object.freeze({openAtLogin:false,showTray:true,closeToTray:false,startMinimized:false,autoLockMinutes:5,alwaysOnTop:false,notifications:false,theme:'pink',scheduleTheme:false,nightTheme:'black',nightStart:'20:00',nightEnd:'07:00',transitionMinutes:2,searchKB:true,tourSeen:false});
 function validate(value){
   if(!value||typeof value!=='object'||Object.keys(value).some(k=>!Object.hasOwn(defaults,k)))throw Error('Invalid settings.');
   const v={...defaults,...value};
-  for(const name of ['openAtLogin','showTray','closeToTray','startMinimized'])if(typeof v[name]!=='boolean')throw Error('Invalid settings.');
+  for(const name of ['openAtLogin','showTray','closeToTray','startMinimized','alwaysOnTop','notifications','scheduleTheme','searchKB','tourSeen'])if(typeof v[name]!=='boolean')throw Error('Invalid settings.');
+  if(!['pink','grey','black'].includes(v.theme)||!['grey','black'].includes(v.nightTheme)||![v.nightStart,v.nightEnd].every(x=>typeof x==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(x))||!Number.isInteger(v.transitionMinutes)||v.transitionMinutes<0||v.transitionMinutes>60)throw Error('Invalid appearance settings.');
   if(![1,5,15,30].includes(v.autoLockMinutes))throw Error('Choose an auto-lock time from the list.');
   if(!v.showTray&&(v.closeToTray||v.startMinimized))throw Error('Enable the tray icon before using tray startup or close options.');
   return v;
