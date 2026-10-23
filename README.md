@@ -84,3 +84,7 @@ Draft Terms, Privacy and deletion instructions are bundled in `assets/legal/` an
 ## Validation
 
 `pnpm test` covers metrics normalization, credential redaction, trusted Bluesky hosts, platform validation, partial publishing, duplicate prevention, uncertain outcomes, persistence and startup configuration. `node node_modules/electron/cli.js . --smoke` runs an isolated desktop check and writes screenshots and a result to ignored `artifacts/`. Use a fresh smoke profile for repeated tests. No real social post is sent by tests. Every release runs a bounded dashboard data preparation benchmark; Windows builds also run the isolated UI smoke checks. Synthetic timing budgets do not establish performance on every machine.
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
