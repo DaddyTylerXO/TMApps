@@ -1,18 +1,38 @@
-name: Launcher Issue report
-description: Issue report for TMApps Launcher
-title: "[Launcher] Issue report"
+name: Launcher issue report
+description: Report a issue for TMApps Launcher
+title: "[Launcher] Issue"
 body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic data. Vulnerabilities belong in private Security reporting. Review every attachment before submission."
   - type: input
     id: app
     attributes:
-      label: Application and version
+      label: Application and installed version
       value: TMApps Launcher
     validations:
       required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system version/build and CPU architecture
+    validations:
+      required: true
+  - type: input
+    id: theme
+    attributes:
+      label: Active theme and affected screen
   - type: textarea
     id: report
     attributes:
-      label: Details and expected behaviour
-      description: Review before submitting. Do not include credentials, mail content or private files.
+      label: Details, expected behaviour and steps
+      description: Include sanitized error text, relevant KB steps, frequency and workarounds. For download issues include asset name and checksum result.
     validations:
       required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: I reviewed the report and attachments and removed credentials and private data.
+          required: true

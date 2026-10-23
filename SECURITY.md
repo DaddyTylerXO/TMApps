@@ -6,7 +6,7 @@ This policy covers all TMApps application branches, the launcher, release assets
 
 Use the newest published package for your app and supported platform, listed in [DOWNLOADS.md](DOWNLOADS.md). Versions are independent across apps; the suite does not use a single shared version number. Older downloads may remain in the shared release for history and compatibility. Their presence is not a promise of continued security maintenance.
 
-TMApps applications are in development. There is no published long-term-support schedule or guaranteed response time. A branch version or successful build alone is not evidence that a package is available or independently security-audited. TMA-Finance and TMA-Libraries have no published application package at the time of the initial maintenance audit.
+TMApps applications are in development. There is no published long-term-support schedule or guaranteed response time. A branch version or successful build alone is not evidence that a package is available or independently security-audited. The 23 October 2026 distribution audit found published Windows development packages for Finance and Libraries. OS-version verification remains separate from package availability; see [OS-SUPPORT.md](OS-SUPPORT.md).
 
 ## Report a vulnerability privately
 
@@ -33,3 +33,7 @@ Keep independent backups and service recovery methods. Do not assume an app has 
 Follow [.cursor/rules/security-data.mdc](.cursor/rules/security-data.mdc) for every commit, push and publication. Review outgoing history, source changes and generated packages with redacted scanning and manual inspection. Keep secrets in an appropriate OS/server secret store or protected CI secrets; never embed them in a distributed client or publish real user data.
 
 If credentials may have been exposed, stop the affected publication, notify the owner with redacted file locations and arrange revocation/rotation. Removing the latest copy does not remove earlier history or release artifacts. Coordinate cleanup; do not rewrite shared history or force-push without explicit authorization.
+
+## Maintenance review — 23 October 2026
+
+This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.

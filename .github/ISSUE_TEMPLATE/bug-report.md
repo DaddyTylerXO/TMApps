@@ -1,44 +1,32 @@
 ---
-name: Bug report - *App Name* - *Bug*
-about: Create a report to help us improve
+name: Bug report
+about: Report a reproducible TMApps problem
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
-**App Name**
-Name of the TMApp you are using.
+**Application and installed version**
+Find the version in the app or TMApps Launcher. Include the affected app branch if known.
 
-**App Version**
-Please find the version you are using in either the Apps settings or displayed in TMApps Launcher.
+**Operating system version/build and processor architecture**
+For example Windows 11 build ..., macOS ... Intel/Apple Silicon, or Linux distribution/version ... x64/ARM64.
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Theme and affected screen**
+Bubble / Finance / ArtCraft-inspired / Blocky Basic / other; include only themes actually available in your installed version.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**What happened and what did you expect?**
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Steps to reproduce**
+1. ...
+2. ...
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Error message and when it occurred**
+Use sanitized text.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**Frequency, workarounds and KB steps already tried**
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Sanitized attachments (optional)**
+Review logs and screenshots before submitting. Never include passwords, tokens, API secrets, authenticator seeds, real vaults, mail or personal files. Do not attach a complete user-data folder. Report vulnerabilities privately using [Security](https://github.com/DaddyTylerXO/TMApps/security/advisories/new).
 
-**Additional context**
-Add any other context about the problem here.
+- [ ] I reviewed this report and any attachments for sensitive information.

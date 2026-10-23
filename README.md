@@ -21,15 +21,20 @@ Each application has its own branch. `main` contains the suite overview, shared 
 | [TMA-Safe](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Safe) | Encrypted password vault | Windows, macOS, Linux |
 | [TMA-Padlock](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Padlock) | TOTP/HOTP authenticator | Windows, macOS, Linux |
 | [TMA-Cut](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Cut) | Local video editor | Windows, macOS, Linux |
-| [TMA-Finance](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Finance) | Reserved project branch | No application package published |
-| [TMA-Libraries](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries) | Project in preparation | No application package published |
+| [TMA-Finance](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Finance) | Personal finance and manual investment workspace | Windows development build |
+| [TMA-Libraries](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Libraries) | Offline document workspace | Windows development preview |
 | [TMA-SocialsManager](https://github.com/DaddyTylerXO/TMApps/tree/TMA-SocialsManager) | Social account metrics and supported publishing tools | Windows, macOS, Linux |
 | [TMA-Agent Office](https://github.com/DaddyTylerXO/TMApps/tree/TMA-AgentOffice) | AI specialists, projects and local app integrations | Windows |
 
-Published-platform information was checked on **21 October 2026**. Architecture-specific downloads and versions are listed in [DOWNLOADS.md](DOWNLOADS.md). Branch source can contain work newer than a published package; requirements in the shared standards do not by themselves mean a port is available.
+Published-platform information was checked on **23 October 2026**. Architecture-specific downloads and versions are listed in [DOWNLOADS.md](DOWNLOADS.md). Branch source can contain work newer than a published package; requirements in the shared standards do not by themselves mean a port is available.
 
 ## Help and maintenance
 
 Use each app's Help/KB and branch README for setup instructions. [SUPPORT.md](SUPPORT.md) links to public bug, feature and general issue reports. Send vulnerabilities through [private security reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new).
 
 [APP-STANDARDS.md](APP-STANDARDS.md) defines the compulsory app requirements. [MAINTENANCE.md](MAINTENANCE.md) records the cross-branch audit, known distribution/documentation gaps and the maintenance procedure. Installers and portable archives are distributed through GitHub Releases; the public GitHub Packages page currently has no published registry packages.
+
+
+## Standards and progress
+
+[The numbered work queue](JOBS.md) records completed work and outstanding app implementation. All app branches carry the [shared standards](APP-STANDARDS.md) and an evidence checklist. [OS support](OS-SUPPORT.md) separates package availability, stated requirements and unverified OS versions. [Contributing](CONTRIBUTING.md), [community conduct](CODE_OF_CONDUCT.md) and [accessibility status](ACCESSIBILITY.md) explain how to participate and report problems. Future apps follow [the onboarding checklist](templates/NEW-APP-CHECKLIST.md).

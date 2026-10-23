@@ -4,7 +4,7 @@ Initial cross-branch audit: **21 October 2026**. This is a dated evidence record
 
 ## Repository and distribution
 
-All ten branches were inspected: `main`, `TMApps-Launcher`, `TMA-Mail`, `TMA-Safe`, `TMA-Padlock`, `TMA-Cut`, `TMA-Finance`, `TMA-Libraries`, `TMA-SocialsManager` and `TMA-AgentOffice`. Branch instructions, root documentation, package versions, file trees and available publishing workflows were reviewed. Finance and Libraries contain project/template documents rather than an application implementation.
+All ten branches were inspected: `main`, `TMApps-Launcher`, `TMA-Mail`, `TMA-Safe`, `TMA-Padlock`, `TMA-Cut`, `TMA-Finance`, `TMA-Libraries`, `TMA-SocialsManager` and `TMA-AgentOffice`. Branch instructions, root documentation, package versions, file trees and available publishing workflows were reviewed. That initial snapshot predates the Finance implementation and Libraries rebuild; use the newer dated record below for current distribution.
 
 The shared `tma-apps` release contained **382 assets** at the final check, after Cut's 0.2.0 and SocialsManager's 0.4.0 publications. The audit compared all **26 package references** in the application catalog and launcher update feeds with GitHub's uploaded-asset SHA-256 digests and checksum sidecars. All 26 matched. This check did not download or execute those release binaries, inspect historical packages, or independently reproduce their builds.
 
@@ -57,3 +57,38 @@ The owner requested daily checks at **09:00 Europe/London**. The chat's maintena
 5. Review relevant dependency advisories and resolve supported updates with app-specific tests. Never equate a package version bump with a tested release, or claim unavailable alert/registry access was checked.
 6. Update the README/download index and this dated record when facts change. Preserve historical release assets unless the owner authorizes cleanup. Follow app-specific release/version requirements and never publish a build that has not passed its required checks.
 7. Run redacted secret scanning and review the actual outgoing changes and artifacts. Keep credentials, real account data, local test output and build products out of commits/releases.
+
+
+## Maintenance update — 23 October 2026
+
+Reviewed all ten current branch heads and published 38 shared acceptance criteria,
+per-branch evidence checklists and future-project guidance. Finance Settings is
+the common layout reference; Mail remains the tray/notification/status reference.
+Four themes are required in separate verified pushed updates. Agent Office's
+approved identity is grey with a white robot; runtime integration remains open.
+
+The read-only release audit checked **403 assets** and **28 manifest packages**
+against GitHub digests and live checksum sidecars with **zero findings**. Binaries
+were not downloaded/executed by this audit. Published Finance is **0.1.3** and
+Libraries **0.2.0-dev.1**, both Windows development builds; newer source or older
+branch documentation must not be confused with these catalog versions. Launcher
+feeds publish **1.14.2**. DOWNLOADS and OS-SUPPORT reflect the dated evidence.
+
+Main Help links now use the existing Windows-safe issue-template filenames. Bug,
+feature, general issue and Launcher templates collect app/version, OS build/CPU,
+theme, reproducible details and sanitized supporting evidence. Contribution,
+community conduct and accessibility status documents were added. Accessibility
+features are described with limits rather than a compliance certification.
+
+README and SECURITY were reviewed/updated on every branch. The changes are policy
+and documentation only; no runtime/performance result, new app version or package
+is claimed. Existing app-specific release gates and security models are preserved.
+Licensing, usage-rights/legality and legal-policy work are deferred by the owner.
+
+The source workbook and four original PNG files were unavailable at their supplied
+paths. Visible theme references and pasted requirements were retained; no claim is
+made that the workbook was reconciled. Word KB drafts still need current-source
+refresh and complete visual QA before publication. Wiki initialization, Project
+fields, labels/topics/version tags and app runtime work remain in the queue.
+
+Repository topics and nine app labels were added. Authenticated package-registry inventory returned HTTP 403 for the available credentials; registry maintenance is not marked complete. App-scoped version tags remain pending exact published-build/source verification.

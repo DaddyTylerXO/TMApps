@@ -1,26 +1,29 @@
 ---
-name: Feature request - *App Name* - *Feature*
-about: Suggest an idea for this project
+name: Feature request
+about: Suggest an improvement to a TMApps application
 title: ''
 labels: ''
-assignees: DaddyTylerXO
-
+assignees: ''
 ---
 
-**App Name**
-Name of the TMApp you are using.
+**Application and installed version**
+Find the version in the app or TMApps Launcher. Include the affected app branch if known.
 
-**App Version**
-Please find the version you are using in either the Apps settings or displayed in TMApps Launcher.
+**Operating system version/build and processor architecture**
+For example Windows 11 build ..., macOS ... Intel/Apple Silicon, or Linux distribution/version ... x64/ARM64.
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Theme and affected screen**
+Bubble / Finance / ArtCraft-inspired / Blocky Basic / other; include only themes actually available in your installed version.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Problem or goal**
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Proposed behaviour**
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**Alternatives and offline expectations**
+
+**Accessibility or performance considerations, if relevant**
+
+**Sanitized attachments (optional)**
+Review logs and screenshots before submitting. Never include passwords, tokens, API secrets, authenticator seeds, real vaults, mail or personal files. Do not attach a complete user-data folder. Report vulnerabilities privately using [Security](https://github.com/DaddyTylerXO/TMApps/security/advisories/new).
+
+- [ ] I reviewed this report and any attachments for sensitive information.

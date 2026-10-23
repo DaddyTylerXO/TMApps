@@ -1,20 +1,28 @@
 ---
 name: General issue
-about: Installation, downloads, help or another issue with a TMApps application
+about: Installation, download, setup or another TMApps question
 title: ''
 labels: ''
 assignees: ''
 ---
 
-**App name and installed version**
+**Application and installed version**
+Find the version in the app or TMApps Launcher. Include the affected app branch if known.
 
-**Operating system and processor architecture**
+**Operating system version/build and processor architecture**
+For example Windows 11 build ..., macOS ... Intel/Apple Silicon, or Linux distribution/version ... x64/ARM64.
 
-**Issue or question**
-Explain what happened and what you expected. Include steps to reproduce where relevant.
+**Theme and affected screen**
+Bubble / Finance / ArtCraft-inspired / Blocky Basic / other; include only themes actually available in your installed version.
+
+**Question or issue**
+
+**What you tried and relevant KB numbers**
 
 **Download details, if relevant**
 Asset filename, official download URL and checksum result.
 
-**Sanitized supporting information**
-Review all logs and screenshots. Do not include passwords, tokens, authenticator seeds, real vaults, mailbox contents or personal files. Report security vulnerabilities privately using the repository's Security tab.
+**Sanitized attachments (optional)**
+Review logs and screenshots before submitting. Never include passwords, tokens, API secrets, authenticator seeds, real vaults, mail or personal files. Do not attach a complete user-data folder. Report vulnerabilities privately using [Security](https://github.com/DaddyTylerXO/TMApps/security/advisories/new).
+
+- [ ] I reviewed this report and any attachments for sensitive information.
