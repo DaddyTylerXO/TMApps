@@ -87,3 +87,7 @@ TMApps Launcher 1.8.0 can share an optional display name and multiple email addr
 This does not sign you in. Connect each mailbox in Mail using its app-specific password/key (where required, such as iCloud) or provider sign-in. Launcher profile sharing never supplies or transfers passwords, app keys, or tokens. Disable sharing in the launcher to remove suggestions and stop future profile updates; connected accounts and the existing Mail display name remain.
 
 The shared file is `%LOCALAPPDATA%\TMApps\profile.json`. Custom `--data-dir` profiles do not read it by default; `--launcher-profile <path>` explicitly opts them in. This is local sharing, not cloud/device sync.
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.

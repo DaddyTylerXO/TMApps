@@ -21,3 +21,7 @@ git config core.hooksPath .githooks
 The installed hook scans every pushed ref before upload and fails closed if PowerShell or the scanner is unavailable. Do not bypass it with `--no-verify`, allow a detected secret through GitHub push protection, or disable protection to publish a release. Investigate any finding, remove real secrets from every outgoing commit and archive, then rerun the scan. If a real secret was published, revoke/rotate it before addressing history cleanup.
 
 `package.ps1` packages public provider configuration only, refuses a nonempty Google client secret, and scans the resulting ZIP before writing its checksum. Failed ZIPs are removed. GitHub CI independently scans reachable history and archived contents after pushes and on pull requests; CI is an additional detector, not a substitute for the pre-upload hook or GitHub push protection.
+
+## Maintenance review — 23 October 2026
+
+This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.
