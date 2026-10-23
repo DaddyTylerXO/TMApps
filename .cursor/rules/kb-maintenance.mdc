@@ -1,0 +1,51 @@
+---
+description: Keep this app's illustrated KB Library current with every implemented update
+alwaysApply: true
+---
+
+# KB maintenance with every app update
+
+The user requires TMA-Padlock to follow the same ongoing KB maintenance standard
+as TMApps Launcher. Treat relevant documentation as part of completing an update.
+
+- Review changes for effects on setup, features, settings, supported platforms,
+  performance, privacy and troubleshooting. Update relevant existing articles;
+  add a new article when a distinct topic needs its own guide.
+- Preserve existing KB identifiers and reference conventions. If none exist, use
+  `Padlock-KB1`, `Padlock-KB2`, and so on. Append new numbers after the highest
+  existing number; never reuse or renumber an existing article.
+- Use the app's existing KB content source. If no KB exists, establish its first
+  guides with the next relevant feature update. Keep any in-app help and Word
+  library consistent; do not add unrelated product features just to apply this rule.
+- Include relevant real screenshots where they help explain the instructions.
+  Refresh captures when affected UI changes. Use sanitized example data and
+  captions. Never capture real passwords, keys, tokens, recovery codes, vault
+  contents, mail, private projects or other sensitive user information.
+- Maintain the app's KB Library Word document at its established path, or use
+  `docs/KB Library.docx` when creating it. Follow the documents skill for artifact
+  authoring. Keep release/date metadata accurate and preserve a reproducible
+  generator where one exists.
+- Make index entries and all KB references clickable buttons linking to the
+  relevant article section. Include Back to index navigation. Preserve stable
+  bookmarks and validate every target, including new articles.
+- Render and visually inspect every page before publishing a changed Word
+  document. Verify screenshot readability, captions, page breaks and navigation.
+- Include updated KB sources, screenshots and the reviewed Word document in
+  the relevant app update on `TMA-Padlock`. Follow this app's existing release
+  policy; this requirement alone does not authorize a version bump or release.
+  When attaching the document to a shared GitHub release, use an app-specific
+  asset name so it cannot replace the launcher or another app's KB Library.
+- Document implemented, verified behaviour and current platform limitations.
+  Clearly label prepared or unavailable features. If an update has no relevant
+  user-facing KB impact, record that assessment rather than inventing an article.
+
+## Suite library requirements (23 October 2026)
+
+Publish docs/(App Name) KB Library.docx with app name, approved logo and app colours
+on every page. Retain legacy KB Library.docx links until consumers are migrated.
+Link the main-branch TMApps Master KB Library on page one once published; never
+claim an unpublished document is available. Keep stable KB IDs, working index and
+cross-reference links, setup, user guides, actual errors/resolutions and escalation.
+Include explicit offline/online coverage. Use real sanitized screenshots. Render
+and visually inspect every changed Word page before upload. Keep in-app Help,
+optional KB search results, Wiki articles and the main KB registry aligned.

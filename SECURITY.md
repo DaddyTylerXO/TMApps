@@ -1,3 +1,5 @@
+> Repository-wide reporting, supported-version guidance and publishing requirements: [suite security policy](https://github.com/DaddyTylerXO/TMApps/blob/main/SECURITY.md). Send vulnerabilities through [private vulnerability reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new); keep sensitive details out of public issues.
+
 # Security model
 
 TMA-Padlock keeps authenticator secrets and metadata encrypted in `vault.tmapadlock` under Electron's per-user application-data directory (`app.getPath('userData')`). Code generation and vault storage make no network requests. Renderer connections are blocked. User-selected help/report actions open fixed GitHub URLs in the system browser, which sends the reviewed report text to GitHub. There is no telemetry or cloud recovery.
@@ -35,3 +37,6 @@ Packaged Electron disables RunAsNode, NODE_OPTIONS, CLI inspector arguments and 
 Uploaded icons accept only size-bounded PNG/JPEG headers with bounded pixel dimensions before native decoding, then normalize to 64-pixel PNG. Presets and custom icons are encrypted account metadata. SVG and remote image URLs are rejected. Account lists render at most 100 matches at once; code caches are bounded by account count and cleared on lock.
 
 Crash diagnostics persist at most ten timestamps and allowlisted failure categories alongside version/platform/architecture. Raw exception messages, stacks, OS paths, vault files, names, codes and setup secrets are excluded. User-written report text is reviewed separately with an explicit checkbox before opening GitHub. Do not include secrets in that text. Windows ACLs remain inherited from the per-user application-data directory; POSIX vault files use mode 0600.
+## Maintenance review — 23 October 2026
+
+The earlier suite maintenance update changed documentation and shared acceptance criteria only. The 0.4.0 code update is assessed in docs/security-assessment.md. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.

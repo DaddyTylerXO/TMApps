@@ -1,0 +1,29 @@
+---
+description: Compulsory TMApps standards for all current and future apps
+alwaysApply: true
+---
+
+# App acceptance criteria
+
+- Follow APP-STANDARDS.md and standards/requirements.json on every update.
+- Maintain evidence and unchecked gaps in APP-COMPLIANCE.md; instructions alone
+  never establish implemented features, native support or a verified release.
+- Use TMA-Finance Settings layout for every app and theme. Keep feature, bug,
+  issue and Help actions on main Settings, with settings/optional KB search.
+- Default to Original Bubble Look. Implement/verify/push one theme per app update
+  before the next: Bubble, Finance, ArtCraft-inspired, then Blocky Basic.
+- Preserve approved identities; Agent Office is grey with a white robot.
+- Offer first-setup tours/replay with visible unblurred targets and adjacent dialogs.
+- Follow the profile, sounds, appearance, accessibility, connectivity, crash-report,
+  notifications, tray, New Features and zero-cost requirements in the standards.
+- Record actual OS versions/architectures and packaged test evidence. Distinguish
+  unsupported OS, known unsupported version and not-yet-verified versions.
+- Review README.md and SECURITY.md after every branch update. Record assessment;
+  preserve accurate app-specific security models and release approval rules.
+- Update affected KB/tours/release notes; follow kb-maintenance.mdc and review all
+  outgoing artifacts under security-data.mdc before publication.
+- Run meaningful functional/performance checks for every code update. Record a
+  no-runtime-impact assessment for policy-only changes; do not invent test results.
+- Copy standards, evidence checklist, AGENTS and security/KB rules to future apps.
+- Defer licensing, usage-rights/legality and legal-policy work per owner direction.
+- Prepare startup-animation proposals for owner approval before implementing them.
