@@ -28,3 +28,7 @@ Key-file protection is a cryptographic possession factor. TOTP and Windows Hello
 Tests cover incorrect passwords/keys, encrypted-at-rest fields, ciphertext/KDF tampering, portability, lock cancellation during derivation, concurrent writes, backups, no overwrite, generator constraints, CSV parsing, DOM injection, lock cleanup and bridge authentication/origin rejection. Real Electron smoke checks cover startup, rendering, Node isolation, hidden list passwords and lock cleanup. These checks are not an independent security audit or penetration test.
 
 Device-local settings contain only preferences. Startup never unlocks the vault. Closing to tray locks immediately; the custom tray menu has a separate sandboxed renderer and an allowlisted IPC channel that cannot access credentials.
+
+## Maintenance review — 23 October 2026
+
+This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.

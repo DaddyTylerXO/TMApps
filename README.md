@@ -64,3 +64,7 @@ The release workflow tests and packages Windows x64, macOS x64/arm64 and Linux x
 ## References
 
 [KeePass security](https://keepass.info/help/base/security.html) informed full-database encryption, salted key derivation, portability and locking. TMA-Safe uses its own format, not KDBX, and does not claim KeePass's review history. Renderer isolation follows [Electron security guidance](https://www.electronjs.org/docs/latest/tutorial/security/).
+
+## Shared standards update — 23 October 2026
+
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
