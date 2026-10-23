@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-[assembly: System.Reflection.AssemblyVersion("1.14.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.14.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.15.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.15.0.0")]
 [assembly: System.Reflection.AssemblyProduct("TMApps Launcher")]
 [assembly: System.Reflection.AssemblyCompany("DaddyTylerXO")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright © DaddyTylerXO 2026")]
@@ -54,7 +54,7 @@ namespace TMApps {
         public Visibility MacSupport { get { return Supports("macos") ? Visibility.Visible : Visibility.Collapsed; } }
         public Visibility LinuxSupport { get { return Supports("linux") ? Visibility.Visible : Visibility.Collapsed; } }
         public string VersionLabel { get; set; } public string Status { get; set; } public string Detail { get; set; }
-        public string Action { get; set; } public bool CanAct { get; set; } public bool Busy; public bool Removing;
+        public string Action { get; set; } public bool CanAct { get; set; } public bool Busy {get;set;} public bool Removing;
         public CancellationTokenSource Cancellation;
         public Visibility CancelVisibility { get { return Busy && !Removing ? Visibility.Visible : Visibility.Collapsed; } }
         public event PropertyChangedEventHandler PropertyChanged;
@@ -105,6 +105,7 @@ namespace TMApps {
             preferences = DesktopIntegration.LoadPreferences(root);
             ThemedDialog.ThemeTransform=dialog=>LauncherThemes.Apply(dialog,preferences.theme);
             window = (Window)XamlReader.Parse(CleanXaml(Bundled.Read("MainWindow.xaml"))); MainWindow = window;
+            LauncherControls.Apply(window.Resources);LauncherControls.WindowChrome(window);
             using (var icon = typeof(Bundled).Assembly.GetManifestResourceStream("TMApps.launcher.ico")) {
                 window.Icon = System.Windows.Media.Imaging.BitmapDecoder.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames.Last();
             }
@@ -183,7 +184,7 @@ namespace TMApps {
             ((StackPanel)target.FindName("BrandTitle")).Visibility=p.compactNavigation ? Visibility.Collapsed : Visibility.Visible;
             ((StackPanel)target.FindName("BrandBlock")).Margin=side ? new Thickness(8,7,8,24) : new Thickness(8,7,20,7);
             ((StackPanel)target.FindName("NavUtilities")).Margin=side ? new Thickness(0,22,0,0) : new Thickness(8,0,0,0);
-            foreach(string name in new[]{"AllFilter","InstalledFilter","UpdatesFilter","NotInstalledFilter","CompactButton","RefreshButton","SettingsButton","GitHubButton"}) {
+            foreach(string name in new[]{"AllFilter","InstalledFilter","UpdatesFilter","NotInstalledFilter","CompactButton","RefreshButton","SettingsButton","SpotifyButton","StatusButton","HelpButton","GitHubButton"}) {
                 var b=(Button)target.FindName(name); b.Margin=side ? new Thickness(0,0,0,8) : new Thickness(4,3,4,3);
                 b.Padding=side && p.compactNavigation ? new Thickness(9,12,9,12) : new Thickness(13,10,13,10);
             }
@@ -191,6 +192,8 @@ namespace TMApps {
             ((Button)target.FindName("RefreshButton")).Content=p.compactNavigation ? "↻" : "↻  Check updates";
             ((Button)target.FindName("SettingsButton")).Content=p.compactNavigation ? "⚙" : "⚙  Settings";
             ((Button)target.FindName("SettingsButton")).ToolTip="Settings";
+            ((Button)target.FindName("SpotifyButton")).Content=p.compactNavigation ? "♫" : "♫  Spotify"; ((Button)target.FindName("SpotifyButton")).ToolTip="Spotify";((Button)target.FindName("StatusButton")).Content=p.compactNavigation?"●":"●  Service Status";((Button)target.FindName("StatusButton")).ToolTip="Service Status";
+            ((Button)target.FindName("HelpButton")).Content=p.compactNavigation ? "?" : "?  Help"; ((Button)target.FindName("HelpButton")).ToolTip="Help";
             ((TextBlock)target.FindName("GitHubLabel")).Visibility=p.compactNavigation ? Visibility.Collapsed : Visibility.Visible;
         }
         static string CleanXaml(string xaml) { return System.Text.RegularExpressions.Regex.Replace(xaml, " (Click|TextChanged)=\"[^\"]+\"", ""); }
@@ -290,7 +293,7 @@ namespace TMApps {
             var panel=dialog.Body;
             var line=new DockPanel(); panel.Children.Add(line);
             var location=new TextBox { Text=service.DefaultAppInstallDirectory(app),MinHeight=40 };
-            var browse=new Button { Content="Browse…",Margin=new Thickness(8,0,0,0) }; DockPanel.SetDock(browse,Dock.Right); line.Children.Add(browse); line.Children.Add(location);
+            var browse=new Button { Content="Browse…",Margin=new Thickness(14,0,0,0) }; DockPanel.SetDock(browse,Dock.Right); line.Children.Add(browse); line.Children.Add(location);
             browse.Click+=(s,e)=> {
                 using(var picker=new System.Windows.Forms.FolderBrowserDialog { Description="Choose the installation folder for "+app.name,SelectedPath=Directory.Exists(location.Text) ? location.Text : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),ShowNewFolderButton=true }) {
                     if(picker.ShowDialog()==System.Windows.Forms.DialogResult.OK) location.Text=picker.SelectedPath;
@@ -321,7 +324,9 @@ namespace TMApps {
             string name = b.Name; string tag = b.Tag as string;
             if(name=="CompactButton") { preferences.compactNavigation=!preferences.compactNavigation; ApplyNavigation(window,preferences); Render(); DesktopIntegration.SavePreferences(service.Root,preferences); return; }
             if(name=="ProfileButton") { ShowProfile(); return; }
+            if(name=="StatusButton") { ShowServiceStatus(); return; }
             if(name=="HelpButton") { ShowHelp(""); return; }
+            if(name=="SpotifyButton") { ShowSpotify(); return; }
             if(name=="SettingsButton") { Settings(); return; }
             if(name=="GitHubButton") { Browse("https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher"); return; }
             if (name == "RefreshButton") { RefreshCatalog(); return; }
@@ -382,14 +387,23 @@ namespace TMApps {
             var initial=Find<TextBlock>("ProfileInitial");
             initial.Text=String.IsNullOrEmpty(value) ? "\uE77B" : System.Globalization.StringInfo.GetNextTextElement(value).ToUpperInvariant();
             initial.FontFamily=new FontFamily(String.IsNullOrEmpty(value) ? "Segoe MDL2 Assets" : "Segoe UI");
+            var photo=LauncherPhoto.Load(Path.Combine(service.Root,"profile-photo.png"));initial.Opacity=photo==null?1:0;Find<Button>("ProfileButton").Background=photo==null?(Brush)new SolidColorBrush(Color.FromRgb(45,49,59)):new ImageBrush(photo){Stretch=Stretch.UniformToFill};
             Find<Button>("ProfileButton").ToolTip=String.IsNullOrEmpty(value) ? "Set up your optional profile" : value+" - Your profile";
         }
         internal void ShowProfile() {
             var dialog=new ThemedDialog(window,"Your TMApps profile","Optional. Save your name and email addresses for your apps on this PC. The first email address is your primary suggestion.");
             Action<string> label=text=>dialog.Body.Children.Add(new TextBlock { Text=text,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,10,0,7) });
             var signIn=new Button { Content="TMApps sign-in and linked apps",HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,0,0,12) }; signIn.Click+=(s,e)=>ShowSignIn(); dialog.Body.Children.Add(signIn);
+            var photoFile=Path.Combine(service.Root,"profile-photo.png");var photoDraft=LauncherPhoto.Load(photoFile);var photoPreview=new Image {Width=80,Height=80,Stretch=Stretch.Uniform,Source=photoDraft,Visibility=photoDraft==null?Visibility.Collapsed:Visibility.Visible,HorizontalAlignment=HorizontalAlignment.Left};dialog.Body.Children.Add(photoPreview);
+            var photoActions=new WrapPanel();var choosePhoto=new Button {Content="Choose profile photo",Margin=new Thickness(0,8,10,8)};var removePhoto=new Button {Content="Remove photo",Margin=new Thickness(0,8,0,8)};photoActions.Children.Add(choosePhoto);photoActions.Children.Add(removePhoto);dialog.Body.Children.Add(photoActions);
+            choosePhoto.Click+=(a,b)=>{var picker=new Microsoft.Win32.OpenFileDialog {Filter="Profile photos|*.png;*.jpg;*.jpeg",Title="Choose a profile photo smaller than 4 MB"};if(picker.ShowDialog(dialog)==true){var selectedPhoto=LauncherPhoto.Load(picker.FileName);if(selectedPhoto==null){ThemedDialogs.Info(dialog,"Could not use photo","Choose a valid PNG or JPEG smaller than 4 MB and up to 8192 pixels.");return;}photoDraft=selectedPhoto;photoPreview.Source=photoDraft;photoPreview.Visibility=Visibility.Visible;}};removePhoto.Click+=(a,b)=>{photoDraft=null;photoPreview.Source=null;photoPreview.Visibility=Visibility.Collapsed;};dialog.Body.Children.Add(new TextBlock {Text="Your cropped photo stays in this launcher on this device. Save profile keeps it; Cancel discards photo changes.",TextWrapping=TextWrapping.Wrap,FontSize=11,Foreground=Brushes.LightGray});
             label("Your name"); var name=new TextBox { Name="ProfileName",Text=suiteProfile.displayName,MaxLength=100 }; dialog.Body.Children.Add(name);
-            label("Email addresses (one per line)"); var emails=new TextBox { Name="ProfileEmails",Text=String.Join("\r\n",suiteProfile.emails),AcceptsReturn=true,Height=100,VerticalScrollBarVisibility=ScrollBarVisibility.Auto }; dialog.Body.Children.Add(emails);
+            label("Email addresses"); var emailRows=new StackPanel();dialog.Body.Children.Add(emailRows);var emailFields=new List<TextBox>();
+            var addEmail=new Button {Content="+ Add email address",Name="AddEmailAddress",HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,10,0,8)};
+            Action<string> addAddress=value=>{if(emailFields.Count>=20)return;var row=new DockPanel {Margin=new Thickness(0,0,0,8)};var input=new TextBox {Name="ProfileEmails",Text=value,MaxLength=254,MinWidth=250};var remove=new Button {Content="Remove",Margin=new Thickness(10,0,0,0)};DockPanel.SetDock(remove,Dock.Right);remove.Click+=(a,b)=>{emailFields.Remove(input);emailRows.Children.Remove(row);addEmail.IsEnabled=true;};row.Children.Add(remove);row.Children.Add(input);emailFields.Add(input);emailRows.Children.Add(row);addEmail.IsEnabled=emailFields.Count<20;};
+            foreach(var address in suiteProfile.emails.DefaultIfEmpty(""))addAddress(address);addEmail.Click+=(a,b)=>addAddress("");dialog.Body.Children.Add(addEmail);
+            var shareAll=new CheckBox {Name="ShareWithApps",Content="Autofill compatible TMA app profiles on this device",IsChecked=suiteProfile.shareWithApps!=false,Margin=new Thickness(0,16,0,8)};dialog.Body.Children.Add(shareAll);
+            dialog.Body.Children.Add(new TextBlock {Text="Compatible profile icons can use your name and primary email. App-specific edits and connected account identities stay local. This shares suggestions on this device; each provider still requires its own sign-in. Companion apps gain this support in their next releases.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=12});
             var share=new CheckBox { Name="ShareWithMail",Content="Sync this profile to TMA-Mail on this PC",IsChecked=suiteProfile.revision==null || suiteProfile.shareWithMail,Margin=new Thickness(0,18,0,12) }; dialog.Body.Children.Add(share);
             dialog.Body.Children.Add(new TextBlock { Text="This shares only your name and email addresses with TMA-Mail for this Windows user. It does not sign in or connect accounts. TMA-Mail still requires an app-specific password/key for providers such as iCloud, or the provider's own sign-in. Enter those credentials in TMA-Mail, never here.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=12 });
             dialog.Body.Children.Add(new TextBlock { Text="Requires TMA-Mail 0.14.1 or later. Changes appear when Mail opens or shortly afterward while it is running. Disabling sync stops future sharing; it does not disconnect mail accounts or erase an existing Mail profile.",TextWrapping=TextWrapping.Wrap,Foreground=Brushes.LightGray,FontSize=11,Margin=new Thickness(0,10,0,0) });
@@ -417,8 +431,8 @@ namespace TMApps {
             dialog.AddAction("Cancel",false,()=>dialog.Close(),"CancelAction").IsCancel=true;
             dialog.AddAction("Save profile",true,()=> {
                 try {
-                    var selected=new TMAppsShared.SuiteProfile { displayName=name.Text,emails=emails.Text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).ToList(),shareWithMail=share.IsChecked==true,socialAccounts=socialFields.Select(read=>read()).ToList(),shareWithSocialApps=socialShare.IsChecked==true };
-                    suiteProfile=TMAppsShared.SuiteProfileStore.Save(suiteProfilePath,selected); suiteProfileWarning=null; UpdateProfileAvatar(); dialog.DialogResult=true;
+                    var selected=new TMAppsShared.SuiteProfile { displayName=name.Text,emails=emailFields.Select(x=>x.Text).Where(x=>!String.IsNullOrWhiteSpace(x)).ToList(),shareWithApps=shareAll.IsChecked==true,shareWithMail=shareAll.IsChecked==true&&share.IsChecked==true,socialAccounts=socialFields.Select(read=>read()).ToList(),shareWithSocialApps=shareAll.IsChecked==true&&socialShare.IsChecked==true };
+                    suiteProfile=TMAppsShared.SuiteProfileStore.Save(suiteProfilePath,selected); LauncherPhoto.Save(photoFile,photoDraft); suiteProfileWarning=null; UpdateProfileAvatar(); dialog.DialogResult=true;
                     Notice(suiteProfile.shareWithMail ? "Profile saved. Compatible TMA-Mail versions will sync your name and account suggestions. Credentials are still required in Mail." : "Profile saved. Sync to TMA-Mail is off.");
                 } catch(Exception ex) { error.Text=ex.Message; }
             },"ConfirmAction");

@@ -90,15 +90,21 @@ async function run() {
   const authOptions = { root: library.root, configuration: authConfiguration, vault: { available: () => safeStorage.isEncryptionAvailable() && (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'), encrypt: text => safeStorage.encryptString(text), decrypt: bytes => safeStorage.decryptString(bytes) } };
   let auth; try { auth = new SuiteAuth(authOptions); } catch (error) { auth = new SuiteAuth({ ...authOptions, configuration: {} }); auth.configurationError = error.message; }
   await library.load(); settings = (await library.snapshot()).settings;
-  window = new BrowserWindow({ width: 1180, height: 800, minWidth: 960, minHeight: 600, title: 'TMApps Launcher', backgroundColor: '#17191f', autoHideMenuBar: true, show: !smokeReport, icon: path.join(__dirname, '../assets/icon.png'), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: !!smokeReport } });
+  window = new BrowserWindow({ width: 1180, height: 800, minWidth: 960, minHeight: 600, title: 'TMApps Launcher', titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', titleBarOverlay: process.platform === 'darwin' ? undefined : { color: '#22252c', symbolColor: '#eceef3', height: 38 }, backgroundColor: '#17191f', autoHideMenuBar: true, show: !smokeReport, icon: path.join(__dirname, '../assets/icon.png'), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: !!smokeReport } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('render-process-gone', (_event, details) => experience.saveCrash(library.root, new Error('Renderer exited: ' + details.reason + ' (' + details.exitCode + ')'), metadata.version));
   window.webContents.on('will-navigate', event => event.preventDefault());
+  const openSpotify = require('./spotify-window.cjs').setupSpotify();
+  const photo = require('./photo.cjs').setupPhoto({root:library.root,window,dialog,nativeImage});
   const methods = {
+    photo,
+    status: () => require('./status.cjs').check(),
+    spotify: () => openSpotify(),
     snapshot: () => library.snapshot(),
     experience: () => experience.content,
     auth: async ({ action, email, code, apps }) => { if (action === 'status') return auth.status(); if (action === 'send') return auth.send(email); if (action === 'verify') return auth.verify(email, code); if (action === 'access') return auth.access(apps); if (action === 'logout') return auth.logout(); throw new Error('Unknown sign-in action.'); },
-    support: ({ kind, report }) => shell.openExternal(experience.issue(kind, report)),
+    support: ({ kind, report, id }) => shell.openExternal(experience.issue(kind, report, id ? library.item(id).name : 'TMApps Launcher')),
+    releases: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/releases/tag/tma-apps'),
     crash: () => experience.crash(library.root, metadata.version),
     knowledgeDocument: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/blob/TMApps-Launcher/docs/KB%20Library.docx'),
     rendererError: value => experience.saveCrash(library.root, String(value).slice(0, 6000), metadata.version),
@@ -131,7 +137,7 @@ async function run() {
       const result = await window.webContents.executeJavaScript('window.launcherSmoke()');
       if (!result.ok || result.nodeAvailable || result.cards !== require('../catalog.json').apps.length || result.platform !== process.platform || result.arch !== process.arch) throw new Error(JSON.stringify(result));
       app.getAppMetrics(); await new Promise(resolve => setTimeout(resolve, 1200));
-      const metrics = app.getAppMetrics(); result.performance = { startupMs: Math.round(performance.now() - startup - 1200), workingSetMb: metrics.reduce((sum, m) => sum + m.memory.workingSetSize / 1024, 0), idleCpuPercent: metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) };
+      const metrics = app.getAppMetrics(); result.performance = { startupMs: Math.round(performance.now() - startup - 1200), workingSetMb: metrics.reduce((sum, m) => sum + m.memory.workingSetSize / 1024, 0), idleCpuPercent: metrics.reduce((sum, m) => sum + Math.max(0,m.cpu.percentCPUUsage), 0) };
       result.performance.passed = result.performance.startupMs < 30000 && result.performance.workingSetMb < 800 && result.performance.idleCpuPercent < 30;
       if (!result.performance.passed) throw new Error('Resource budget exceeded: ' + JSON.stringify(result.performance));
       await fs.mkdir(path.dirname(smokeReport), { recursive: true }); await fs.writeFile(smokeReport, JSON.stringify({ ...result, version: metadata.version }));

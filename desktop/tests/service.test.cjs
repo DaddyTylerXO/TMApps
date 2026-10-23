@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const tar = require('tar');
 const { Library, trusted, newer, parseCatalog, support, launcherRelease, profile, directories, extract, download, readJSON, atomic } = require('../electron/service.cjs');
-const bundled = require('../catalog.json');
+const bundled = require('./catalog-fixture.json');
 const clone = value => structuredClone(value);
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 async function fixture(t, platform = 'linux', arch = 'x64') {

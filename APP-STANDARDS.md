@@ -110,3 +110,7 @@ Copy these standards, standards/requirements.json, AGENTS.md, APP-COMPLIANCE.md 
 ## Deferred owner decisions
 
 Licensing, usage-rights/legality assessment and legal-policy work are deferred at the owner's request. This standards update does not select or change any licence or approve third-party usage. Preserve existing notices and app-specific licence files. Publisher identity/contact details remain deferred. Startup animation implementation also awaits the owner's selection of a concrete proposal.
+
+## Shared profile implementation guidance
+
+Where an app has a user profile icon, consume docs/shared-profile.md. Honor overall and app-specific sharing controls, update imported name/email suggestions, and preserve independent edits, connected accounts and isolated demo data. Do not import passwords or provider credentials or add idle polling. Sharing does not authenticate providers or synchronize between devices.

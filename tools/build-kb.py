@@ -95,22 +95,27 @@ illustrations = {
                      'The application library after opening the launcher. Available apps depend on your operating system.'),
     'Launcher-KB2': ('install-preview.png', None, 6.0,
                      'App installation offers a destination folder, startup and desktop shortcut options on Windows.'),
-    'Launcher-KB3': ('profile-preview.png', (0, 0, 600, 509), 5.5,
+    'Launcher-KB3': ('profile-preview.png', (0, 0, 600, 590), 5.0,
                      'The optional profile shares suggestions with Mail. Provider authentication is still completed in the app.'),
-    'Launcher-KB5': ('settings-preview.png', (0, 0, 600, 443), 5.8,
+    'Launcher-KB5': ('settings-preview.png', (15, 178, 585, 620), 5.8,
                      'Appearance controls with the Grey palette selected. Save keeps your chosen layout and colours.'),
     'Launcher-KB6': ('tray-menu-preview.png', None, 2.3,
                      'Choose Quit from the tray menu to release launcher memory.'),
     'Launcher-KB8': ('help-preview.png', (0, 0, 600, 540), 5.4,
                      'Help provides the KB Library and actions for GitHub support forms.'),
-    'Launcher-KB9': ('details-preview.png', None, 5.4,
+    'Launcher-KB9': ('details-preview.png', None, 6.6,
                      'App details show version information and release notes. Media slots remain unpublished until assets are supplied.'),
     'Launcher-KB10': ('uninstall-preview.png', None, 5.8,
                       'The uninstall dialog lets you choose whether the selected app keeps its standard local data.'),
     'Launcher-KB11': ('settings-search-preview.png', None, 5.8,
                       'Search by keywords or a KB number to find relevant knowledge articles.'),
     'Launcher-KB14': ('libraries-v02-preview.png', None, 5.5,
-                      'Libraries 0.2.0-dev.1 Windows preview home screen after isolated packaged-app checks.'),
+                      'Libraries 0.2.0 development preview after verified launcher installation.'),
+    'Launcher-KB16': ('profile-sharing-preview.png', (0, 0, 600, 490), 5.0,
+                      'The launcher profile enables local autofill for compatible TMA app profile icons.'),
+    'Launcher-KB17': ('service-status-preview.png', (0, 0, 600, 490), 5.0, 'Service Status checks public service reachability only when requested.'),
+    'Launcher-KB15': ('spotify-preview.png', (20, 145, 580, 455), 5.8,
+                      'Spotify offers Connect controls and browser streaming with in-app controls. Sign-in is optional.'),
 }
 
 
@@ -132,7 +137,7 @@ def illustrate(article_id):
     paragraph.paragraph_format.space_after = Pt(12)
 document.add_paragraph('TMApps Launcher KB Library', 'Title')
 document.add_paragraph('User guides setup and troubleshooting', 'Subtitle')
-document.add_paragraph(f'Release {version}  |  22 October 2026  |  DaddyTylerXO')
+document.add_paragraph(f'Release {version}  |  23 October 2026  |  DaddyTylerXO')
 document.add_paragraph('Use this library to install the launcher, manage your applications, find settings, and report problems. Each article has a stable KB number that you can type into launcher Help or settings search. Shared TMApps sign-in is prepared for deployment and requires backend configuration before activation. App support varies by operating system.')
 document.add_paragraph('Use the orange KB buttons to jump to an article, then Back to index to return. In Microsoft Word, hold Ctrl while clicking a link if required by your settings. Screenshots illustrate the launcher controls; versions and available apps may change.')
 bookmark(document.add_heading('Article index', 1), 'KB_Index')
@@ -161,14 +166,17 @@ for i, row in enumerate(table.rows):
             borders.append(border)
         cell._tc.get_or_add_tcPr().append(borders)
         for paragraph in cell.paragraphs:
+            paragraph.paragraph_format.space_after = Pt(2)
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0
             for run in paragraph.runs:
                 run.font.size = Pt(10)
                 run.bold = i == 0
 for article in content['articles']:
     # Brief related articles share their predecessor's page.
-    if article['id'] not in ['Launcher-KB4', 'Launcher-KB7', 'Launcher-KB12']:
-        document.add_page_break()
+    break_before = article['id'] not in ['Launcher-KB4', 'Launcher-KB5', 'Launcher-KB7', 'Launcher-KB12', 'Launcher-KB13']
     heading = document.add_heading(article['id'].replace('-', ' ') + ' ' + article['title'], 1)
+    heading.paragraph_format.page_break_before = break_before
     bookmark(heading, targets[article['id']])
     reference = document.add_paragraph()
     link(reference, 'Back to index', 'KB_Index', button=True)

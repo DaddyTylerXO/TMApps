@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.15.0
+
+- Individual email rows, optional local profile photo, showcase details and bounded screenshot navigation.
+- Manual Service Status with accessible reachability indicators and no background polling.
+- Branded macOS DMG background and ICNS icon, stable native download aliases and bundle-version verification.
+- Installation loading indicators and increased Browse spacing; app-specific support links.
+- Load native KB/release/gallery content on startup, rather than after the first app operation.
+
+
+- Add Spotify PKCE sign-in and controls for an active Spotify/Connect device, with optional Spotify web-player streaming in the browser. Authorization uses OS-protected storage and no client secret; refresh stops when the music window closes.
+- Replace white window chrome and default scrollbars with themed controls. Move list Details under app actions, organize settings into sections, and restyle checkboxes including Compact Navigation Bar.
+- Add optional local profile autofill for compatible app icons. Companion source integrations and their KBs are uploaded for later releases; their published packages remain unchanged.
+- Keep companion rebuilds opt-in during launcher publication, preserving published catalog versions and hashes for launcher-only updates.
+- Update the illustrated Word library and in-app guides with Launcher-KB15 and Launcher-KB16.
+
 ## 1.14.2
 
 - Publish Windows development packages for Libraries and Finance from their app branches, with their brown folder/green bills icons, verified hashes and source dates. Native launchers advertise Windows support and block incompatible installs.

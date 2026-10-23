@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test'); const assert = require('node:assert/strict');
 const { parseCatalog, support, Library } = require('../electron/service.cjs');
-const bundled = require('../catalog.json');
+const bundled = require('./catalog-fixture.json');
 test('Safe catalog accepts verified native builds and still reads legacy two-app caches', () => {
   const catalog = structuredClone(bundled), safe = catalog.apps.find(a => a.id === 'tma-safe');
   assert.ok(safe); assert.deepEqual(support(safe), []);

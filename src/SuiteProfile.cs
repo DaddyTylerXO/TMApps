@@ -18,6 +18,7 @@ namespace TMAppsShared {
         public string displayName { get; set; }
         public List<string> emails { get; set; }
         public bool shareWithMail { get; set; }
+        public bool? shareWithApps { get; set; }
         public List<SocialAccount> socialAccounts { get; set; }
         public bool shareWithSocialApps { get; set; }
         public SuiteProfile() { schemaVersion=1; displayName=""; emails=new List<string>(); socialAccounts=new List<SocialAccount>(); }
@@ -26,6 +27,8 @@ namespace TMAppsShared {
         public static string DefaultPath { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TMApps","profile.json"); } }
         public static SuiteProfile Validate(SuiteProfile value) {
             if(value==null || value.schemaVersion!=1) throw new FormatException("Unsupported profile format.");
+            if(value.shareWithApps==null)value.shareWithApps=true;
+            if(value.shareWithApps==false){value.shareWithMail=false;value.shareWithSocialApps=false;}
             value.displayName=(value.displayName ?? "").Trim();
             if(value.displayName.Length>100 || value.displayName.Any(Char.IsControl)) throw new FormatException("Enter a name of up to 100 characters on one line.");
             var addresses=value.emails ?? new List<string>();
@@ -33,7 +36,7 @@ namespace TMAppsShared {
             value.emails=new List<string>();
             foreach(string item in addresses) {
                 string email=(item ?? "").Trim(); if(email.Length==0) continue;
-                if(email.Length>254 || email.Any(Char.IsControl)) throw new FormatException("Enter a valid email address on each line.");
+                if(email.Length>254 || email.Any(Char.IsControl)) throw new FormatException("Enter a valid email address in each field.");
                 MailAddress parsed; try { parsed=new MailAddress(email); } catch { throw new FormatException("Enter a valid email address: "+email); }
                 if(!String.Equals(parsed.Address,email,StringComparison.OrdinalIgnoreCase) || !parsed.Host.Contains(".")) throw new FormatException("Enter a valid email address: "+email);
                 if(!value.emails.Contains(email,StringComparer.OrdinalIgnoreCase)) value.emails.Add(email);

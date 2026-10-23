@@ -17,7 +17,7 @@
       "id": "Launcher-KB3",
       "title": "Profile and social account suggestions",
       "keywords": "profile mail socials accounts email passwords key",
-      "body": "The optional profile stores name, email addresses and social handles or public profile URLs locally. Sharing suggestions does not authenticate with providers. Enable each sharing choice only for the apps you want to use it. Provider passwords and API keys stay in each app. See Launcher-KB4 and Launcher-KB10."
+      "body": "Your optional profile stays on this device. Enter your name and one email address, then choose + Add email address for additional addresses, up to 20. Remove deletes a row; the first saved email is your primary suggestion. Choose profile photo accepts a PNG or JPEG smaller than 4 MB, crops it to a square and stores a small local PNG when you save. Remove photo restores your initial. Cancel discards unsaved profile and photo edits. Photos are not shared with providers or other apps. Optional social accounts hold usernames or public HTTPS profile URLs, never passwords or tokens. Shared profile suggestions do not sign in to provider accounts. Control overall, Mail and future social sharing separately. See Launcher-KB4, Launcher-KB10 and Launcher-KB16."
     },
     {
       "id": "Launcher-KB4",
@@ -29,13 +29,13 @@
       "id": "Launcher-KB5",
       "title": "Choose your appearance",
       "keywords": "theme dark grey gray black orange colours color",
-      "body": "Settings offers Orange, Grey and Black dark palettes. Navigation can sit on any edge. List view uses smaller app tiles; Grid view emphasises app cards. Save keeps your changes and Cancel restores the previous appearance. See Launcher-KB11."
+      "body": "In Settings, choose the Appearance tab. Pick Orange, Grey or Black, move navigation to Left, Right, Top or Bottom, choose List or Grid, and toggle Compact Navigation Bar. Save keeps changes; Cancel restores the previous appearance. The title bar and scrollbars use the dark theme. Drag the title bar to move the window, double-click to maximize or restore, and use its window buttons to minimize or close. In list view, Details sits below the Open, Install or Update action. Spotify playback modes and account opens the music settings. See Launcher-KB9 and Launcher-KB15."
     },
     {
       "id": "Launcher-KB6",
       "title": "Reduce resource usage",
       "keywords": "performance cpu gpu ram memory network startup tray media",
-      "body": "Close-to-tray keeps the launcher in memory; use Quit to release it. Startup launch affects boot time. Startup update checks use network and some CPU briefly. App videos use network, RAM, decoding CPU and GPU while playing; playback starts only when requested. Screenshots load only in app details. Close details to release media. Functional and resource checks run in the release workflow. See Launcher-KB5 and Launcher-KB9."
+      "body": "Close-to-tray keeps the launcher in memory; use Quit to release it. Startup launch affects boot time. Startup update checks use network and some CPU briefly. App videos use network, RAM, decoding CPU and GPU while playing; playback starts only when requested. Screenshots load only in app details. Close details to release media. Functional and resource checks run in the release workflow. See Launcher-KB5 and Launcher-KB9. Optional Spotify controls refresh every 15 seconds only while their music window is open and visible. Closing it stops refresh work. Browser streaming uses the browser's CPU, RAM and network; Connect playback uses the selected Spotify device. See Launcher-KB15."
     },
     {
       "id": "Launcher-KB7",
@@ -53,7 +53,7 @@
       "id": "Launcher-KB9",
       "title": "App details and galleries",
       "keywords": "details versions new features changelog video screenshots gallery",
-      "body": "Click an app name or Details to see its catalog version, update date, description and published release notes. Each app can publish one showcase video and up to ten screenshots. Missing media is labelled unpublished. Media is loaded only when details are opened; videos never play automatically. See Launcher-KB6."
+      "body": "Click an app name or Details to open its showcase. The header shows the app icon, description, version and update date. Open, Install or Update is available when the app supports your operating system; GitHub opens its source branch. Published screenshots appear in a gallery with Previous, Next and thumbnail buttons, up to ten per app. A showcase video appears only when published and plays only when requested. Missing media stays unpublished. Feature cards and Latest release show available app information; preview limitations remain in the release notes. Close the screen to release media resources. In List view Details is below the main app action. See Launcher-KB2 and Launcher-KB6."
     },
     {
       "id": "Launcher-KB10",
@@ -65,7 +65,7 @@
       "id": "Launcher-KB11",
       "title": "Search settings and knowledge articles",
       "keywords": "settings search keywords kb library toggle",
-      "body": "Type keywords in Settings search to find relevant controls. Knowledge articles are included by default. Turn off Include KB articles in settings search to limit results to controls; Help still provides the complete KB Library. Search supports KB numbers such as Launcher-KB6. See Launcher-KB5."
+      "body": "Settings groups options into Appearance, Startup and performance, Help and KB Library, and Downloads and storage on Windows. Choose a section button to focus its controls. Search settings searches all sections by keyword. Help has a dedicated Search KB Library field on Windows; Open KB Library and support opens the searchable library on macOS and Linux. Include KB articles in settings search can be disabled without removing Help. Enter a stable reference such as Launcher-KB6 to find the matching guide. See Launcher-KB5, Launcher-KB6 and Launcher-KB8."
     },
     {
       "id": "Launcher-KB12",
@@ -84,6 +84,24 @@
       "title": "Install Libraries and Finance",
       "keywords": "libraries finance windows install beta development notes budgets profile data privacy",
       "body": "Choose Check updates to load the published app catalog. A GitHub source push alone is not an installable app update: a tested package, version and checksum must also be published. Libraries 0.2.0-dev.1 is an unsigned Windows development preview with offline document, checklist, spreadsheet, slide and PDF editors. Advanced format fidelity and performance work remain pending. The packaged editor test used about 896 MiB after exercising all editors; close unused editors and quit the app when finished. Export backups before updating from Libraries 0.1.0. The preview uses a separate roaming TMA-Libraries/library-v2 profile; legacy local TMApps/TMA-Libraries records remain untouched. Import a schema-1 workspace export inside Libraries to migrate; close the legacy app first. Launcher 1.14.2 only deletes the legacy Libraries data location when Delete local data is chosen; the new preview profile is retained and must be managed separately. Finance remains 0.1.0 with budgets, savings and a manual investment workspace. Both apps store records without app-level encryption. No provider key is entered in the launcher. No macOS or Linux package is advertised until matching verification is complete. See Launcher-KB2, Launcher-KB10 and Launcher-KB13."
+    },
+    {
+      "id": "Launcher-KB15",
+      "title": "Spotify playback and browser streaming",
+      "keywords": "spotify music premium pkce connect browser playback streaming callback sign in device",
+      "body": "Open Spotify in navigation, or Spotify playback modes and account in Settings. Connect Spotify signs in through your browser using PKCE. Choose Spotify app / Connect device or Browser streaming with in-app controls. In browser mode, open the web player, sign in there and start a track. Audio streams in the browser; TMA controls the active Spotify device. Premium and developer-app user access are required. Each app authorizes separately. Finish one sign-in before starting another. The registered callback is http://127.0.0.1:43823/spotify/callback. Authorization stays encrypted locally; without a secure Linux keyring it stays in memory. Closing the music window stops its 15-second refresh. Disconnect removes local authorization; revoke provider access in Spotify if needed. A busy port, denied access, inactive device or rate limit has an actionable message. See Launcher-KB6 and Launcher-KB10. Companion-app Spotify changes are uploaded as source for their next releases; existing companion downloads are unchanged."
+    },
+    {
+      "id": "Launcher-KB16",
+      "title": "Autofill profiles across TMA apps",
+      "keywords": "profile sync autofill name email avatar account icon share local identity",
+      "body": "Save your optional name and email addresses through the top-right profile icon. Autofill compatible TMA app profiles on this device enables shared suggestions; Mail and social metadata keep their additional sharing controls. Compatible apps read suggestions when opened or focused. Empty fields and previously imported values update automatically; app-specific edits and connected account identities are preserved. Office and Finance source updates add editable profile icons; their public downloads gain this with their next releases. Mail already supports launcher name/email suggestions on Windows. Profile sharing is local to the current OS user, not cloud sync or provider authentication. Disabling sharing stops future imports and keeps existing local app values. Credentials and app-specific keys are still entered in each provider app. See Launcher-KB3, Launcher-KB4 and Launcher-KB10. Earlier released Mail versions continue their existing display-name sync behavior until the companion update; connected email identities stay protected."
+    },
+    {
+      "id": "Launcher-KB17",
+      "title": "Check service status",
+      "keywords": "service status API checker red green network github spotify microsoft google health connection",
+      "body": "Open Service Status and choose Check APIs now. API Checkers group the suite public service checks by app. Gray means not checked. Glowing green means the public endpoint responded; glowing red means unavailable from this device or rate-limited. Checks send no account credentials and do not run in the background. Green is not proof that an account is signed in, a subscription is active or permissions are granted. Microsoft and Google sign-in discovery and GitHub and Spotify endpoint reachability are covered; additional app-specific providers and IMAP/SMTP account tests remain inside their apps. Companion Spotify integration reaches downloads in their own releases. Retry after checking your connection if a service is red. See Launcher-KB7, Launcher-KB8 and Launcher-KB15."
     }
   ],
   "apps": {
@@ -140,12 +158,22 @@
     },
     "tma-libraries": {
       "video": null,
-      "screenshots": [],
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/bc7bbf773784cdb11dbaf8cef867b49f7772c7e9/docs/libraries-v02-preview.png",
+          "caption": "Libraries 0.2.0 development preview home with document types and folders."
+        }
+      ],
       "releaseNotes": "# TMA-Libraries version notes\n\n## 0.2.0-dev.1 \u2014 22 October 2026\n\nElectron desktop rebuild with a brown Finance-inspired shell, tabs and ten document choices. Adds transactional SQLite storage, legacy migration, assets/revisions, native copies, Trash/Restore and confirmed permanent deletion, rich-document templates, Books, spreadsheets, slides and PDF tools. Settings include search, support drafts, offline help, accessibility choices, autosave and templates.\n\nStorage, representative format adapters and desktop workflows are checked; PDF redaction is independently checked. This is a development preview: full Office fidelity, complete editor tooling, memory targets, accessibility/standards, Word KB publication, Launcher and cross-platform distribution remain open. See VERIFICATION-0.2.0.md. Legacy source is retained for migration/reference.\n\n## 0.1.0 \u2014 21 October 2026\n\nInitial Windows desktop foundation using Windows Forms and .NET Framework 4.8, with no required paid services or external packages.\n\n- Offline plain-text notes, checklists, optional completion progress and side notes.\n- Folders, favourites, recent documents, search and coloured tags.\n- Atomic local saves, previous-save recovery and native workspace import/export.\n- Autosave defaults to five seconds when changed; configurable from two to 300 seconds or disabled.\n- First-run setup offers optional larger text/high contrast, both off by default. Feature tour can be replayed from the toolbar.\n- Light, Grey and Black appearance; fixed keyboard shortcuts and Settings release notes.\n- Leather Brown identity and white-folder executable/window icon.\n- Word KB draft with setup, offline operation, recovery, error catalogue and performance guidance. Rendering, master KB linking and publication are pending.\n\nAdvanced editors and the other pending specification items are not included. No Launcher package, remote publication, encryption, sync, tray, connection indicator or support forms are claimed.\n"
     },
     "tma-finance": {
       "video": null,
-      "screenshots": [],
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/bc7bbf773784cdb11dbaf8cef867b49f7772c7e9/docs/finance-preview.png",
+          "caption": "Finance development preview with synthetic demonstration data."
+        }
+      ],
       "releaseNotes": "TMA-Finance 0.1.0 Windows development build. Budgets, expenses, subscriptions, savings, exports and a manual USD investment workspace. Optional Finnhub requests require the user's provider key and permissions. Bank linking, cloud sync, background alerts, macOS/Linux builds and the full suite settings/help features are not complete. Local finance records are not encrypted. The tax tool is an estimate, not a filing service."
     }
   }

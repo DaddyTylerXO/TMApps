@@ -25,10 +25,10 @@
      <Grid Grid.Row="1" Margin="20,23">
       <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/><ColumnDefinition Width="184"/><ColumnDefinition Width="170"/></Grid.ColumnDefinitions>
       <Border Width="56" Height="56" Background="{Binding PreviewBackground}" CornerRadius="9" VerticalAlignment="Top"><Grid><TextBlock Visibility="{Binding GlyphVisibility}" Text="{Binding Glyph}" FontFamily="{Binding GlyphFont}" FontSize="28" Foreground="{Binding Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/><Image Source="{Binding Icon}" Visibility="{Binding IconVisibility}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/></Grid></Border>
-      <StackPanel Grid.Column="1" Margin="0,0,25,0"><Button x:Name="AppDetailsButton" Content="{Binding Name}" Tag="{Binding Id}" FontSize="22" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Left" ToolTip="View app details"/><TextBlock Text="{Binding Description}" Foreground="#A9B0C0" FontSize="12" TextWrapping="Wrap" LineHeight="19" Margin="0,7,0,0"/><TextBlock Text="{Binding Detail}" Foreground="#A6B2AC" FontSize="12" TextWrapping="Wrap" Margin="0,11,0,0"/><Button Content="Details" Tag="{Binding Id}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,6"/>
+      <StackPanel Grid.Column="1" Margin="0,0,25,0"><Button x:Name="AppDetailsButton" Content="{Binding Name}" Tag="{Binding Id}" FontSize="22" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Left" ToolTip="View app details"/><TextBlock Text="{Binding Description}" Foreground="#A9B0C0" FontSize="12" TextWrapping="Wrap" LineHeight="19" Margin="0,7,0,0"/><ProgressBar Height="5" IsIndeterminate="{Binding Busy}" Margin="0,8,0,0"><ProgressBar.Style><Style TargetType="ProgressBar"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Busy}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ProgressBar.Style></ProgressBar><TextBlock Text="{Binding Detail}" Foreground="#A6B2AC" FontSize="12" TextWrapping="Wrap" Margin="0,11,0,0"/>
       <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PlatformBadges}" HorizontalAlignment="Left"/></StackPanel>
       <StackPanel Grid.Column="2" Margin="0,4,12,0"><TextBlock Text="{Binding Status}" Foreground="{Binding Accent}" FontSize="11" FontFamily="Segoe UI" TextWrapping="Wrap"/><TextBlock Text="{Binding VersionLabel}" Foreground="#D7DADD" FontSize="12" Margin="0,14,0,0"/><TextBlock Text="{Binding UpdatedLabel, StringFormat=Updated {0}}" Foreground="#A9B0C0" FontSize="12" Margin="0,5,0,0"/></StackPanel>
-      <StackPanel Grid.Column="3" VerticalAlignment="Center"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="38"/></Grid.ColumnDefinitions><Button Content="{Binding Action}" IsEnabled="{Binding CanAct}" Tag="{Binding Id}" Click="AppAction" FontWeight="SemiBold" Background="#CC5500" Foreground="White" BorderThickness="0"/><Button Grid.Column="1" Content="•••" Tag="{Binding Id}" Click="AppMenu" ToolTip="Application options" Margin="6,0,0,0" Padding="0,10" AutomationProperties.Name="Application options"/></Grid><Button Content="Cancel" Tag="{Binding Id}" Click="CancelInstall" Visibility="{Binding CancelVisibility}" Margin="0,6,0,0"/></StackPanel>
+      <StackPanel Grid.Column="3" VerticalAlignment="Center"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="38"/></Grid.ColumnDefinitions><Button Content="{Binding Action}" IsEnabled="{Binding CanAct}" Tag="{Binding Id}" Click="AppAction" FontWeight="SemiBold" Background="#CC5500" Foreground="White" BorderThickness="0"/><Button Grid.Column="1" Content="•••" Tag="{Binding Id}" Click="AppMenu" ToolTip="Application options" Margin="6,0,0,0" Padding="0,10" AutomationProperties.Name="Application options"/></Grid><Button Content="Cancel" Tag="{Binding Id}" Click="CancelInstall" Visibility="{Binding CancelVisibility}" Margin="0,6,0,0"/><Button Content="Details" Tag="{Binding Id}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,6"/></StackPanel>
      </Grid>
     </Grid>
    </Border>
@@ -42,7 +42,7 @@
       <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="#A9B0C0" FontSize="12" LineHeight="20" Margin="0,17,0,0" MinHeight="44"/>
       <TextBlock Text="{Binding Status}" Foreground="{Binding Accent}" FontFamily="Segoe UI" FontSize="11" Margin="0,18,0,0"/>
       <StackPanel Orientation="Horizontal" Margin="0,12,0,0"><TextBlock Text="{Binding VersionLabel}" FontSize="12" Foreground="#A8ADB2"/><TextBlock Text=" · " Foreground="#A8ADB2"/><TextBlock Text="{Binding UpdatedLabel}" FontSize="12" Foreground="#A8ADB2"/></StackPanel>
-      <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" Foreground="#9BA8A1" FontSize="12" Margin="0,10,0,0" MinHeight="16"/>
+      <ProgressBar Height="5" IsIndeterminate="{Binding Busy}" Margin="0,8,0,0"><ProgressBar.Style><Style TargetType="ProgressBar"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Busy}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ProgressBar.Style></ProgressBar><TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" Foreground="#9BA8A1" FontSize="12" Margin="0,10,0,0" MinHeight="16"/>
       <Button Content="Details" Tag="{Binding Id}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,6"/>
       <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PlatformBadges}" HorizontalAlignment="Left"/>
       <Grid Margin="0,20,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="38"/></Grid.ColumnDefinitions><Button Content="{Binding Action}" IsEnabled="{Binding CanAct}" Tag="{Binding Id}" Click="AppAction" FontWeight="SemiBold" Background="#CC5500" Foreground="White" BorderThickness="0"/><Button Grid.Column="1" Content="Cancel" Tag="{Binding Id}" Click="CancelInstall" Visibility="{Binding CancelVisibility}" Margin="6,0,0,0"/><Button Grid.Column="2" Content="•••" Tag="{Binding Id}" Click="AppMenu" Margin="6,0,0,0" Padding="0,10" ToolTip="Application options"/></Grid>
@@ -53,7 +53,7 @@
  </Window.Resources>
  <DockPanel x:Name="Shell" Background="#17191F" LastChildFill="True">
   <Border x:Name="NavigationPanel" DockPanel.Dock="Left" Width="214" Background="#412313" Padding="10,14">
-   <WrapPanel x:Name="NavigationLayout" Orientation="Vertical">
+   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><WrapPanel x:Name="NavigationLayout" Orientation="Vertical">
     <StackPanel x:Name="BrandBlock" Orientation="Horizontal" Margin="8,7,8,24" VerticalAlignment="Center"><Image x:Name="BrandIcon" Width="34" Height="34" Margin="0,0,10,0"/><StackPanel x:Name="BrandTitle"><TextBlock Text="TMApps" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Launcher" FontSize="11" Foreground="#F4BE93"/></StackPanel></StackPanel>
     <StackPanel x:Name="NavActions">
      <Button x:Name="CompactButton" Content="☰  Collapse navigation" Tag="compact" Margin="0,0,0,14" Background="Transparent" BorderThickness="0"/>
@@ -64,11 +64,12 @@
     </StackPanel>
     <StackPanel x:Name="NavUtilities" Margin="0,22,0,0">
      <Button x:Name="RefreshButton" Content="↻  Check updates" Margin="0,0,0,8"/>
-     <Button x:Name="HelpButton" Content="?  Help" Margin="0,0,0,8"/>
+     <Button x:Name="SpotifyButton" Content="♫  Spotify" Margin="0,0,0,8"/>
+     <Button x:Name="StatusButton" Content="●  Service Status" Margin="0,0,0,8"/><Button x:Name="HelpButton" Content="?  Help" Margin="0,0,0,8"/>
      <Button x:Name="SettingsButton" Content="⚙  Settings" Margin="0,0,0,8"/>
      <Button x:Name="GitHubButton" Margin="0,0,0,8" ToolTip="Open GitHub repository"><StackPanel Orientation="Horizontal"><Path Data="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656" Fill="#ECEEF3" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"/><TextBlock x:Name="GitHubLabel" Text="GitHub" Margin="8,0,0,0" VerticalAlignment="Center"/></StackPanel></Button>
     </StackPanel>
-   </WrapPanel>
+   </WrapPanel></ScrollViewer>
   </Border>
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
@@ -86,7 +87,7 @@
     <TextBlock x:Name="Empty" Text="No applications match this view." Foreground="#A9B0C0" Visibility="Collapsed" Margin="0,25"/>
     <TextBlock x:Name="Notice" Text="Choose an application to install." Foreground="#A9B0C0" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,0"/>
    </StackPanel></ScrollViewer>
-   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.14.2 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
+   <Border Grid.Row="2" Background="#22252C" Padding="26,0"><TextBlock x:Name="Footer" Text="TMApps Launcher 1.15.0 · DaddyTylerXO · Windows x64" Foreground="#A9B0C0" FontSize="10" VerticalAlignment="Center"/></Border>
   </Grid>
  </DockPanel>
 </Window>

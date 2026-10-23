@@ -1,5 +1,7 @@
 # TMApps Launcher
 
+Launcher 1.15.0 adds Spotify playback modes, a dark title bar and themed controls, reorganized settings, and local profile autofill for compatible app icons. Companion source updates are prepared locally for their next releases; this launcher release preserves their current downloadable packages. See [Spotify setup](docs/spotify.md) and [shared profile contract](docs/shared-profile.md).
+
 A launcher for the **TMApps application suite**, available on **Windows, macOS, and Linux**. Windows keeps its existing native installer and interface; macOS and Linux use the companion desktop client. A burnt-orange navigation pane sits beside the app library, with version numbers, update dates, and Install / Open / Update controls. Downloads, verification, and app installation happen inside the launcher.
 
 ![TMApps Launcher library](docs/launcher-preview.png)
@@ -9,10 +11,10 @@ A launcher for the **TMApps application suite**, available on **Windows, macOS, 
 | Launcher download | Architecture | Install |
 | --- | --- | --- |
 | [Windows Setup EXE](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-Setup.exe) | x64 | Run setup; existing 1.7+ launchers can use Check for updates. |
-| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-mac-x64.dmg) | x64 | Open the disk image and drag the launcher to Applications. |
-| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-mac-arm64.dmg) | ARM64 | Open the disk image and drag the launcher to Applications. |
-| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
-| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-1.14.2-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
+| [macOS DMG - Intel](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-mac-x64.dmg) | x64 | Quit the existing launcher, open the disk image, drag to Applications and replace the previous copy. Open it from Applications. |
+| [macOS DMG - Apple Silicon](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-mac-arm64.dmg) | ARM64 | Quit the existing launcher, open the disk image, drag to Applications and replace the previous copy. Open it from Applications. |
+| [Linux AppImage - Intel/AMD](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-linux-x64.AppImage) | x64 | Save in a writable location, allow execution, and open. |
+| [Linux AppImage - ARM](https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMApps-Launcher-linux-arm64.AppImage) | ARM64 | Save in a writable location, allow execution, and open. |
 
 **Launcher support and app support are separate.** Mail and Agent Office have Windows-only packages. Safe, Padlock and SocialsManager have Windows x64, macOS Intel/Apple Silicon and Linux x64/ARM64 packages; Cut has Windows x64, macOS Intel/Apple Silicon and Linux x64 packages. Finance and Libraries have no published application package. The logos under each app follow verified catalog packages; incompatible packages remain unavailable. See the [suite download index](https://github.com/DaddyTylerXO/TMApps/blob/main/DOWNLOADS.md) for dated versions and direct checksum links.
 
@@ -170,7 +172,7 @@ TMApps email-code sign-in clients, protected session storage, app access grants 
 
 ## Libraries and Finance
 
-Launcher **1.14.2** includes verified Windows development packages for **TMA-Libraries 0.1.0** and **TMA-Finance 0.1.0**. Use **Check updates**, accept the launcher update/restart if needed, and choose **Install app**. Both use their actual app icons, source versions/dates and SHA-256-checked ZIP packages, with custom installation folders and optional startup/desktop shortcuts. Neither app has a published macOS/Linux build yet; those launchers show the Windows badge and disable incompatible installation.
+Launcher **1.14.2 and later** can install the published Windows development packages for **TMA-Libraries 0.2.0-dev.1** and **TMA-Finance 0.1.0**. Use **Check updates**, accept the launcher update/restart if needed, and choose **Install app**. Both use their actual app icons, source versions/dates and SHA-256-checked ZIP packages, with custom installation folders and optional startup/desktop shortcuts. Neither app has a published macOS/Linux build yet; those launchers show the Windows badge and disable incompatible installation.
 
 Libraries provides offline text notes and checklists with local workspace recovery. Its brown folder icon matches the app. Advanced editors, encryption, notifications and several suite settings/help features remain incomplete. Finance provides budgets, subscriptions, savings and a manual investment workspace, with optional data-provider connections. Its green bills icon matches the app; provider credentials are entered only in Finance. Bank linking, cloud sync and the full suite tray/help/settings features remain incomplete. Both are development builds, not a claim that all compulsory standards are finished.
 

@@ -1,6 +1,6 @@
 {
   "name": "tmapps-launcher",
-  "version": "1.14.2",
+  "version": "1.15.0",
   "private": true,
   "description": "Your TMApps library for macOS and Linux.",
   "author": "DaddyTylerXO",
@@ -48,13 +48,32 @@
         "dmg"
       ],
       "category": "public.app-category.utilities",
-      "icon": "assets/icon.png",
+      "icon": "assets/icon.icns",
       "identity": "-",
       "hardenedRuntime": false
     },
     "dmg": {
       "title": "TMApps Launcher",
-      "sign": false
+      "sign": false,
+      "background": "assets/dmg-background.png",
+      "icon": "assets/icon.icns",
+      "window": {
+        "width": 640,
+        "height": 420
+      },
+      "contents": [
+        {
+          "x": 165,
+          "y": 210,
+          "type": "file"
+        },
+        {
+          "x": 475,
+          "y": 210,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "linux": {
       "target": [

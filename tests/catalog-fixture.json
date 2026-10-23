@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "apps": [
+    {
+      "id": "tma-mail",
+      "name": "TMA-Mail",
+      "category": "COMMUNICATION",
+      "description": "A calmer home for your inbox. Connect your accounts, compose beautifully, and keep your day in focus.",
+      "version": "0.14.1-beta",
+      "updatedAt": "2026-10-17T04:57:03+01:00",
+      "branch": "TMA-Mail",
+      "executable": "TMA-Mail.exe",
+      "downloadUrl": "https://raw.githubusercontent.com/DaddyTylerXO/TMApps/3f2510ce13c2884e4ba23b7d42bdaf2e92b374e2/dist/TMA-Mail-0.14.1-beta-windows.zip",
+      "sha256": "cf851a37dcfff9369d6c5a92f40a3b9b3d1cc1a9348e54978a9f566047998119",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "tma-agent-office",
+      "name": "TMA-Agent Office",
+      "category": "AI WORKSPACE",
+      "description": "Your team, together. Bring AI specialists, projects, and real work into one live office.",
+      "version": "0.2.0",
+      "updatedAt": "2026-10-15T19:42:51Z",
+      "branch": "TMA-AgentOffice",
+      "executable": "Agent Office.exe",
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Agent-Office-0.2.0-windows.zip",
+      "sha256": "bfe1461a72bd7521f7cf288b2f82ca73a430695c21673ddabb259acdfa54d883",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "tma-safe",
+      "name": "TMA-Safe",
+      "category": "PRIVACY & SECURITY",
+      "description": "A calmer home for your passwords. Keep an encrypted, portable vault with a master password and optional separate key file.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Safe",
+      "executable": "TMA-Safe.exe",
+      "platforms": []
+    },
+    {
+      "id": "tma-padlock",
+      "name": "TMA-Padlock",
+      "category": "PRIVACY & SECURITY",
+      "description": "Your codes, kept close. Encrypted TOTP and HOTP authenticators with optional master-password protection.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Padlock",
+      "executable": "TMA-Padlock.exe",
+      "platforms": []
+    },
+    {
+      "id": "tma-socialsmanager",
+      "name": "TMA-SocialsManager",
+      "category": "SOCIAL MEDIA",
+      "description": "A calmer home for your socials. Bring account metrics together, save ideas, and publish to supported platforms.",
+      "version": "0.1.0",
+      "branch": "TMA-SocialsManager",
+      "executable": "TMA-SocialsManager.exe",
+      "platforms": [],
+      "updatedAt": "2026-10-20T00:00:00Z"
+    },
+    {
+      "id": "tma-cut",
+      "name": "TMA-Cut",
+      "category": "VIDEO & CREATIVITY",
+      "description": "Your clips, your style. Trim videos, add captions and branding, and export your next story.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-20T00:00:00Z",
+      "branch": "TMA-Cut",
+      "executable": "TMA-Cut.exe",
+      "platforms": []
+    },
+    {
+      "id": "tma-libraries",
+      "name": "TMA-Libraries",
+      "category": "LIBRARIES",
+      "description": "Offline notes, checklists, folders and workspace import/export. Initial Windows development build; advanced editors and integrations are still pending.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-21T15:03:39+01:00",
+      "branch": "TMA-Libraries",
+      "executable": "TMA-Libraries.exe",
+      "platforms": [
+        "windows"
+      ],
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Libraries-0.1.0-windows.zip",
+      "sha256": "64dc2fa3eddc55555853f12080bae944683a9cecdfcf8194a35d3a1b993ac29d"
+    },
+    {
+      "id": "tma-finance",
+      "name": "TMA-Finance",
+      "category": "FINANCE",
+      "description": "Budgets, expenses, subscriptions, savings and a manual investment workspace. Initial Windows development build with optional market-data providers.",
+      "version": "0.1.0",
+      "updatedAt": "2026-10-21T14:55:05+01:00",
+      "branch": "TMA-Finance",
+      "executable": "TMA-Finance.exe",
+      "platforms": [
+        "windows"
+      ],
+      "downloadUrl": "https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/TMA-Finance-0.1.0-windows.zip",
+      "sha256": "f3ea2de64b4cc87b616828c285f98f18379aef97db32fd87bcb9f76390fb7a53"
+    }
+  ]
+}

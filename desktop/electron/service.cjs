@@ -54,7 +54,7 @@ function profile(value) {
   const name = value.displayName.trim();
   if (name.length > 100 || /[\x00-\x1f\x7f]/.test(name) || value.emails.length > 20) throw new Error('Use a name of up to 100 characters and up to 20 email addresses.');
   const emails = [];
-  for (const raw of value.emails) { const email = String(raw).trim(); if (!email) continue; if (email.length > 254 || !/^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(email)) throw new Error('Enter one valid email address per line.'); if (!emails.some(e => e.toLowerCase() === email.toLowerCase())) emails.push(email); }
+  for (const raw of value.emails) { const email = String(raw).trim(); if (!email) continue; if (email.length > 254 || !/^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(email)) throw new Error('Enter a valid email address in each field.'); if (!emails.some(e => e.toLowerCase() === email.toLowerCase())) emails.push(email); }
   const accounts = value.socialAccounts ?? [];
   if (!Array.isArray(accounts) || accounts.length > 20) throw new Error('You can save up to 20 social accounts.');
   const socialAccounts = [];
@@ -69,7 +69,7 @@ function profile(value) {
     }
     if (!socialAccounts.some(a => a.platform.toLowerCase() === platform.toLowerCase() && a.account.toLowerCase() === account.toLowerCase())) socialAccounts.push({ platform, account });
   }
-  return { schemaVersion: 1, revision: typeof value.revision === 'string' ? value.revision.slice(0, 80) : null, displayName: name, emails, shareWithMail: value.shareWithMail === true, socialAccounts, shareWithSocialApps: value.shareWithSocialApps === true };
+  return { schemaVersion: 1, revision: typeof value.revision === 'string' ? value.revision.slice(0, 80) : null, displayName: name, emails, shareWithApps: value.shareWithApps !== false, shareWithMail: value.shareWithApps !== false && value.shareWithMail === true, socialAccounts, shareWithSocialApps: value.shareWithApps !== false && value.shareWithSocialApps === true };
 }
 async function readJSON(file, fallback = null) { try { const info = await fs.stat(file); if (info.size > 1024 * 1024) throw new Error('Metadata too large.'); return JSON.parse((await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '')); } catch { return fallback; } }
 async function atomic(file, data) {
@@ -138,7 +138,7 @@ class Library {
   async saveSettings(value) {
     if (!['Left', 'Right', 'Top', 'Bottom'].includes(value.navigationEdge) || !['List', 'Grid'].includes(value.libraryView)) throw new Error('Invalid appearance settings.');
     if (value.theme && !['Orange','Grey','Black'].includes(value.theme)) throw new Error('Invalid theme.');
-    const saved = { theme: value.theme || 'Orange', includeKbSearch: value.includeKbSearch !== false, navigationEdge: value.navigationEdge, libraryView: value.libraryView, closeToTray: value.closeToTray === true, checkOnStartup: value.checkOnStartup === true, runAtStartup: value.runAtStartup === true };
+    const saved = { theme: value.theme || 'Orange', includeKbSearch: value.includeKbSearch !== false, navigationEdge: value.navigationEdge, compactNavigation: value.compactNavigation === true, libraryView: value.libraryView, closeToTray: value.closeToTray === true, checkOnStartup: value.checkOnStartup === true, runAtStartup: value.runAtStartup === true };
     await this.integration('launcher', saved); await atomic(path.join(this.root, 'settings.json'), saved); return this.snapshot();
   }
   async processes() {

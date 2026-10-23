@@ -1,0 +1,6 @@
+{
+  "id": "Launcher-KB15",
+  "title": "Spotify playback and browser streaming",
+  "keywords": "spotify music premium pkce connect browser playback streaming callback sign in device",
+  "body": "Open Spotify in navigation, or Spotify playback modes and account in Settings. Connect Spotify signs in through your browser using PKCE. Choose Spotify app / Connect device or Browser streaming with in-app controls. In browser mode, open the web player, sign in there and start a track. Audio streams in the browser; TMA controls the active Spotify device. Premium and developer-app user access are required. Each app authorizes separately. Finish one sign-in before starting another. The registered callback is http://127.0.0.1:43823/spotify/callback. Authorization stays encrypted locally; without a secure Linux keyring it stays in memory. Closing the music window stops its 15-second refresh. Disconnect removes local authorization; revoke provider access in Spotify if needed. A busy port, denied access, inactive device or rate limit has an actionable message. See Launcher-KB6 and Launcher-KB10. Companion-app Spotify changes are uploaded as source for their next releases; existing companion downloads are unchanged."
+}

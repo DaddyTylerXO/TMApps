@@ -1,6 +1,11 @@
 name: Publish launcher for Windows, macOS and Linux
 on:
   workflow_dispatch:
+    inputs:
+      rebuild_companion_apps:
+        description: Rebuild companion apps only when their releases are authorized
+        type: boolean
+        default: false
   push:
     branches: [TMApps-Launcher]
     paths: ['desktop/**', 'src/**', 'assets/**', 'content/**', 'backend/**', 'tools/**', 'docs/**', 'catalog.json', 'build.ps1', 'package.ps1', 'make-icon.ps1', 'tests/**', 'test.ps1', '.github/workflows/publish.yml']
@@ -20,20 +25,24 @@ jobs:
         with:
           path: launcher
       - uses: actions/checkout@v4
+        if: ${{ inputs.rebuild_companion_apps == true }}
         with:
           ref: TMA-Mail
           path: mail
           fetch-depth: 0
       - uses: actions/checkout@v4
+        if: ${{ inputs.rebuild_companion_apps == true }}
         with:
           ref: TMA-AgentOffice
           path: office
       - uses: actions/checkout@v4
+        if: ${{ inputs.rebuild_companion_apps == true }}
         with:
           ref: TMA-Libraries
           path: libraries
           fetch-depth: 0
       - uses: actions/checkout@v4
+        if: ${{ inputs.rebuild_companion_apps == true }}
         with:
           ref: TMA-Finance
           path: finance
@@ -48,7 +57,7 @@ jobs:
         shell: powershell
         run: |
           ./launcher/test.ps1
-      - name: Preserve published security, social and video app packages
+      - name: Preserve published companion application packages
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,15 +66,17 @@ jobs:
           gh release download tma-apps --pattern catalog.json --dir prior-catalog
           if ($LASTEXITCODE -eq 0) {
             $prior = Get-Content prior-catalog/catalog.json -Raw | ConvertFrom-Json
-            $securityApps = @($prior.apps | Where-Object { $_.id -in @("tma-safe", "tma-padlock", "tma-socialsmanager", "tma-cut") -and $_.downloadUrl })
+            $rebuild = '${{ inputs.rebuild_companion_apps }}' -eq 'true'
+            $securityApps = @($prior.apps | Where-Object { (!$rebuild -or $_.id -in @("tma-safe", "tma-padlock", "tma-socialsmanager", "tma-cut")) -and $_.downloadUrl })
             if ($securityApps.Count -gt 0) {
               $catalog = Get-Content launcher/catalog.json -Raw | ConvertFrom-Json
               $catalog.apps = @($catalog.apps | ForEach-Object { $current = $_; $published = $securityApps | Where-Object id -eq $current.id; if ($published) { $published } else { $current } })
               $catalog | ConvertTo-Json -Depth 10 | Set-Content launcher/catalog.json -Encoding UTF8
             }
-          }
+          } else { throw 'Cannot safely publish without the existing application catalog' }
           $global:LASTEXITCODE=0
       - name: Build Agent Office from its application branch
+        if: ${{ inputs.rebuild_companion_apps == true }}
         working-directory: office
         shell: powershell
         env:
@@ -80,12 +91,14 @@ jobs:
           pnpm exec electron-builder --win --dir
           if ($LASTEXITCODE -ne 0) { throw 'Agent Office packaging failed' }
       - name: Verify and build Libraries Windows app
+        if: ${{ inputs.rebuild_companion_apps == true }}
         shell: powershell
         run: |
           ./libraries/build.ps1 -Test
           if ($LASTEXITCODE -ne 0) { throw 'Libraries build or storage/smoke verification failed' }
           ./libraries/scripts/security-check.ps1
       - name: Verify and build Finance Windows app
+        if: ${{ inputs.rebuild_companion_apps == true }}
         working-directory: finance/tma-finance
         shell: powershell
         env:
@@ -102,6 +115,7 @@ jobs:
           pnpm exec electron-builder --win --dir --publish never
           if ($LASTEXITCODE -ne 0) { throw 'Finance packaging failed' }
       - name: Prepare verified application packages
+        if: ${{ inputs.rebuild_companion_apps == true }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -129,7 +143,7 @@ jobs:
           $librariesVersion = [regex]::Match((Get-Content libraries/docs/RELEASE-NOTES.md -Raw), '(?m)^## (\d+\.\d+\.\d+)').Groups[1].Value
           if (!$librariesVersion) { throw 'Libraries release version missing' }
           $librariesName = "TMA-Libraries-$librariesVersion-windows.zip"
-          Compress-Archive -LiteralPath libraries/build/TMA-Libraries.exe,libraries/build/TMA-Libraries.exe.config -DestinationPath "published/$librariesName" -CompressionLevel Optimal
+          Compress-Archive -Path libraries/build/TMA-Libraries.exe,libraries/build/TMA-Libraries.exe.config,libraries/build/docs -DestinationPath "published/$librariesName" -CompressionLevel Optimal
           $financeVersion = (Get-Content finance/tma-finance/package.json -Raw | ConvertFrom-Json).version
           $financeName = "TMA-Finance-$financeVersion-windows.zip"
           Compress-Archive -Path finance/tma-finance/release/win-unpacked/* -DestinationPath "published/$financeName" -CompressionLevel Optimal
@@ -146,6 +160,21 @@ jobs:
           $catalog | ConvertTo-Json -Depth 6 | Set-Content published/catalog.json -Encoding UTF8
           ./launcher/tools/verify-windows-app-packages.ps1 -CatalogPath published/catalog.json -PackageDirectory published -OutputDirectory launcher/build/app-package-verification
           if ($LASTEXITCODE -ne 0) { throw 'Real app installation/launch/uninstall verification failed' }
+      - name: Reuse existing app catalog for launcher-only release
+        if: ${{ inputs.rebuild_companion_apps != true }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force published | Out-Null
+          [Reflection.Assembly]::LoadFile((Resolve-Path launcher/build/TMApps-Launcher.exe).Path) | Out-Null
+          $validated = [TMApps.LauncherService]::ParseCatalog((Get-Content launcher/catalog.json -Raw))
+          foreach ($id in @('tma-libraries','tma-finance')) {
+            if (!($validated.apps | Where-Object { $_.id -eq $id -and $_.downloadUrl })) { throw "Required published app is missing: $id" }
+          }
+          Copy-Item launcher/catalog.json published/catalog.json
+      - name: Package launcher without releasing unrequested companion changes
+        shell: powershell
+        run: |
           # Embed the exact catalog for the packages built by this run.
           Copy-Item published/catalog.json launcher/catalog.json -Force
           ./launcher/package.ps1
@@ -182,7 +211,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Package upload failed; catalog was not published' }
           gh release upload tma-apps published/catalog.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Catalog upload failed' }
-          gh release upload tma-apps 'launcher/docs/KB Library.docx' --clobber
+          Copy-Item 'launcher/docs/KB Library.docx' published/KB.Library.docx
+          gh release upload tma-apps published/KB.Library.docx --clobber
           if ($LASTEXITCODE -ne 0) { throw 'KB Library upload failed' }
           gh release upload tma-apps published/launcher-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Launcher update manifest upload failed' }
@@ -275,6 +305,7 @@ jobs:
           trap 'hdiutil detach "$MOUNT" || true' EXIT
           BUNDLE=$(find "$MOUNT" -maxdepth 1 -type d -name '*.app' -print -quit)
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$BUNDLE/Contents/Info.plist")" = "com.tmapps.launcher"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$BUNDLE/Contents/Info.plist")" = "$(node -p "require('./package.json').version")"
           codesign --verify --deep --strict "$BUNDLE"
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$BUNDLE/Contents/Info.plist")
           "$BUNDLE/Contents/MacOS/$EXECUTABLE" --smoke "$PWD/build/packaged-smoke.json"
@@ -309,6 +340,7 @@ jobs:
           const all=files('native-release'); const metadata=all.filter(p=>/metadata-.*\.json$/.test(p)).map(p=>JSON.parse(fs.readFileSync(p,'utf8')));
           if(metadata.length!==4||new Set(metadata.map(m=>m.platform+'-'+m.arch)).size!==4||new Set(metadata.map(m=>m.version)).size!==1)throw Error('Missing native build');
           const crypto=require('node:crypto'); for(const m of metadata){const file=all.find(p=>path.basename(p)===m.filename);if(!file||crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==m.sha256)throw Error('Native artifact checksum mismatch');}
+          for(const m of metadata){const source=all.find(p=>path.basename(p)===m.filename);const alias=`TMApps-Launcher-${m.platform==='darwin'?'mac':'linux'}-${m.arch}.${m.platform==='darwin'?'dmg':'AppImage'}`;fs.copyFileSync(source,path.join('native-release',alias));fs.writeFileSync(path.join('native-release',alias+'.sha256'),m.sha256+'  '+alias+'\n');}
           fs.writeFileSync('launcher-platforms.json',JSON.stringify({schemaVersion:1,version:metadata[0].version,updatedAt:new Date().toISOString(),releases:metadata.map(({version,...m})=>m)},null,2));
           NODE
           find native-release -type f \( -name '*.dmg' -o -name '*.AppImage' -o -name '*.sha256' \) -print0 | xargs -0 gh release upload tma-apps --clobber

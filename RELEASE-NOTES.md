@@ -1,3 +1,15 @@
+TMApps Launcher 1.15.0 adds profile email rows and a local photo, a showcase-style app details screen, Service Status, Spotify playback modes, themed window controls and shared profile autofill.
+
+- Open Spotify to connect through browser authorization using PKCE. Choose an active Spotify/Connect device or browser streaming with in-app controls. Browser mode opens Spotify's web player; start a track there. Premium and developer-app user access are required. No client secret is bundled. Authorization stays in protected local storage, or in memory if no secure Linux keyring is available. Refresh stops when the music window closes.
+- The launcher and Windows installer use dark window chrome. Scrollbars and checkboxes follow the theme. List-mode Details sits below the main app actions. Settings has focused section buttons, dedicated KB Help and a Compact Navigation Bar control.
+- Profile setup includes Autofill compatible TMA app profiles on this device. Name/email suggestions are local to this OS user; provider sign-ins remain separate. Office, Finance and Mail source integrations are prepared for their next companion releases. Companion downloads are unchanged in this launcher release; earlier Mail versions retain their existing display-name sync behavior.
+- Email addresses have individual fields with + Add and Remove controls. Optional profile photos stay local and are saved only on Save profile.
+- App details use a prominent identity header, available install/open actions, feature panels, app-specific support links and a screenshot gallery. Unpublished media stays hidden.
+- Service Status performs manual public endpoint checks with gray, glowing green and glowing red indicators. Reachability is separate from provider account health; additional provider diagnostics remain inside apps.
+- macOS disk images use a branded background and native ICNS icon. Stable download links point to the current build; the native workflow verifies the bundle version. Existing signing/notarization and reported companion launch issues remain open.
+- App installations show a loading indicator and the native Browse row has additional spacing. Full startup-in-tray and tray preference parity across companion apps remains pending.
+- Launcher-KB15, Launcher-KB16 and Launcher-KB17 explain Spotify, profile autofill and Service Status. The illustrated Word library has clickable article references. Functional and resource checks cover the launcher and the shared components. A live Spotify account has not yet been used for end-to-end authorization/playback verification.
+
 TMApps Launcher 1.14.2 adds installable Windows development builds of TMA-Libraries and TMA-Finance.
 
 - Install Libraries 0.1.0 for offline text notes, checklists and workspace recovery, or Finance 0.1.0 for budgets, subscriptions, savings and a manual investment workspace. Both are initial development builds with documented missing features.
