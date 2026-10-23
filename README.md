@@ -40,4 +40,6 @@ Pushes to [TMA-Cut](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Cut) run `.g
 
 See [third-party notices](THIRD_PARTY.md) for media-tool licenses and source links.
 
+## Shared standards update — 23 October 2026
 
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
