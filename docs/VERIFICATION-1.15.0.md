@@ -25,3 +25,11 @@ The workflow preserves current published companion catalog entries, packages and
 ## Patch 1.15.1
 
 Corrected historical fixed-version wording for Finance in the KB and README; the live catalog already had 0.1.3. The spaced source compatibility file is preserved; dotted and app-named release downloads are synchronized. GitHub normalizes release filenames, so no separate spaced release asset is uploaded. No companion application package is changed. Runtime version/installer checks and the native release pipeline are repeated for the patch.
+
+## Verified public patch release
+
+Release CI run 40000717239 completed successfully for code revision e946e20. Windows Server 2025 build 10.0.26100, macOS 15.7.9 (24G830) on x64/ARM64, and Ubuntu 24.04.5 LTS on x64/ARM64 were used. Source and packaged native launch checks passed. This does not verify the reported macOS 26.7.1 companion-app issue.
+
+The public Windows 1.15.1 installer matched its update-feed SHA-256, reported file version 1.15.1.0 and passed isolated installation, replacement, payload launch and uninstall/data-retention verification. All four native versioned packages and stable aliases matched GitHub asset digests and the 1.15.1 native manifest. The public Word guide matched the reviewed local document; both repository copies are byte-identical. The companion catalog entries remained unchanged from the Libraries repair baseline.
+
+This final evidence/queue update changes documentation only; it adds no runtime behavior and does not require another app build.
