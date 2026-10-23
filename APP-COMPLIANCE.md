@@ -48,3 +48,11 @@ This is a requirements register, not a runtime certification. Source or package 
 ## This maintenance update
 
 Shared instructions, checklist and documentation only. No application code or packages changed; runtime/performance tests were not run for this policy update. README and SECURITY were reviewed and received the maintenance gate below. Existing app-specific security and release requirements are preserved. Licensing, usage-rights/legality and legal policies remain deferred. Record code-update functional/performance/security results and native OS/build/architecture evidence here as work is completed.
+
+## Launcher 1.15 code evidence
+
+Original Bubble is the implemented layout style; Orange, Grey and Black are its colour palettes. Finance, ArtCraft-inspired and Blocky Basic layout styles remain pending separate updates. Settings has search, categories, panels, Save/Cancel and main-page support actions. Full suite parity, tours, appearance scheduling, accessibility and notification requirements remain open.
+
+See docs/VERIFICATION-1.15.0.md: Windows 210 checks and native 56 passing tests with one platform-specific skip, renderer/performance checks, local photo/email controls, bounded media, reviewed crash drafts and manual public endpoint indicators. Matching-runner release checks provide architecture evidence. Native app installation on the reported Mac remains unresolved. Shared sign-in needs operator deployment; companion consumer/source rollout is incomplete.
+
+The Word guide has canonical app-named and legacy compatibility files with identical contents, app branding on every page, 17 stable KB IDs and verified internal links. The main branch had no published Master KB document when checked; its link and Wiki/registry synchronization remain pending. README and SECURITY were reviewed for the runtime update. Legal and startup-animation decisions remain deferred; no startup animation was added.

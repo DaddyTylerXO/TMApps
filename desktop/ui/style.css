@@ -31,3 +31,5 @@ html[data-theme=Grey]{--control-accent:#626c7b;--chrome:#303238}html[data-theme=
 
 .status-light{display:inline-block;width:11px;height:11px;border-radius:50%;background:#77808e;margin-right:12px;flex:none}.status-light.working{background:#46d989;box-shadow:0 0 10px #46d989}.status-light.broken{background:#ff626c;box-shadow:0 0 10px #ff626c}.service-row small{display:block;margin:8px 0 12px 23px;color:#bcc4d2}
 .profile-photo-preview[hidden]{display:none}
+
+.settings-support{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}

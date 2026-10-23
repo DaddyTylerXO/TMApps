@@ -135,10 +135,18 @@ def illustrate(article_id):
     paragraph = document.add_paragraph(caption, 'Caption')
     paragraph.paragraph_format.keep_with_next = False
     paragraph.paragraph_format.space_after = Pt(12)
+header=section.header.paragraphs[0]
+header.paragraph_format.space_after=Pt(2)
+with Image.open(root / 'desktop/assets/icon.png') as source:
+    stream=BytesIO();source.thumbnail((96,96));source.save(stream,format='PNG');stream.seek(0)
+    header.add_run().add_picture(stream,width=Inches(.24))
+brand=header.add_run('  TMApps Launcher');brand.bold=True;brand.font.size=Pt(10);brand.font.color.rgb=RGBColor.from_string('CC5500')
 document.add_paragraph('TMApps Launcher KB Library', 'Title')
 document.add_paragraph('User guides setup and troubleshooting', 'Subtitle')
 document.add_paragraph(f'Release {version}  |  23 October 2026  |  DaddyTylerXO')
 document.add_paragraph('Use this library to install the launcher, manage your applications, find settings, and report problems. Each article has a stable KB number that you can type into launcher Help or settings search. Shared TMApps sign-in is prepared for deployment and requires backend configuration before activation. App support varies by operating system.')
+document.add_paragraph('The TMApps Master KB link is pending publication on the main branch when this guide is prepared. This app library remains available offline. Provider sign-in, app downloads, API checks and support links require an internet connection.')
+
 document.add_paragraph('Use the orange KB buttons to jump to an article, then Back to index to return. In Microsoft Word, hold Ctrl while clicking a link if required by your settings. Screenshots illustrate the launcher controls; versions and available apps may change.')
 bookmark(document.add_heading('Article index', 1), 'KB_Index')
 table = document.add_table(rows=1, cols=2)
@@ -196,3 +204,4 @@ footer._p.append(field)
 document.core_properties.title = 'TMApps Launcher KB Library'
 document.core_properties.author = 'DaddyTylerXO'
 document.save(root / 'docs/KB Library.docx')
+(root / 'docs/TMApps Launcher KB Library.docx').write_bytes((root / 'docs/KB Library.docx').read_bytes())

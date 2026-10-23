@@ -167,10 +167,10 @@
   }
   async function settings() {
     const result = await modal('Your workspace', 'Search settings or KB numbers. Appearance previews immediately; Cancel restores it.', 'Save changes', body => {
-      const search = field(body, 'Search settings', ''), tabs = el('nav', null, 'settings-tabs'), groups = []; tabs.setAttribute('aria-label', 'Settings sections'); body.append(tabs); let active = 'Appearance';
+      const search = field(body, 'Search settings', ''), tabs = el('nav', null, 'settings-tabs'), groups = []; tabs.setAttribute('aria-label', 'Settings sections'); const supportActions=el('div',null,'settings-support');for(const [kind,label] of [['feature','Feature request'],['bug','Bug report'],['issue','Issue report']])supportActions.append(button(label,()=>api.support(kind)));supportActions.append(button('Help',help));body.append(supportActions,tabs); let active = 'Appearance';
       const group = (title, keywords) => { const block = el('section', null, 'settings-section'); block.dataset.keywords = title + ' ' + keywords; block.dataset.section = title; block.append(el('h3', title)); body.append(block); groups.push(block); return block; };
       const appearance = group('Appearance', 'theme dark grey gray black orange colour color navigation view list grid');
-      const edge = field(appearance, 'Navigation position', '', 'select'); ['Left', 'Right', 'Top', 'Bottom'].forEach(v => edge.append(new Option(v, v))); edge.value = state.settings.navigationEdge;
+      appearance.append(el('p','Theme style: Original Bubble Look'));const edge = field(appearance, 'Navigation position', '', 'select'); ['Left', 'Right', 'Top', 'Bottom'].forEach(v => edge.append(new Option(v, v))); edge.value = state.settings.navigationEdge;
       const view = field(appearance, 'Library view', '', 'select'); ['List', 'Grid'].forEach(v => view.append(new Option(v, v))); view.value = state.settings.libraryView;
       const theme = field(appearance, 'Dark palette', '', 'select'); ['Orange', 'Grey', 'Black'].forEach(v => theme.append(new Option(v, v))); theme.value = state.settings.theme || 'Orange'; theme.addEventListener('change', () => { document.documentElement.dataset.theme = theme.value; });
       const compact = check(appearance, 'Compact Navigation Bar', state.settings.compactNavigation === true); appearance.append(button('Spotify playback modes and account', () => api.spotify()));

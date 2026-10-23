@@ -106,7 +106,7 @@ async function run() {
     support: ({ kind, report, id }) => shell.openExternal(experience.issue(kind, report, id ? library.item(id).name : 'TMApps Launcher')),
     releases: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/releases/tag/tma-apps'),
     crash: () => experience.crash(library.root, metadata.version),
-    knowledgeDocument: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/blob/TMApps-Launcher/docs/KB%20Library.docx'),
+    knowledgeDocument: () => shell.openExternal('https://github.com/DaddyTylerXO/TMApps/blob/TMApps-Launcher/docs/TMApps%20Launcher%20KB%20Library.docx'),
     rendererError: value => experience.saveCrash(library.root, String(value).slice(0, 6000), metadata.version),
     refresh: async () => { if (library.busy || updating) throw new Error('Wait for the current operation.'); const messages = []; try { await library.refresh(); messages.push('Application catalog checked.'); } catch { messages.push('Could not refresh applications; showing the saved catalog.'); } try { update = await checkLauncher(); messages.push(update ? `Launcher ${update.version} is available.` : 'Launcher is up to date.'); } catch { messages.push('Launcher update check could not complete.'); } return { ...await library.snapshot(), update, notice: messages.join(' ') }; },
     profile: async value => library.saveProfile(value),
