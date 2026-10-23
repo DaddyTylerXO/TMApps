@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><StartupObject>CoreChecks</StartupObject></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TmaMail.Core/TmaMail.Core.csproj" />
+    <ProjectReference Include="../TmaMail.Desktop/TmaMail.Desktop.csproj" />
+    <Compile Include="../../tests/SyncFolderTests.cs" Link="Shared/SyncFolderTests.cs" />
+    <PackageReference Include="Avalonia.Headless" Version="12.1.4" />
+  </ItemGroup>
+</Project>

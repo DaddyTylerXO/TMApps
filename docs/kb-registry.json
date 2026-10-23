@@ -1,0 +1,15 @@
+{
+  "app": "TMA-Mail",
+  "branch": "TMA-Mail",
+  "updated": "2026-10-23",
+  "publishedWindowsVersion": "0.16.5",
+  "sourcePreviewVersion": "0.17.0-preview.1",
+  "canonicalLibrary": "docs/TMA-Mail KB Library.docx",
+  "compatibilityLibrary": "docs/KB Library.docx",
+  "masterLibrary": { "status": "not-published", "reviewedMainCommit": "7696d580281a8602bdea854488c4d9a9d084d9a6" },
+  "articles": [
+    { "id": "Mail-KB1", "title": "Trying the cross platform preview", "bookmark": "Mail_KB1", "file": "Mail-KB1.md" },
+    { "id": "Mail-KB2", "title": "Building and troubleshooting the preview", "bookmark": "Mail_KB2", "file": "Mail-KB2.md" },
+    { "id": "Mail-KB3", "title": "Preview privacy and offline behaviour", "bookmark": "Mail_KB3", "file": "Mail-KB3.md" }
+  ]
+}

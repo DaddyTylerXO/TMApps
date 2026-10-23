@@ -3,7 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+#if NET10_0_OR_GREATER
+using System.Text.Json;
+#else
 using System.Web.Script.Serialization;
+#endif
 using Microsoft.Identity.Client;
 using Google.Apis.Auth;
 using Google.Apis.Auth.OAuth2;
@@ -17,7 +21,11 @@ namespace Postbox {
         public string GmailDesktopClientSecret { get; set; }
         public static ProviderConfiguration Load() {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "provider-settings.json");
+#if NET10_0_OR_GREATER
+            return File.Exists(path) ? JsonSerializer.Deserialize<ProviderConfiguration>(File.ReadAllText(path)) ?? new ProviderConfiguration() : new ProviderConfiguration();
+#else
             return File.Exists(path) ? new JavaScriptSerializer().Deserialize<ProviderConfiguration>(File.ReadAllText(path)) ?? new ProviderConfiguration() : new ProviderConfiguration();
+#endif
         }
         public bool Ready(string provider) {
             Guid value;
@@ -35,7 +43,7 @@ namespace Postbox {
             return client;
         }
         private static void ApplyMicrosoft(MailAccount account, AuthenticationResult result) {
-            account.Email = WelcomeFlow.ValidateEmail(result.Account.Username); account.UserName = account.Email;
+            account.Email = MailAddressValidation.Validate(result.Account.Username); account.UserName = account.Email;
             account.AccessToken = result.AccessToken; account.ExpiresUtc = result.ExpiresOn.UtcDateTime.AddSeconds(-90); account.AuthMethod = "OAuth";
         }
         private static PkceGoogleAuthorizationCodeFlow GoogleFlow(MailAccount account, bool calendar = false) {
@@ -55,7 +63,7 @@ namespace Postbox {
                     if (String.IsNullOrEmpty(credential.Token.RefreshToken)) throw new InvalidOperationException("Google did not grant ongoing access. Please try signing in again and approve mail access.");
                     var identity = await GoogleJsonWebSignature.ValidateAsync(credential.Token.IdToken, new GoogleJsonWebSignature.ValidationSettings { Audience = new[] { account.ClientId } }).ConfigureAwait(false);
                     if (!identity.EmailVerified) throw new InvalidOperationException("Google did not return a verified email address.");
-                    account.Email = WelcomeFlow.ValidateEmail(identity.Email); account.UserName = account.Email;
+                    account.Email = MailAddressValidation.Validate(identity.Email); account.UserName = account.Email;
                     account.AccessToken = credential.Token.AccessToken; account.RefreshToken = credential.Token.RefreshToken;
                     account.ExpiresUtc = DateTime.UtcNow.AddSeconds((credential.Token.ExpiresInSeconds ?? 3600) - 90); account.AuthMethod = "OAuth";
                 }
@@ -66,7 +74,13 @@ namespace Postbox {
             if (account.ExpiresUtc > DateTime.UtcNow) return;
             if (account.Provider == "Microsoft") {
                 // Keep existing 0.7 device-code connections working after upgrading.
-                if (String.IsNullOrEmpty(account.AuthCache)) { if (calendar) throw new InvalidOperationException("Reconnect calendar access."); MicrosoftLogin.Refresh(account); return; }
+                if (String.IsNullOrEmpty(account.AuthCache)) {
+#if NET10_0_OR_GREATER
+                    throw new InvalidOperationException("Reconnect Outlook in this edition to create a browser sign-in session.");
+#else
+                    if (calendar) throw new InvalidOperationException("Reconnect calendar access."); MicrosoftLogin.Refresh(account); return;
+#endif
+                }
                 var client = MicrosoftClient(account); var identity = client.GetAccountsAsync().GetAwaiter().GetResult().FirstOrDefault();
                 if (identity == null) throw new InvalidOperationException("Please reconnect Outlook from Accounts.");
                 ApplyMicrosoft(account, client.AcquireTokenSilent(calendar ? new[] { "https://graph.microsoft.com/Calendars.ReadWrite" } : OutlookScopes, identity).ExecuteAsync(cancellation).GetAwaiter().GetResult());

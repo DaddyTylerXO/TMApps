@@ -91,3 +91,9 @@ The shared file is `%LOCALAPPDATA%\TMApps\profile.json`. Custom `--data-dir` pro
 ## Shared standards update — 23 October 2026
 
 [APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
+
+## Cross-platform migration started — 23 October 2026
+
+The public Windows release remains **0.16.5**. New [migration source](cross-platform/README.md) targets .NET 10 and Avalonia with shared mail code, authenticated encrypted profile storage and a sample-only mailbox preview. It does not connect to real accounts or open an installed Windows profile. Production macOS/Linux compatibility and feature parity are not complete; do not replace the working Windows app with a development preview.
+
+Run `./cross-platform.ps1 -Mode Check` to test the migration or `-Mode Run` to open its sample window. Native CI jobs and packaged startup evidence are separate from real-account acceptance. [PORTABILITY.md](PORTABILITY.md) records the gates, [ROADMAP.md](ROADMAP.md) retains the complete requested backlog, and the illustrated [KB Library](docs/README.md) covers the preview, troubleshooting and offline/privacy limits. Existing Windows regression checks passed after source extraction. The initial Windows native preview opened in about 1.4 seconds using approximately 129 MB on the tested machine; this is a development baseline, not a universal resource guarantee.

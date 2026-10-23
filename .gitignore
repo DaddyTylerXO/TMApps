@@ -6,3 +6,6 @@ release-repository/
 *.protected
 *.tmp
 provider-settings.json
+**/bin/
+**/obj/
+**/.avalonia-build-tasks/

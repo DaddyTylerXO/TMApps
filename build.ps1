@@ -12,7 +12,7 @@ $arguments += '/win32icon:' + (Join-Path $root 'assets\TMA-Mail.ico')
 $arguments += '/resource:' + (Join-Path $root 'assets\TMA-Mail.ico') + ',TMA-Mail.ico'
 $arguments += '/reference:' + (Join-Path $framework 'System.Security.dll')
 $arguments += '/reference:' + (Join-Path $framework 'System.Net.Http.dll')
-foreach ($source in @('AppBrand','Accounts','MailTransport','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
+foreach ($source in @('AppBrand','AccountModels','MailModels','Accounts','MailTransport','MailTransportLegacy','ConnectedUi','MailHtml','ProviderSetup','ProviderLogin')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($source in @('SyncTransport','LiveMail','AccountWorkspace','HtmlMessageView','FolderFeatures','Sounds','SuiteUi','SuiteServices','CalendarFeatures','Subscriptions','ExtendedMail','MessageWindow','MailboxTools','ManagementUi','UiPolish','RecipientSuggestions','CalendarReminders','CalendarProviders','CalendarSyncUi')) { $arguments += Join-Path $root ('src\' + $source + '.cs') }
 foreach ($package in Get-ChildItem (Join-Path $root 'packages') -Directory) {
     $dll = Get-ChildItem (Join-Path $package.FullName 'lib\net462') -Filter *.dll -ErrorAction SilentlyContinue | Select-Object -First 1

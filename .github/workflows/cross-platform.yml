@@ -1,0 +1,36 @@
+name: Cross-platform migration checks
+on:
+  push:
+    branches: [TMA-Mail]
+    paths: ['cross-platform/**', 'cross-platform.ps1', 'src/AccountModels.cs', 'src/MailModels.cs', 'src/MailTransport*.cs', 'src/SyncTransport.cs', 'src/ProviderLogin.cs', 'tests/SyncFolderTests.cs', 'provider-settings.public.json', 'check-secrets.ps1', '.github/workflows/cross-platform.yml']
+  pull_request:
+    paths: ['cross-platform/**', 'cross-platform.ps1', 'src/AccountModels.cs', 'src/MailModels.cs', 'src/MailTransport*.cs', 'src/SyncTransport.cs', 'src/ProviderLogin.cs', 'tests/SyncFolderTests.cs', '.github/workflows/cross-platform.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  migration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build, exercise shared core and render the preview
+        shell: pwsh
+        run: ./cross-platform.ps1 -Mode Publish
+      - name: Retain preview and UI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-preview-${{ matrix.os }}
+          path: |
+            build/cross-platform/TMA-Mail-preview-*
+            build/cross-platform/checks/preview-*.png
+            build/cross-platform/*/startup-evidence.json
+          if-no-files-found: error
+          retention-days: 14

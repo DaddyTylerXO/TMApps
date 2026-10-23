@@ -56,7 +56,7 @@ class SyncFolderTests {
     static SyncSnapshot Run(Peer peer, List<Message> cached, List<string> completed, CancellationToken token) {
         using (var client = new ImapClient()) {
             client.Connect(peer, "synthetic.invalid", 143, SecureSocketOptions.None);
-            var transport = new MailTransport(new MailAccount { Id = "test", Provider = "Gmail" }, null);
+            var transport = MailTransport.Create(new MailAccount { Id = "test", Provider = "Gmail" }, delegate { throw new Exception("The authenticated synthetic stream must not request credentials"); });
             try { return (SyncSnapshot)typeof(MailTransport).GetMethod("SynchronizeConnected", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(transport, new object[] { client, cached, null, null, new Action<ServerFolder, List<Message>>(delegate(ServerFolder f, List<Message> batch) { completed.Add(f.Path); }), token }); }
             catch (TargetInvocationException error) { throw error.InnerException; }
         }

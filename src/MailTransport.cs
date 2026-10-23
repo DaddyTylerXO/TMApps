@@ -14,13 +14,12 @@ using MimeKit.Text;
 namespace Postbox {
     public sealed partial class MailTransport {
         private readonly MailAccount account;
-        private readonly AccountStore accounts;
-        private readonly bool persistTokens;
-        public MailTransport(MailAccount value, AccountStore storage, bool persist = true) { account = value; accounts = storage; persistTokens = persist; }
+        private readonly Action<IMailService, MailAccount, CancellationToken> authenticateAccount;
+        private MailTransport(MailAccount value, Action<IMailService, MailAccount, CancellationToken> authentication, int marker) { if (value == null) throw new ArgumentNullException("value"); if (authentication == null) throw new ArgumentNullException("authentication"); account = value; authenticateAccount = authentication; }
+        public static MailTransport Create(MailAccount value, Action<IMailService, MailAccount, CancellationToken> authentication) { return new MailTransport(value, authentication, 0); }
         private void Authenticate(IMailService client, CancellationToken cancellation = default(CancellationToken)) { lock (account) {
             cancellation.ThrowIfCancellationRequested();
-            if (ProviderLogin.UsesOAuth(account)) { ProviderLogin.Refresh(account, false, cancellation); cancellation.ThrowIfCancellationRequested(); if (persistTokens) accounts.SaveTokens(account); client.Authenticate(new SaslMechanismOAuth2(account.Email, account.AccessToken), cancellation); }
-            else { client.AuthenticationMechanisms.Remove("XOAUTH2"); client.Authenticate(account.UserName, account.Password, cancellation); }
+            authenticateAccount(client, account, cancellation);
         }
         }
         internal static ImapClient CreateImapClient() { return new ImapClient { Timeout = 30000, SslProtocols = System.Security.Authentication.SslProtocols.None, CheckCertificateRevocation = true }; }

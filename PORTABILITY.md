@@ -2,6 +2,12 @@
 
 Prepared 17 October 2026. This is a migration plan, not a claim that the current Windows ZIP runs on macOS or Linux. Keep the existing Windows release supported throughout the work.
 
+## Implementation status — 23 October 2026
+
+Migration has started in [cross-platform/](cross-platform/README.md). The shared .NET 10 core links the Windows account/message models, mail transport, sync and provider-login source. A sample-only Avalonia desktop window, authenticated encrypted profile-file implementation and synthetic/headless checks are implemented. The existing Windows application still builds and its regression suite passes after extraction.
+
+Stage 1 is in progress: native credential-vault adapters, persistent account repositories and the remaining calendar/analytics extraction are outstanding. The new OS-matrix workflow exercises shared code and renders development previews; check its actual results before claiming a target has passed. Production macOS and Linux support, real-account validation, HTML/rich-editor proofs, signing and full feature parity are **not complete**. The public Windows update manifest remains on 0.16.5.
+
 ## Proposed approach
 
 Build an Avalonia desktop interface on a supported .NET LTS release, with shared mail/calendar services and small platform adapters. Avalonia is a reasonable candidate because the app already uses C# and XAML concepts. Its [WPF migration guide](https://docs.avaloniaui.net/docs/migration/wpf/) describes the differences; this app still needs substantial work because its UI, storage, HTML reader and Windows integrations are coupled together.

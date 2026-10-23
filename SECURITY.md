@@ -25,3 +25,11 @@ The installed hook scans every pushed ref before upload and fails closed if Powe
 ## Maintenance review — 23 October 2026
 
 This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.
+
+## Migration increment review — 23 October 2026
+
+The Avalonia preview uses synthetic mail and has no real-account setup or existing-profile import. Its new profile-file component requires an externally supplied secure-vault key, uses AES-256-GCM with random nonces and profile-bound authentication, and refuses a plaintext fallback. OS vault adapters and real-account storage integration remain unfinished; component encryption tests do not establish native-vault readiness. Existing Windows DPAPI handling remains in the Windows application.
+
+Both editions share mail transport, MIME, sync and modern provider-login source. TLS certificate validation is preserved. Only the public provider configuration is copied to preview packages. Client secrets, live accounts and protected caches remain excluded. Package publication scans files before archiving; CI artifacts contain sample-only previews, sample screenshots and sanitized OS/startup measurements. Moderate-or-higher NuGet advisories fail the migration restore. A vulnerable transitive PKCS dependency discovered during this increment was explicitly pinned to patched 10.0.13 before testing; the affected preliminary build was not published.
+
+The safe HTML renderer and rich editor are not yet ported; the preview displays plain text only. Public Windows downloads and the update manifest remain at 0.16.5. Real-account login, provider writes, actual macOS/Linux vaults and supported installation/update/uninstall claims require separate native validation. README, KB sources/screenshots and the Word library were reviewed for this increment; the full suite compliance checklist remains open.

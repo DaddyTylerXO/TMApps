@@ -48,3 +48,17 @@ This is a requirements register, not a runtime certification. Source or package 
 ## This maintenance update
 
 Shared instructions, checklist and documentation only. No application code or packages changed; runtime/performance tests were not run for this policy update. README and SECURITY were reviewed and received the maintenance gate below. Existing app-specific security and release requirements are preserved. Licensing, usage-rights/legality and legal policies remain deferred. Record code-update functional/performance/security results and native OS/build/architecture evidence here as work is completed.
+
+## Migration increment — 23 October 2026
+
+The source preview is 0.17.0-preview.1; the published Windows application and update manifest remain 0.16.5. No requirement above is marked fully complete by this increment.
+
+- APP-04/32/33: in progress. Shared transport, models and authentication compile under .NET 10; an Avalonia sample interface is implemented. Native Windows x64 packaged startup passed on Microsoft Windows 10.0.26300. macOS/Linux native CI validation is pending. Real-account UI, native vault adapters, complete feature parity and supported OS/version/architecture acceptance remain open.
+- APP-03/17/29: partial. The preview uses the existing icon and green rounded controls, with a dark original-style palette. Four complete themes, settings parity and gradual scheduling are still open.
+- APP-11/12: partial. The branded four-page Word KB includes three numbered preview guides, internal index/backlinks, troubleshooting, offline/privacy limits and an actual sanitized UI screenshot. All four pages were rendered through installed Word and visually reviewed. Full application KB coverage remains open.
+- APP-14: open. Main was reviewed at 7696d580281a8602bdea854488c4d9a9d084d9a6; no Master KB or suite KB registry was published there. No unavailable master link is claimed.
+- APP-22: this increment passed the existing Windows regression suite, ten synthetic IMAP checks and 31 portable checks including encryption and rendered layouts at 820/1180/1600 pixels. The packaged native Windows preview opened in 1,374 ms, used 135,438,336 bytes of working set and consumed 31.25 ms of CPU during a one-second idle sample following a two-second warm-up. This two-message baseline does not establish real-mail performance.
+- APP-23: public preview configuration leaves the Google client secret empty. The packaged Windows preview's 253 files passed the secret scanner. Outgoing source and nested Word archives must also pass before publication; CI scans each native package tree before upload. Native credential-vault integration remains unfinished; encryption tests do not establish end-to-end profile security.
+- APP-24/35/37: roadmap, README, SECURITY, portability notes and source-preview changelog reviewed. Development CI artifacts are separate from the public Windows update channel.
+
+Native CI results and remaining migration gates must be updated from actual runs. Licensing and legal-policy assessment remain deferred as instructed.

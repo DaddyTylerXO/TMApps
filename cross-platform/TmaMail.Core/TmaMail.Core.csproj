@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="../../src/AccountModels.cs" Link="Shared/AccountModels.cs" />
+    <Compile Include="../../src/MailModels.cs" Link="Shared/MailModels.cs" />
+    <Compile Include="../../src/MailTransport.cs" Link="Shared/MailTransport.cs" />
+    <Compile Include="../../src/SyncTransport.cs" Link="Shared/SyncTransport.cs" />
+    <Compile Include="../../src/ProviderLogin.cs" Link="Shared/ProviderLogin.cs" />
+    <PackageReference Include="MailKit" Version="4.17.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.91.0" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
+  </ItemGroup>
+</Project>
