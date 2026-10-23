@@ -7,7 +7,7 @@ Development history reconstructed from the local prototype milestones. Earlier v
 - Begin the macOS/Linux migration with .NET 10 shared mail models, transport and provider authentication, retaining the existing Windows implementation through a compatibility adapter.
 - Add an Avalonia sample-only desktop preview with resizable panes, search, read/unread, starring and delete/restore. It does not connect to real accounts or open existing profiles.
 - Add an authenticated encrypted profile-file component and synthetic tests; native keychain/keyring adapters and real-account migration remain unfinished.
-- Add locked dependency restore, advisory checks, native startup/performance checks, secret scanning and Windows/macOS/Linux development packaging CI. Native macOS/Linux results are pending.
+- Add locked dependency restore, advisory checks, native startup/performance checks, secret scanning and Windows/macOS/Linux development packaging CI. Native sample-window checks passed on Windows Server 2025 x64, macOS 26.6.2 arm64 and Ubuntu 26.04.1 x64 (Xvfb); production compatibility remains unfinished.
 - Pass the Windows regression suite, ten synthetic IMAP checks and 31 portable checks locally. Windows packaged sample startup took 1,374 ms with approximately 129 MiB working set.
 - Add the complete accepted feature roadmap and illustrated numbered Word KB guides. The public Windows release and update manifest remain 0.16.5.
 

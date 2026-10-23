@@ -8,6 +8,18 @@ Migration has started in [cross-platform/](cross-platform/README.md). The shared
 
 Stage 1 is in progress: native credential-vault adapters, persistent account repositories and the remaining calendar/analytics extraction are outstanding. The new OS-matrix workflow exercises shared code and renders development previews; check its actual results before claiming a target has passed. Production macOS and Linux support, real-account validation, HTML/rich-editor proofs, signing and full feature parity are **not complete**. The public Windows update manifest remains on 0.16.5.
 
+### Native preview evidence
+
+[CI run 40002885499](https://github.com/DaddyTylerXO/TMApps/actions/runs/40002885499), source commit `5858a4a4b40b81bc5993853c40eec0804ae0102e`, opened the self-contained sample window on each target. All builds reported zero warnings/errors. Each target passed ten synthetic IMAP checks, portable model/MIME/encryption/UI checks (31 on Windows, 32 on Unix including file permissions), and a package-tree secret scan before artifact upload.
+
+| Tested runner | Architecture | Native startup | Initial working set | CPU during one-second idle sample |
+| --- | --- | --- | --- | --- |
+| Windows Server 2025, OS build 10.0.26100 | x64 | 1,782 ms | 110 MiB | 0 ms |
+| macOS 26.6.2 | Apple Silicon arm64 | 2,654 ms | 169 MiB | 15.583 ms |
+| Ubuntu 26.04.1 LTS, Xvfb/X11 | x64 | 1,708 ms | 182 MiB | 8.487 ms |
+
+The idle sample follows a two-second warm-up. These are two-message sample baselines on hosted runners, not real-mail or production OS support declarations. macOS Intel, Linux arm64, Wayland, other OS versions/distributions, installer/update behaviour and real accounts have not passed native acceptance. CI artifacts are temporary development packages; the public download remains the supported Windows release.
+
 ## Proposed approach
 
 Build an Avalonia desktop interface on a supported .NET LTS release, with shared mail/calendar services and small platform adapters. Avalonia is a reasonable candidate because the app already uses C# and XAML concepts. Its [WPF migration guide](https://docs.avaloniaui.net/docs/migration/wpf/) describes the differences; this app still needs substantial work because its UI, storage, HTML reader and Windows integrations are coupled together.

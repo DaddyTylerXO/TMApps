@@ -9,7 +9,8 @@ Updated 23 October 2026. The owner's 75-item backlog is retained below. macOS/Li
 - [x] Add authenticated, atomic profile-file encryption with no plaintext fallback, plus integrity and cancellation checks.
 - [x] Pass the existing Windows regression suite and the modern synthetic/headless checks.
 - [x] Smoke-test the self-contained sample window on this Windows x64 host and record startup/memory/idle CPU.
-- [ ] Complete and inspect native macOS/Linux CI results; then test real account flows on target systems.
+- [x] Pass and inspect native sample-window CI results on Windows x64, macOS arm64 and Linux x64; see PORTABILITY.md for exact runner versions and limits.
+- [ ] Test real account flows on target systems after vault and mailbox wiring are implemented.
 - [ ] Implement native vault adapters, account repositories and mailbox UI wiring.
 - [ ] Prove secure HTML rendering, rich composing, provider login and existing-data migration on each OS.
 - [ ] Port remaining mail/calendar/desktop features and verify install, update, uninstall, signing and accessibility.
