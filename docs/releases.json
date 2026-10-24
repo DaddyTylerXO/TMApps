@@ -1,0 +1,17 @@
+[
+  {
+    "version": "0.3.0",
+    "date": "2026-10-24",
+    "notes": "Searchable Settings, scheduled purple/grey/black palettes in Original Bubble, accessibility controls, generator defaults, offline dashboard widgets and manual breach flags, encrypted API and card records, encrypted vault merge, first-launch demo tour and reviewed GitHub support drafts."
+  },
+  {
+    "version": "0.2.3",
+    "date": "2026-10-23",
+    "notes": "Security update: stronger lock cancellation, delayed reveal handling, safer encrypted backup replacement and bounded file reads. Automated security and performance release checks and illustrated Safe-KB1\u20134."
+  },
+  {
+    "version": "0.2.2",
+    "date": "2026-10-20",
+    "notes": "Approved white horizontal key icon on the purple rounded tile."
+  }
+]

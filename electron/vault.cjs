@@ -11,10 +11,25 @@ const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 function text(value, max = 8192) { if (typeof value !== 'string' || value.length > max || value.includes('\0')) throw Error('Invalid text field.'); return value; }
 function origin(value) { if (!value) return ''; const u = new URL(text(value, 2048)); if (u.protocol !== 'https:' || u.username || u.password) throw Error('Website must use HTTPS without embedded credentials.'); return u.origin; }
 function entry(value) {
+  const kind = value.kind ?? 'login'; if (!['login','api','card'].includes(kind)) throw Error('Unsupported record type.');
   const title = text(value.title, 200).trim(); if (!title) throw Error('Give this login a name.');
   const expiryDays = Number(value.expiryDays || 0); if (!Number.isInteger(expiryDays) || expiryDays < 0 || expiryDays > 3650) throw Error('Expiry must be between 0 and 3650 days.');
   const folderId = text(value.folderId || '', 36); if (folderId && !/^[a-f\d-]{36}$/.test(folderId)) throw Error('Invalid folder.');
-  return { title, username: text(value.username), password: text(value.password), url: origin(value.url), notes: text(value.notes || '', 32000), expiryDays, folderId };
+  let password = text(value.password);
+  if (kind === 'card') {
+    let card; try { card = JSON.parse(password); } catch { throw Error('Invalid card details.'); }
+    const number = text(card.number, 32).replace(/[ -]/g,'');
+    if (!/^\d{12,19}$/.test(number) || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(card.expiry) || !/^\d{0,4}$/.test(card.cvv) || card.cvv.length === 1 || card.cvv.length === 2) throw Error('Check the card number, expiry (MM/YY), and optional 3–4 digit security code.');
+    password = JSON.stringify({ number, expiry: card.expiry, cvv: card.cvv });
+  }
+  if (value.breached !== undefined && typeof value.breached !== 'boolean') throw Error('Invalid breach flag.');
+  return { kind, title, username: text(value.username), password, url: kind === 'login' ? origin(value.url) : '', notes: text(value.notes || '', 32000), expiryDays, folderId, breached: value.breached === true, breachSource: text(value.breachSource || '', 200), ...(kind === 'api' ? { clientId: text(value.clientId || '', 8192) } : {}) };
+}
+function health(data) {
+  const logins = data.entries.filter(e => !e.kind || e.kind === 'login'), counts = new Map();
+  for (const e of logins) if (e.password) counts.set(e.password,(counts.get(e.password) || 0) + 1);
+  const issues = logins.map(e => ({ id:e.id, short:e.password.length < 12, reused:!!e.password && counts.get(e.password) > 1 }));
+  return { total:data.entries.length, short:issues.filter(e => e.short).length, reused:issues.filter(e => e.reused).length, due:data.entries.filter(e => e.expiryDays > 0 && Date.now() >= Date.parse(e.passwordChangedAt) + e.expiryDays * 86400000).length, flagged:data.entries.filter(e => e.breached).length, issues };
 }
 function validateData(data) {
   if (data?.schema !== 1 || !Array.isArray(data.entries) || data.entries.length > 20000) throw Error('Unsupported vault contents.');
@@ -56,14 +71,25 @@ async function encryptedTemp(file, content) {
   const handle = await fs.open(file, 'wx', 0o600);
   try { await handle.writeFile(content); await handle.sync(); } finally { await handle.close(); }
 }
+async function replace(source, destination) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fs.rename(source, destination); }
+    catch (error) {
+      // Windows scanners can briefly hold a newly closed file. Keep the exclusive
+      // vault lock and retry only atomic rename; never unlink the destination.
+      if (process.platform !== 'win32' || !['EPERM','EACCES','EBUSY'].includes(error.code) || attempt >= 4) throw error;
+      await new Promise(resolve => setTimeout(resolve, 50 * 2 ** attempt));
+    }
+  }
+}
 async function write(file, content, previous) {
   const lock = file + '.lock'; const guard = await fs.open(lock, 'wx', 0o600).catch(() => { throw Error('Vault is being saved elsewhere, or a stale .lock file needs review.'); });
   const temp = path.join(path.dirname(file), '.' + path.basename(file) + '.' + crypto.randomUUID() + '.tmp');
   const backupTemp = temp + '.bak';
   try {
-    if (previous) { const old = await read(file); if (digest(old) !== previous) throw Error('Vault changed on disk. Lock and reopen it before editing.'); await encryptedTemp(backupTemp, old); await fs.rename(backupTemp, file + '.bak'); }
+    if (previous) { const old = await read(file); if (digest(old) !== previous) throw Error('Vault changed on disk. Lock and reopen it before editing.'); await encryptedTemp(backupTemp, old); await replace(backupTemp, file + '.bak'); }
     await encryptedTemp(temp, content);
-    if (previous) await fs.rename(temp, file); else { await fs.link(temp, file); await fs.unlink(temp); }
+    if (previous) await replace(temp, file); else { await fs.link(temp, file); await fs.unlink(temp); }
   } finally { await fs.rm(temp, { force: true }); await fs.rm(backupTemp, { force: true }); await guard.close(); await fs.unlink(lock); }
 }
 class Vault {
@@ -93,17 +119,26 @@ class Vault {
   }
   list() { this.require(); return { file: this.file, keyfile: this.base.keyfile, folders: structuredClone(this.data.folders || []), entries: this.data.entries.map(({ password, ...e }) => ({ ...e, expired: e.expiryDays > 0 && Date.now() >= Date.parse(e.passwordChangedAt) + e.expiryDays * 86400000 })) }; }
   async mutate(change) {
-    this.require(); const data = structuredClone(this.data), epoch = this.epoch; change(data); const content = seal(data, this.key, this.base); await write(this.file, content, this.hash);
+    this.require(); const data = structuredClone(this.data), epoch = this.epoch; change(data); const { issues, ...snapshot } = health(data); const date = new Date().toISOString().slice(0,10); data.healthHistory = [...(Array.isArray(data.healthHistory) ? data.healthHistory : []).filter(item => item?.date !== date).slice(-89), {date,...snapshot}]; const content = seal(data, this.key, this.base); await write(this.file, content, this.hash);
     if (epoch !== this.epoch) throw Error('Vault locked during save. Reopen to see saved changes.'); this.data = data; this.hash = digest(content); return this.list();
   }
   async put(value) {
     const clean = entry(value); return this.mutate(data => { const old = value.id ? data.entries.find(e => e.id === value.id) : null; if (value.id && !old) throw Error('Login no longer exists.'); const now = new Date().toISOString(); const saved = { ...clean, id: old?.id || crypto.randomUUID(), updatedAt: now, passwordChangedAt: old && old.password === clean.password ? old.passwordChangedAt : now }; if (old) data.entries[data.entries.indexOf(old)] = saved; else data.entries.push(saved); });
   }
   secret(id) { this.require(); const found = this.data.entries.find(e => e.id === id); if (!found) throw Error('Login no longer exists.'); return found; }
+  audit() { this.require(); return { ...health(this.data), history: (this.data.healthHistory || []).filter(item => item && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && ['total','short','reused','due','flagged'].every(k => Number.isInteger(item[k]) && item[k] >= 0)).slice(-90) }; }
   async remove(id) { return this.mutate(data => { const index = data.entries.findIndex(e => e.id === id); if (index < 0) throw Error('Login no longer exists.'); data.entries.splice(index, 1); }); }
   async folder(value) { return this.mutate(data => { data.folders ??= []; const name = text(value.name, 80).trim(); if (!name) throw Error('Give the folder a name.'); if (data.folders.some(f => f.id !== value.id && f.name.toLowerCase() === name.toLowerCase())) throw Error('A folder with this name already exists.'); const old = value.id ? data.folders.find(f => f.id === value.id) : null; if (value.id && !old) throw Error('Folder no longer exists.'); if (old) old.name = name; else data.folders.push({ id: crypto.randomUUID(), name }); }); }
   async removeFolder(id) { return this.mutate(data => { if (!(data.folders || []).some(f => f.id === id)) throw Error('Folder no longer exists.'); data.folders = data.folders.filter(f => f.id !== id); for (const e of data.entries) if (e.folderId === id) e.folderId = ''; }); }
   async import(values) { const entries = values.map(entry); return this.mutate(data => { for (const e of entries) { if (data.entries.some(v => v.url === e.url && v.username === e.username && v.password === e.password)) continue; const now = new Date().toISOString(); data.entries.push({ ...e, id: crypto.randomUUID(), updatedAt: now, passwordChangedAt: now }); } }); }
+  async merge(source) {
+    const clean = validateData(structuredClone(source));
+    return this.mutate(data => {
+      data.folders ??= []; const mapping = new Map();
+      for (const folder of clean.folders) { let target = data.folders.find(f => f.name.toLowerCase() === folder.name.toLowerCase()); if (!target) { target = { id:crypto.randomUUID(),name:folder.name }; data.folders.push(target); } mapping.set(folder.id,target.id); }
+      for (const item of clean.entries) { const e = entry(item); if (data.entries.some(v => (v.kind || 'login') === e.kind && v.url === e.url && v.username === e.username && v.password === e.password && (v.clientId || '') === (e.clientId || ''))) continue; data.entries.push({...e,folderId:mapping.get(e.folderId) || '',id:crypto.randomUUID(),updatedAt:item.updatedAt,passwordChangedAt:item.passwordChangedAt}); }
+    });
+  }
   async copy(destination) { this.require(); await write(destination, seal(this.data, this.key, this.base)); }
 }
 function generate(options = {}) {

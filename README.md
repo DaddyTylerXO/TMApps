@@ -1,6 +1,6 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Version 0.2.3 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Source version 0.3.0 is an unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
@@ -74,3 +74,22 @@ The release workflow tests and packages Windows x64, macOS x64/arm64 and Linux x
 Source prepared 23 October 2026. Published packages remain at the version shown in the live launcher catalog until the native release workflow succeeds. This update strengthens locking, reveal handling, file reads and encrypted backup writes. Twenty-five regression tests and Windows source/packaged smoke checks passed with fictional data. Security and performance checks now run in release CI. See the sanitised [verification summary](SECURITY-REVIEW-2026-10-20.md).
 
 The illustrated [TMA-Safe KB Library](docs/TMA-Safe%20KB%20Library.docx) contains Safe-KB1 through Safe-KB4, setup, offline coverage and troubleshooting. [KB Library.docx](docs/KB%20Library.docx) is retained as a compatibility copy. Master-library registration and in-app KB search remain pending.
+
+## Feature update 0.3.0
+
+Prepared 24 October 2026. Until the native release workflow finishes, the live catalog remains the authority for the published version. This build adds searchable two-column Settings, purple/grey/black palettes in Original Bubble, scheduled gradual colour changes, optional magnification/contrast/reduced motion, password-generator defaults, and a first-launch fictional demo tour with replay.
+
+Store API credentials using App Name, Email, Client ID and Client Secret, and store encrypted card records with masked numbers/security codes. These record types are excluded from website login filling. Import another encrypted vault through Vault & security using that file's own master password and key file; folders are preserved and exact duplicates skipped. Portable copies remain encrypted; plaintext export is not provided.
+
+Dashboard widgets calculate local password health and encrypted daily snapshots. Red breach flags are reports entered by you, with an optional reference. They are not results of an online/dark-web lookup. Per your offline preference, no email, username, password or hash is sent to a breach provider. Passkeys, Travel Mode, signup-password capture, autologin and payment-form filling remain open work in [JOBS.md](JOBS.md).
+
+Settings includes separate feature, bug, issue, Help and Crash report actions. Support drafts contain fixed sanitised categories and require native preview plus final submission in your browser. A renderer failure locks the vault before offering reload; main-process/OS crashes may still require a manual report after restart. No private stack trace or vault payload is attached. Guides Safe-KB1–8 are available offline and can appear in Settings search; disable KB results while keeping Help available. The Word library has matching articles and clickable cross-references.
+
+The Windows 11 Home 10.0.26300 x64 source smoke and 34-test suite passed on 24 October. The latest 1,000-entry test measured 265 ms unlock, 38 ms import and 222 MiB peak benchmark-process RSS. GUI smoke measured 328 ms main-module-to-renderer startup, 0.13% summed idle-process CPU and 401 MiB working set across app processes. These are one-machine observations. Native CI additionally records each OS/kernel version, architecture, source commit and source/packaged smoke results in app-scoped verification JSON release assets. A published architecture is not proof of compatibility with every OS version.
+
+| OS / architecture | Current evidence and limitations |
+| --- | --- |
+| Windows x64 | Windows 11 Home 10.0.26300 source verified locally; packaged verification and CI are required for this source version. Unsigned portable ZIP; no installer/uninstaller certification. |
+| macOS x64 / arm64 | 0.2.3 native source/packaged CI passed; 0.3.0 pending its native workflow. Ad-hoc signing, not notarized. See the release verification JSON for the actual OS release tested. |
+| Linux x64 / arm64 | 0.2.3 native source/packaged CI passed; 0.3.0 pending its native workflow. Chromium sandbox/user-namespace and tray support depend on the desktop. |
+| Other OS versions / architectures | Not yet verified unless listed in the version-specific evidence. Absence of testing does not mean OS Version Not Supported. |

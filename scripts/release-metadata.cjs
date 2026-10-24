@@ -1,6 +1,10 @@
 'use strict';
 const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
 const version = require('../package.json').version, directory = path.join(__dirname, '../dist'), platform = process.platform, arch = process.arch;
+const smoke = name => { const file = path.join(__dirname, '../build', name, 'smoke.json'); return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null; };
+const verification = { app:'TMA-Safe',version,sourceCommit:process.env.GITHUB_SHA || null,environment:process.env.GITHUB_SHA ? 'native CI' : 'local working tree',testedAt:new Date().toISOString(),os:require('node:os').type(),osRelease:require('node:os').release(),platform,arch,sourceSmoke:smoke('source-smoke'),packagedSmoke:smoke('packaged-smoke') };
+if (process.env.CI === 'true' && (!verification.sourceSmoke?.ok || !verification.packagedSmoke?.ok)) throw Error('Missing successful native smoke evidence.');
+fs.writeFileSync(path.join(directory, `TMA-Safe-${version}-verification-${platform}-${arch}.json`), JSON.stringify(verification,null,2));
 const files = fs.readdirSync(directory).filter(name => name.startsWith(`TMA-Safe-${version}-`) && /\.(zip|dmg|AppImage|tar\.gz)$/.test(name));
 if (!files.length) throw Error('No application packages found.');
 const artifacts = files.map(filename => { const sha256 = crypto.createHash('sha256').update(fs.readFileSync(path.join(directory, filename))).digest('hex'); fs.writeFileSync(path.join(directory, filename + '.sha256'), `${sha256}  ${filename}\n`); return { filename, sha256, url: `https://github.com/DaddyTylerXO/TMApps/releases/download/tma-apps/${filename}` }; });

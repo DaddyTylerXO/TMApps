@@ -50,3 +50,15 @@ test('lock during key-file read cancels unlock before key derivation and wipes b
   app.lock(); wait.resolve(bytes); await rejected;
   assert.equal(called, false); assert.ok(bytes.every(b => b === 0));
 });
+test('browser login filling never offers API secrets or card records', async () => {
+  let options;const app=main({'./bridge.cjs':{startBridge:async value=>{options=value;return {token:'fictional',close(){}}}}});
+  app.vault.key=Buffer.alloc(32,1);app.vault.data={entries:[{kind:'api',url:'https://example.com',password:'fictional-client-secret'},{kind:'card',url:'https://example.com',password:'fictional-card'}]};
+  await app.actions.bridge(true);await assert.rejects(options.approve('https://example.com','fictional-extension',{aborted:false}),/No unique choice/);app.lock();
+});
+test('encrypted vault import requires its own master password and does not partially merge on failure', async t => {
+  const files=require('node:fs/promises'),os=require('node:os');const root=await files.mkdtemp(path.join(os.tmpdir(),'safe-import-auth-'));t.after(()=>files.rm(root,{recursive:true,force:true}));
+  const source=path.join(root,'source.tmasafe'),incoming=new (require('../electron/vault.cjs').Vault)();await incoming.create(source,'fictional source master password');await incoming.folder({name:'Imported apps'});await incoming.put({kind:'api',title:'Fictional API',username:'demo@example.com',clientId:'fictional-id',password:'fictional-secret',folderId:incoming.list().folders[0].id});incoming.lock();
+  const app=main({electron:{dialog:{showOpenDialog:async()=>({canceled:false,filePaths:[source]})}}});t.after(()=>app.lock());await app.vault.create(path.join(root,'target.tmasafe'),'different fictional target master');
+  await assert.rejects(app.actions.importVault({password:'incorrect password',useKey:false}),/Could not unlock/);assert.equal(app.vault.list().entries.length,0);
+  await app.actions.importVault({password:'fictional source master password',useKey:false});assert.equal(app.vault.list().entries.length,1);assert.equal(app.vault.list().folders[0].name,'Imported apps');
+});

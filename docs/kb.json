@@ -8,7 +8,8 @@
       "Choose Create a vault, choose a new .tmasafe filename, and enter and confirm a unique master passphrase of at least 14 characters. There is no password reset.",
       "For an additional possession factor, select Use a separate key file and generate a .tmakey file. Keep it separate from the vault. Both the master password and original key file are needed on another computer. TOTP and Windows Hello are not implemented.",
       "Always use this vault remembers only the filename on this device. The master password is required at every launch. After locking, choose your key file again when one is required.",
-      "If the saved drive is missing, choose the moved vault again. See Safe-KB4 for unlock errors. This feature works offline."
+      "If the saved drive is missing, choose the moved vault again. See Safe-KB4 for unlock errors. This feature works offline.",
+      "On first launch, choose Take the tour, Skip, or Accessibility. The tour uses fictional records and locks the real vault. Back, Next and Exit guide you around visible controls; after a first-setup tour you return to vault creation. Replay it from Settings. See Safe-KB5 for accessibility choices."
     ]
   },
   {
@@ -29,10 +30,11 @@
     "image": "settings.png",
     "caption": "Settings controls for startup, tray behaviour, automatic locking and the clipboard.",
     "paragraphs": [
-      "Settings is available while locked or unlocked. Startup opens a locked app. Close to tray requires Show tray and locks immediately. Tray availability depends on the desktop environment.",
+      "Settings is available while locked or unlocked. Search settings by keywords; sections use the common two-column panel layout. Feature request, Bug report, Issue report, Help and Crash report remain on the main Settings screen. Startup opens a locked app. Close to tray locks immediately.",
       "Idle lock defaults to five minutes. Clipboard text clears after twenty seconds if unchanged; clipboard history or third-party managers may retain it. Shorter limits reduce exposure.",
       "Use Vault & security then Save an encrypted portable copy. Copy or move a locked .tmasafe file to another device and open it using the same passphrase and any key file. Copies do not synchronise.",
-      "Each save retains an encrypted .bak of the previous version. Keep backups safe because they retain older passwords. Unlocking uses about 128 MiB for scrypt, briefly increasing CPU/RAM usage; it is deliberate password-guessing resistance. This app has no cloud service or paid integration."
+      "Each save retains an encrypted .bak of the previous version. Keep backups safe because they retain older passwords. Unlocking uses about 128 MiB for scrypt, briefly increasing CPU/RAM usage; it is deliberate password-guessing resistance. This app has no cloud service or paid integration.",
+      "The original purple Bubble layout remains the default. Grey and black palettes, schedules, accessibility options and password defaults are explained in Safe-KB5. See Safe-KB8 for encrypted import and support drafts."
     ]
   },
   {
@@ -48,7 +50,57 @@
       "Expected a regular file within the size limit: choose a normal vault/import file or the original 32-byte key file. Files that grow past the limit or nonregular paths are rejected.",
       "Browser filling unavailable: unlock, enable filling, pair the companion extension, and visit the exact HTTPS origin of the saved login. Every fill requires native approval. Filling contacts only the local loopback bridge; opening support links or downloading updates requires internet access.",
       "If an error persists, report the app version, OS, steps and a sanitised error through GitHub Issues. Review the report and remove private account names and paths. Security vulnerabilities belong in private reporting, not a public issue.",
-      "The app is an unsigned beta without an independent audit. AES-256-GCM protects vault data at rest; the provider has no account, recovery key or remote vault access. A compromised computer can capture unlocked data. No dark-web/breach lookup or passkey provider is implemented. See Safe-KB1 for recovery precautions."
+      "The app is an unsigned beta without an independent audit. AES-256-GCM protects all vault data at rest, including API and card secrets; no provider has a recovery key or remote vault access. A compromised computer can capture unlocked data. Online breach monitoring, passkeys, TOTP and Windows Hello are not implemented. See Safe-KB1 for recovery precautions and Safe-KB7 for offline health checks."
+    ]
+  },
+  {
+    "id": "Safe-KB5",
+    "title": "Appearance accessibility and password defaults",
+    "image": "settings.png",
+    "caption": "Searchable Settings with categories, support actions and saved preferences.",
+    "paragraphs": [
+      "Original Bubble remains the default layout. Under Appearance choose Purple, Toned-back grey or Black. Enable a scheduled background, enter local start and return times, and choose an instant or gradual transition from 2 to 60 minutes. The transition must fit within both time intervals. Changes are saved with Save settings.",
+      "The app calculates progress from the clock, so reopening during a transition resumes the appropriate colours. It checks the clock at most once a minute outside transitions and updates at most twice a minute during them. Reduced motion makes colour changes instant. This is a display preference, not a medical treatment.",
+      "Accessibility offers 100\u2013200% interface magnification, higher contrast and reduced motion. Optional adaptations are off by default. Native semantic labels and keyboard focus are always available. OS screen readers can read these controls; full manual testing with every assistive technology is not certified.",
+      "Password defaults set length and character groups for future generation. At least one group must remain selected. Existing passwords are unchanged. Settings search can include KB guides or exclude them using Include KB guides; Help still shows every guide. All these functions work offline."
+    ]
+  },
+  {
+    "id": "Safe-KB6",
+    "title": "Store API credentials and cards",
+    "image": "api-editor.png",
+    "caption": "A fictional API record with its client secret masked.",
+    "paragraphs": [
+      "Choose API credential to add App Name, Email, Client ID and Client Secret. Choose a folder, optional update reminder and notes. Secret reveal is temporary; leave an existing secret untouched when editing to keep it. The Client ID is visible as record metadata while unlocked, but remains encrypted on disk.",
+      "Choose Card to store a card name, cardholder, number, expiry in MM/YY and an optional 3\u20134 digit security code. Numbers and codes remain masked in the editor until revealed. Copy card number copies the number only, not the security code.",
+      "Use the API credentials or Cards sidebar filters to find records. Edit opens the appropriate form; Delete record asks for confirmation. Folders and encrypted backups include these records. API secrets and card data are excluded from ordinary website login filling. Payment-form filling is not implemented.",
+      "These fields are encrypted using the same vault key as other records. They are available offline and are not uploaded to an API provider. Enter credentials issued by your provider; storing a value here does not configure or authenticate the external service. See Safe-KB8 before moving records between vaults."
+    ]
+  },
+  {
+    "id": "Safe-KB7",
+    "title": "Offline health dashboard and reported breaches",
+    "image": "dashboard.png",
+    "caption": "Offline widgets using fictional records and deliberately reused demonstration passwords.",
+    "paragraphs": [
+      "Open Dashboard to choose widgets for stored records, short login passwords, reused login passwords, due reminders and manually reported breaches. Select the widgets and Save widget choices. Preferences are saved on this device.",
+      "Short means fewer than 12 characters; reuse means identical nonempty login passwords. These are local health signals, not a complete strength analysis or proof that a password was breached. API client secrets and card payloads are excluded from login reuse checks.",
+      "If you have your own reliable breach report, edit the record and select Manually reported breach, then enter a reference or note. A red Reported breach warning appears on that record. The application does not verify your report or query a dark-web, email or password-breach service. No account, username, password or hash is sent online.",
+      "Daily snapshots keep the last measured counts for each UTC day when you changed the vault, up to 90 days. Days without changes have no new measurement. Snapshots are encrypted inside the vault and reflect your local records and entered reports; they do not measure worldwide breach activity. Locking clears the dashboard."
+    ]
+  },
+  {
+    "id": "Safe-KB8",
+    "title": "Encrypted imports and reviewed support drafts",
+    "image": null,
+    "caption": "",
+    "paragraphs": [
+      "To export or back up, open Vault & security and Save an encrypted portable copy. This exports a complete encrypted .tmasafe file, not plaintext CSV. Keep any required key file separately. Exported copies are independent; they do not synchronise.",
+      "To merge an encrypted file, unlock the destination vault and choose Import an encrypted vault. Enter the imported vault\u2019s own master password and indicate whether it requires a separate key file. Choose that vault and, if required, its original key file. A wrong password or key does not partially import records.",
+      "The import preserves folders by matching names and creating missing folders. It assigns new record IDs and skips exact duplicate credentials. Logins, API credentials and cards are supported. The source file remains unchanged. Locking during import cancels the operation; an encrypted save already in progress may finish on disk. See Safe-KB4 for recovery.",
+      "The main Settings screen offers Feature request, Bug report, Issue report and Crash report. The app prepares an app/version/platform draft with only fixed sanitised error categories. Raw messages and stacks may contain private data and are omitted. Review the native preview, open the GitHub draft and submit it yourself in the browser. No issue is silently submitted. You can edit the draft on GitHub before submitting it.",
+      "Support links require internet and GitHub may require you to sign in. The offline KB remains available without it. Never attach a vault, key file, browser CSV, private screenshots or pairing code. Security vulnerabilities belong in the private GitHub reporting flow, not a public issue.",
+      "Passkey hosting, generated-password signup capture, automatic login, payment-form filling and Travel Mode are still unavailable. Optional cryptographic MFA currently means a separately stored key file selected during vault creation; authenticator TOTP and Windows Hello have not been added."
     ]
   }
 ]

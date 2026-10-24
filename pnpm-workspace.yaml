@@ -1,0 +1,4 @@
+# Pin the patched compatible release until the build-tool dependency refreshes it.
+# AJV accepts ^3.0.1; this does not introduce the breaking 4.x URI API.
+overrides:
+  fast-uri@3.1.8: 3.1.9

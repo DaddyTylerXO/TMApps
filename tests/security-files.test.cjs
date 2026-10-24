@@ -27,3 +27,9 @@ test('authentication failures wipe intermediate decrypted bytes and leave vault 
   try { await assert.rejects(vault.unlock(file, password), /Could not unlock/); assert.ok(intermediate.length > 0); assert.ok(intermediate.every(b => b === 0)); assert.equal(vault.key, null); assert.equal(vault.data, null); }
   finally { crypto.createDecipheriv = original; }
 });
+test('Windows transient rename locks retry without unlinking the original vault', {skip:process.platform!=='win32'}, async t => {
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'safe-rename-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));const vault=new Vault();t.after(()=>vault.lock());const file=path.join(root,'vault.tmasafe');await vault.create(file,password);
+  const rename=fs.rename;let attempts=0;fs.rename=async(...args)=>{if(attempts++<2){const error=Error('Fictional transient scanner lock');error.code='EPERM';throw error;}return rename(...args);};
+  try{await vault.put({title:'Example',username:'demo',password:'fictional'});assert.ok(attempts>=3);assert.equal(vault.list().entries.length,1);}
+  finally{fs.rename=rename;}
+});

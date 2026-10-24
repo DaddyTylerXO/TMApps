@@ -2,7 +2,7 @@
 
 # Security policy and format
 
-TMA-Safe 0.2.x is an experimental, unaudited beta. Report vulnerabilities through the repository's private security advisory flow if available; otherwise contact the owner privately. Do not put real vaults, passwords, keys, CSV exports or pairing codes in issues.
+TMA-Safe 0.3.x is an experimental, unaudited beta. Report vulnerabilities through the repository's private security advisory flow if available; otherwise contact the owner privately. Do not put real vaults, passwords, keys, CSV exports or pairing codes in issues.
 
 ## At-rest encryption
 
@@ -34,3 +34,13 @@ Device-local settings contain only preferences. Startup never unlocks the vault.
 ## Maintenance review — 23 October 2026
 
 This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.
+
+## Feature review 24 October 2026
+
+API client secrets and card number/expiry/security-code payloads use the same AES-256-GCM vault encryption. Client IDs and record metadata are visible to the sandboxed UI only while unlocked; card payloads and client secrets require individual reveal/edit/copy actions. API/card records cannot be offered by the login bridge. Health widgets return counts and record IDs, not passwords or hashes. User-entered breach flags and daily counts are encrypted; they are not externally verified breach data.
+
+Encrypted merge uses a temporary Vault instance authenticated with the source file's own master password and optional key file. It clears that instance and key Buffer in finally, checks lock cancellation and preserves the existing format. Invalid credentials cannot partially merge. Remembered settings contain only device preferences, not secrets. Appearance scheduling runs bounded local timers; the first-run tour uses a fictional renderer state while the real vault is locked and workspace controls are inert.
+
+This is a local encryption design with no provider-held recovery/decryption key and no uploaded vault account. It is not a formally audited zero-knowledge protocol or a security certification. The app does not transmit vault files. Remote support/download links use HTTPS. Browser filling's HTTP exception is limited to authenticated 127.0.0.1 loopback with explicit per-fill approval; it is not TLS and cannot defend against a compromised local OS.
+
+Reports use fixed sanitised error categories, excluding original stacks, file paths and payloads. They require preview and user submission on GitHub. A renderer failure locks before offering reload. No telemetry or automatic private-data upload is enabled. Full manual assistive-technology, real-browser and native OS integration testing remain separate from automated regressions. MFA beyond the existing separate key file, passkey hosting, Travel Mode and expanded browser filling remain unimplemented.

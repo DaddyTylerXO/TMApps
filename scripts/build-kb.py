@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, shutil
+import json, shutil, argparse
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.oxml import OxmlElement
@@ -7,6 +7,8 @@ from docx.oxml.ns import qn
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from PIL import Image
 root=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser();parser.add_argument('--screenshots',type=Path);args=parser.parse_args()
+version=json.loads((root/'package.json').read_text(encoding='utf-8'))['version']
 doc=Document(); sec=doc.sections[0]; sec.top_margin=Inches(.7);sec.bottom_margin=Inches(.65);sec.left_margin=sec.right_margin=Inches(.75)
 sec.page_width=Inches(8.27);sec.page_height=Inches(11.69)
 
@@ -18,7 +20,7 @@ style=doc.styles['Normal'];style.font.name='Calibri';style.font.size=Pt(11);styl
 for n in ['Heading 1','Heading 2']:
  doc.styles[n].font.color.rgb=RGBColor.from_string('7048A4')
 header=sec.header.paragraphs[0];header.add_run().add_picture(str(root/'assets/icon.png'),width=Inches(.28));r=header.add_run('  TMA-Safe    KB Library');r.bold=True;r.font.color.rgb=RGBColor.from_string('7048A4')
-footer=sec.footer.paragraphs[0];r=footer.add_run('TMA-Safe 0.2.3  |  23 October 2026  |  ');r.font.size=Pt(9);r.font.color.rgb=RGBColor.from_string('7048A4')
+footer=sec.footer.paragraphs[0];r=footer.add_run(f'TMA-Safe {version}  |  24 October 2026  |  ');r.font.size=Pt(9);r.font.color.rgb=RGBColor.from_string('7048A4')
 fld=OxmlElement('w:fldSimple');fld.set(qn('w:instr'),'PAGE');footer._p.append(fld)
 def bookmark(p,name,num):
  start=OxmlElement('w:bookmarkStart');start.set(qn('w:id'),str(num));start.set(qn('w:name'),name);end=OxmlElement('w:bookmarkEnd');end.set(qn('w:id'),str(num));p._p.insert(0,start);p._p.append(end)
@@ -40,17 +42,17 @@ doc.add_paragraph('Core vault operations work offline. Browser filling also requ
 for i,a in enumerate(articles,1):
  doc.add_page_break();p=doc.add_heading(a['id']+'  '+a['title'],1);bookmark(p,a['id'].replace('-',''),i);link(doc.add_paragraph(),'Back to index','Index')
  if a['image']:
-  folder=root/'docs/images';folder.mkdir(exist_ok=True);im=Image.open(root/'build/security-smoke-023'/a['image'])
-  if a['image']=='create.png':im=im.crop((620,45,1190,760))
-  elif a['image']=='settings.png':im=im.crop((330,94,901,719))
+  folder=root/'docs/images';folder.mkdir(exist_ok=True);im=Image.open((args.screenshots if args.screenshots else folder)/a['image'])
+  if args.screenshots and a['image']=='create.png':im=im.crop((620,45,1190,760))
+  elif args.screenshots and a['image']=='api-editor.png':im=im.crop((330,35,903,780))
   dest=folder/a['image'];im.save(dest)
-  width=Inches(3.15 if a['image']!='vault.png' else 6.45);doc.add_picture(str(dest),width=width)
+  width=Inches(3.15 if a['image'] in ['create.png','api-editor.png'] else 6.45);doc.add_picture(str(dest),width=width)
   p=doc.add_paragraph(a['caption']);p.style='Caption'
  for text in a['paragraphs']:
   p=doc.add_paragraph()
   import re
   start=0
-  for m in re.finditer(r'Safe-KB[1-4]',text):
+  for m in re.finditer(r'Safe-KB[1-9][0-9]*',text):
    p.add_run(text[start:m.start()]);link(p,m.group(),m.group().replace('-',''));start=m.end()
   p.add_run(text[start:])
 doc.core_properties.author='TMApps';doc.core_properties.title='TMA Safe KB Library';doc.core_properties.subject='Offline password vault user guides';doc.core_properties.comments=''

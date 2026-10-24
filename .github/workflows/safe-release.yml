@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [TMA-Safe]
-    paths: ['electron/**', 'ui/**', 'assets/**', 'browser-extension/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/safe-release.yml']
+    paths: ['electron/**', 'ui/**', 'assets/**', 'browser-extension/**', 'tests/**', 'scripts/**', 'docs/kb.json', 'docs/releases.json', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/safe-release.yml']
 permissions:
   contents: write
 concurrency:
@@ -104,6 +104,7 @@ jobs:
             dist/*.tar.gz
             dist/*.sha256
             dist/safe-metadata-*.json
+            dist/TMA-Safe-*-verification-*.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -137,5 +138,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          find published -maxdepth 1 -type f \( -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.tar.gz' -o -name '*.sha256' \) -print0 | xargs -0 gh release upload tma-apps --repo "$GITHUB_REPOSITORY" --clobber
+          find published -maxdepth 1 -type f \( -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.tar.gz' -o -name '*.sha256' -o -name 'TMA-Safe-*-verification-*.json' \) -print0 | xargs -0 gh release upload tma-apps --repo "$GITHUB_REPOSITORY" --clobber
           gh release upload tma-apps catalog.json --repo "$GITHUB_REPOSITORY" --clobber

@@ -10,10 +10,12 @@ const { startBridge } = require('./bridge.cjs');
 const os = require('node:os');
 const settings = require('./settings.cjs');
 const { createTray } = require('./tray.cjs');
+const support = require('./support.cjs');
+let lastError;
 let preferences = { ...settings.defaults }, tray, quitting = false, settingsFile;
 let win, selected, keyPath, bridge, pendingImport, clipTimer, idleTimer, lastActivity = Date.now();
 const { SessionQueue } = require('./session.cjs');
-const vault = new Vault(), operations = new SessionQueue();
+const vault = new Vault(), operations = new SessionQueue(), launchStarted = Date.now();
 const uiURL = pathToFileURL(path.join(__dirname, '../ui/index.html')).href;
 // Hosted CI machines may have no usable GPU. This affects smoke runs only.
 if (process.argv.includes('--smoke')) {
@@ -28,7 +30,7 @@ function restore() { if (!win) return; if (win.isMinimized()) win.restore(); win
 function syncTray() {
   if (process.argv.includes('--smoke')) return;
   if (!preferences.showTray) { restore(); tray?.destroy(); tray = null; return; }
-  if (!tray) tray = createTray({ open: restore, settings: () => { restore(); win.webContents.send('settings'); }, lock, exit: () => { quitting = true; app.quit(); } });
+  if (!tray) tray = createTray({ open: restore, settings: () => { restore(); win.webContents.send('settings'); }, lock, exit: () => { quitting = true; app.quit(); } }, { theme: () => preferences });
 }
 async function startup(enabled) {
   if (!app.isPackaged) { if (enabled) throw Error('Startup is available in an installed build.'); return; }
@@ -52,8 +54,28 @@ async function pick(save, extension, title) {
   const result = await dialog.showOpenDialog(win, { ...options, properties: ['openFile'] }); operations.check(epoch); return result.canceled ? null : result.filePaths[0];
 }
 const actions = {
+  releases: () => require('../docs/releases.json'),
+  importVault: async value => {
+    vault.require(); const epoch = operations.epoch;
+    const file = await pick(false,'tmasafe','Choose an encrypted vault to import'); if (!file) return null;
+    let bytes; const incoming = new Vault();
+    try {
+      if (value.useKey) { const file = await pick(false,'tmakey','Choose the imported vault key file'); if (!file) return null; bytes = await readBytes(file,32); }
+      operations.check(epoch); await incoming.unlock(file,value.password,bytes); operations.check(epoch); vault.require();
+      return await vault.merge(incoming.data);
+    } finally { incoming.lock(); bytes?.fill(0); }
+  },
+  audit: () => vault.audit(),
+  kb: () => require('../docs/kb.json'),
+  support: async value => {
+    const kind = value?.kind, url = support.link(kind), body = support.report(kind, lastError);
+    if (!value.open) return { body };
+    const result = await dialog.showMessageBox(win, { type: 'question', title: 'Review GitHub draft', message: 'Open this draft in your browser?', detail: body + '\nNothing is submitted until you review and submit it on GitHub. Security vulnerabilities must use private reporting.', buttons: ['Cancel', 'Open GitHub draft'], defaultId: 0, cancelId: 0 });
+    if (result.response === 1) { if (kind !== 'feature') url.searchParams.set('body', body); await shell.openExternal(url.href); }
+    return { opened: result.response === 1 };
+  },
   state: () => vault.key ? vault.list() : null,
-  settings: async value => { if (value === undefined) return { ...preferences, startupSupported: app.isPackaged }; const next = settings.validate({ ...value, vaultFile: preferences.vaultFile }), previous = preferences; if (next.openAtLogin !== previous.openAtLogin) await startup(next.openAtLogin); try { preferences = await settings.save(settingsFile, next); syncTray(); } catch (e) { preferences = previous; await settings.save(settingsFile, previous).catch(() => {}); await startup(previous.openAtLogin).catch(() => {}); syncTray(); throw e; } return { ...preferences, startupSupported: app.isPackaged }; },
+  settings: async value => { if (value === undefined) return { ...preferences, startupSupported: app.isPackaged }; const next = settings.validate({ ...value, vaultFile: preferences.vaultFile }), previous = preferences; if (next.openAtLogin !== previous.openAtLogin) await startup(next.openAtLogin); try { preferences = await settings.save(settingsFile, next); win?.webContents.setZoomFactor?.(preferences.textScale / 100); if (!preferences.browserFilling) { bridge?.close(); bridge = null; } syncTray(); } catch (e) { preferences = previous; await settings.save(settingsFile, previous).catch(() => {}); await startup(previous.openAtLogin).catch(() => {}); syncTray(); throw e; } return { ...preferences, startupSupported: app.isPackaged }; },
   vaultChoice: async () => { let available = false; if (selected) { try { available = (await fs.stat(selected)).isFile(); } catch {} } if (!available) selected = undefined; return { name: selected ? path.basename(selected) : null, remember: !!preferences.vaultFile, unavailable: !!preferences.vaultFile && !available }; },
   rememberVault,
   folder: value => vault.folder(value),
@@ -67,17 +89,17 @@ const actions = {
   put: async value => { if (value.id && value.password === null) value.password = vault.secret(value.id).password; return vault.put(value); },
   remove: async id => { vault.require(); const result = await dialog.showMessageBox(win, { type: 'warning', title: 'Delete login?', message: 'Delete this login from the vault?', detail: 'An encrypted .bak file retains the previous save.', buttons: ['Cancel', 'Delete login'], defaultId: 0, cancelId: 0 }); if (result.response !== 1) return vault.list(); return vault.remove(id); },
   reveal: id => vault.secret(id).password,
-  copy: value => { const e = vault.secret(value.id); if (!['username', 'password'].includes(value.field)) throw Error('Unsupported clipboard field.'); clearClipboard(); const text = e[value.field]; clipboard.writeText(text); clipTimer = { text, timer: setTimeout(clearClipboard, preferences.clipboardSeconds * 1000) }; return { seconds: preferences.clipboardSeconds }; },
+  copy: value => { const e = vault.secret(value.id); if (!['username', 'password'].includes(value.field)) throw Error('Unsupported clipboard field.'); clearClipboard(); const text = e.kind === 'card' && value.field === 'password' ? JSON.parse(e.password).number : e[value.field]; clipboard.writeText(text); clipTimer = { text, timer: setTimeout(clearClipboard, preferences.clipboardSeconds * 1000) }; return { seconds: preferences.clipboardSeconds }; },
   generate: value => generate(value),
   previewImport: async () => { vault.require(); const epoch = operations.epoch; pendingImport = null; const result = await dialog.showOpenDialog(win, { title: 'Import a browser password CSV', properties: ['openFile'], filters: [{ name: 'Browser password export', extensions: ['csv'] }] }); operations.check(epoch); if (result.canceled) return null; const bytes = await read(result.filePaths[0]); operations.check(epoch); const parsed = parseCSV(bytes); pendingImport = parsed.entries; return { count: parsed.entries.length, skipped: parsed.skipped }; },
   import: async () => { vault.require(); if (!pendingImport) throw Error('Preview a CSV first.'); const values = pendingImport; const state = await vault.import(values); pendingImport = null; return state; },
   backup: async () => { vault.require(); const file = await pick(true, 'tmasafe', 'Save an encrypted portable copy'); if (file) await vault.copy(file); return !!file; },
   extension: () => shell.openPath(path.join(app.getAppPath(), 'browser-extension')),
   bridge: async enabled => {
-    vault.require(); if (!enabled) { bridge?.close(); bridge = null; return null; } if (bridge) return { token: bridge.token };
+    vault.require(); if (!enabled) { bridge?.close(); bridge = null; return null; } if (!preferences.browserFilling) throw Error('Enable browser filling in Settings first.'); if (bridge) return { token: bridge.token };
     const epoch = operations.epoch;
     const started = await startBridge({ unlocked: () => !!vault.key && epoch === operations.epoch, approve: async (site, extension, signal) => {
-      vault.require(); const epoch = vault.epoch; const matches = vault.data.entries.filter(e => e.url === site); if (!matches.length || matches.length > 8) throw Error('No unique choice.');
+      vault.require(); const epoch = vault.epoch; const matches = vault.data.entries.filter(e => (e.kind || 'login') === 'login' && e.url === site); if (!matches.length || matches.length > 8) throw Error('No unique choice.');
       win.show(); win.focus(); const result = await dialog.showMessageBox(win, { type: 'question', title: 'Approve browser fill', message: `Fill a login for ${site}?`, detail: `Requested by ${extension}.\nOnly approve if you just clicked Fill in your browser.\n${matches.map((e, i) => `${i + 1}. ${e.title} — ${e.username}`).join('\n')}`, buttons: ['Cancel', ...matches.map((e, i) => `Fill login ${i + 1}`)], defaultId: 0, cancelId: 0, signal });
       if (signal.aborted || epoch !== vault.epoch || !result.response) throw Error('Declined.'); const e = vault.secret(matches[result.response - 1].id); return { username: e.username, password: e.password, origin: site };
     } });
@@ -92,22 +114,23 @@ else {
   app.whenReady().then(async () => {
     app.setName('TMA-Safe');
     settingsFile = path.join(app.getPath('userData'), 'settings.json');
-    if (!process.argv.includes('--smoke')) preferences = await settings.load(settingsFile);
+    if (!process.argv.includes('--smoke')) preferences = await settings.load(settingsFile); else preferences = { ...settings.defaults, onboardingDone: true };
     selected = preferences.vaultFile || undefined;
     win = new BrowserWindow({ width: 1260, height: 850, minWidth: 900, minHeight: 680, backgroundColor: '#17191f', icon: path.join(__dirname, '../assets/icon.png'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, devTools: !app.isPackaged } });
+    win.webContents.setZoomFactor?.(preferences.textScale / 100);
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.webContents.on('will-attach-webview', event => event.preventDefault());
     win.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     win.webContents.session.setPermissionCheckHandler(() => false);
-    win.webContents.on('render-process-gone', lock);
+    win.webContents.on('render-process-gone', async () => { lastError = support.sanitise('renderer'); lock(); if (quitting || !win) return; try { const result = await dialog.showMessageBox(win, { type:'error',title:'TMA-Safe stopped displaying',message:'Your vault has been locked. Reload the locked app or exit.',detail:'No private error data was saved. After reloading, Settings > Crash report can prepare a reviewed draft.',buttons:['Reload locked app','Exit'],defaultId:0,cancelId:1 }); if (result.response === 0 && win) win.webContents.reload(); else app.quit(); } catch { app.quit(); } });
     win.on('close', event => { lock(); if (!quitting && preferences.closeToTray && tray) { event.preventDefault(); win.hide(); } }); win.on('closed', () => { win = null; app.quit(); });
     try { syncTray(); } catch (e) { preferences.closeToTray = false; dialog.showErrorBox('Tray icon unavailable', e.message); }
     for (const [name, action] of Object.entries(actions)) ipcMain.handle('safe:' + name, (event, value) => {
       if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame || event.senderFrame.url !== uiURL) throw Error('Untrusted caller.');
       // Lock invalidates in-flight key derivation immediately; all other operations serialize.
       if (name === 'lock' || name === 'activity') return action(value);
-      return operations.run(() => { lastActivity = Date.now(); return action(value); }).then(value => ({ ok: true, value }), e => ({ ok: false, error: e.message }));
+      return operations.run(() => { lastActivity = Date.now(); return action(value); }).then(value => ({ ok: true, value }), e => { lastError = support.sanitise(e); return { ok: false, error: e.message }; });
     });
     powerMonitor.on('suspend', lock); powerMonitor.on('lock-screen', lock);
     idleTimer = setInterval(() => { if (vault.key && Date.now() - lastActivity >= preferences.idleMinutes * 60000) lock(); }, 1000);
@@ -117,7 +140,7 @@ else {
       win.webContents.once('did-finish-load', async () => {
         let folder;
         try {
-          if (!target) throw Error('Smoke output directory required.'); await fs.mkdir(target, { recursive: true });
+          if (!target) throw Error('Smoke output directory required.'); await fs.mkdir(target, { recursive: true }); const startupToRendererMs = Date.now() - launchStarted;
           await new Promise(resolve => setTimeout(resolve, 250)); await fs.writeFile(path.join(target, 'locked.png'), (await win.webContents.capturePage()).toPNG());
           await win.webContents.executeJavaScript(`document.getElementById('create-mode').click()`); await new Promise(resolve => setTimeout(resolve, 150)); await fs.writeFile(path.join(target, 'create.png'), (await win.webContents.capturePage()).toPNG());
           folder = await fs.mkdtemp(path.join(os.tmpdir(), 'tma-safe-smoke-'));
@@ -130,21 +153,49 @@ else {
             if (Date.now() > deadline) throw Error('Timed out waiting for the demo vault to render.');
             await new Promise(resolve => setTimeout(resolve, 100));
           }
-          const result = await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.login-card').length, unlocked:!document.getElementById('workspace').hidden, nodeAvailable:typeof require!=='undefined', passwordVisible:document.body.textContent.includes('Fictional-demo-only!')})`);
-          if (result.cards !== 3 || !result.unlocked || result.nodeAvailable || result.passwordVisible) throw Error('Renderer isolation or smoke fixture failed.');
+          const result = await win.webContents.executeJavaScript(`({cards:document.querySelectorAll('.login-card').length, unlocked:!document.getElementById('workspace').hidden, folders:document.querySelectorAll('#folders button').length, foldersVisible:document.getElementById('folders').getBoundingClientRect().height>=40, nodeAvailable:typeof require!=='undefined', passwordVisible:document.body.textContent.includes('Fictional-demo-only!')})`);
+          if (result.cards !== 3 || result.folders !== 2 || !result.foldersVisible || !result.unlocked || result.nodeAvailable || result.passwordVisible) throw Error('Renderer isolation or smoke fixture failed.');
           await fs.writeFile(path.join(target, 'vault.png'), (await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('add-api').click(); document.getElementById('record-title').value='Fictional API'; document.getElementById('record-user').value='demo@example.com'; document.getElementById('record-clientId').value='fictional-public-client'; document.getElementById('record-secret').value='FictionalClientSecretOnly';`);
+          await new Promise(resolve => setTimeout(resolve,150));
+          if (await win.webContents.executeJavaScript(`document.getElementById('record-secret').type!=='password' || document.body.textContent.includes('FictionalClientSecretOnly')`)) throw Error('API secret is visible.');
+          await fs.writeFile(path.join(target,'api-editor.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('record-form').requestSubmit()`);
+          for (let i=0;i<100 && await win.webContents.executeJavaScript(`document.getElementById('record-dialog').open`);i++) await new Promise(resolve=>setTimeout(resolve,50));
+          if (vault.data.entries.filter(e=>e.kind==='api').length!==1) throw Error('API record did not save.');
+          await win.webContents.executeJavaScript(`document.getElementById('add-card').click(); document.getElementById('record-title').value='Fictional card'; document.getElementById('record-user').value='Demo user'; document.getElementById('record-number').value='0000000000000000'; document.getElementById('record-expiry').value='12/30'; document.getElementById('record-cvv').value='000';`);
+          await new Promise(resolve=>setTimeout(resolve,150));await fs.writeFile(path.join(target,'card-editor.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('record-form').requestSubmit()`);
+          for (let i=0;i<100 && await win.webContents.executeJavaScript(`document.getElementById('record-dialog').open`);i++) await new Promise(resolve=>setTimeout(resolve,50));
+          if (vault.data.entries.filter(e=>e.kind==='card').length!==1) throw Error('Card record did not save.');
+          await win.webContents.executeJavaScript(`document.querySelector('[data-view=dashboard]').click()`);await new Promise(resolve=>setTimeout(resolve,250));
+          await fs.writeFile(path.join(target,'dashboard.png'),(await win.webContents.capturePage()).toPNG());
+
           await win.webContents.executeJavaScript(`document.getElementById('settings-button').click()`);
           for (let i=0; i<100 && !await win.webContents.executeJavaScript(`document.getElementById('settings-dialog').open`); i++) await new Promise(resolve => setTimeout(resolve, 50));
           if (!await win.webContents.executeJavaScript(`document.getElementById('settings-dialog').open`)) throw Error('Settings did not open.');
+          await new Promise(resolve => setTimeout(resolve, 200));
           await fs.writeFile(path.join(target, 'settings.png'), (await win.webContents.capturePage()).toPNG());
           await win.webContents.executeJavaScript(`document.getElementById('settings-cancel').click(); document.getElementById('add-button').click()`);
           await new Promise(resolve => setTimeout(resolve, 150));
           await fs.writeFile(path.join(target, 'editor.png'), (await win.webContents.capturePage()).toPNG());
           await win.webContents.executeJavaScript(`document.getElementById('entry-cancel').click()`);
+          await win.webContents.executeJavaScript(`(async()=>{const result=await window.safe.settings();window.safePreferences.apply({...result.value,appearance:'grey',scheduleEnabled:false});})()`); await new Promise(resolve=>setTimeout(resolve,150));await fs.writeFile(path.join(target,'grey.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`(async()=>{const result=await window.safe.settings();window.safePreferences.apply({...result.value,appearance:'black',scheduleEnabled:false});})()`); await new Promise(resolve=>setTimeout(resolve,150));await fs.writeFile(path.join(target,'black.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`(async()=>{const result=await window.safe.settings();window.safePreferences.apply(result.value);})()`);
           const menu = createTray({}, { preview: true }); try { if (menu.popup.webContents.isLoading()) await new Promise(resolve => menu.popup.webContents.once('did-finish-load', resolve)); menu.popup.showInactive(); await fs.writeFile(path.join(target, 'tray.png'), (await menu.popup.webContents.capturePage()).toPNG()); } finally { menu.destroy(); }
+          await win.webContents.executeJavaScript(`window.safeOnboarding.offer({onboardingDone:false})`); await new Promise(resolve=>setTimeout(resolve,150));await fs.writeFile(path.join(target,'welcome.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('welcome-dialog').close();document.getElementById('settings-tour').click()`);
+          for(let i=0;i<100 && !await win.webContents.executeJavaScript(`!document.getElementById('tour-guide').hidden`);i++)await new Promise(resolve=>setTimeout(resolve,50));
+          if(!await win.webContents.executeJavaScript(`!document.getElementById('tour-guide').hidden && document.getElementById('workspace').inert`))throw Error('Demo tour did not start safely.');
+          await new Promise(resolve=>setTimeout(resolve,200));await fs.writeFile(path.join(target,'tour.png'),(await win.webContents.capturePage()).toPNG());
+          await win.webContents.executeJavaScript(`document.getElementById('tour-exit').click()`);
           lock(); await new Promise(resolve => setTimeout(resolve, 100));
           if (!await win.webContents.executeJavaScript(`document.getElementById('workspace').hidden && document.querySelectorAll('.login-card').length===0`)) throw Error('Lock did not clear renderer.');
-          await fs.writeFile(path.join(target, 'smoke.json'), JSON.stringify({ ok: true, platform: process.platform, arch: process.arch, ...result }, null, 2));
+          app.getAppMetrics(); await new Promise(resolve=>setTimeout(resolve,1000)); const metrics=app.getAppMetrics();
+          const idleProcessCpuPercent=Number(metrics.reduce((sum,item)=>sum+item.cpu.percentCPUUsage,0).toFixed(2)), processWorkingSetMiB=Math.round(metrics.reduce((sum,item)=>sum+item.memory.workingSetSize,0)/1024);
+          if(startupToRendererMs>30000 || processWorkingSetMiB>1536)throw Error('GUI performance ceiling exceeded.');
+          await fs.writeFile(path.join(target, 'smoke.json'), JSON.stringify({ ok: true, platform: process.platform, arch: process.arch, startupToRendererMs, idleProcessCpuPercent, processWorkingSetMiB, ...result }, null, 2));
         } catch (e) { console.error(e.stack); process.exitCode = 1; if (target) await fs.writeFile(path.join(target, 'error.txt'), e.stack); }
         finally { lock(); if (folder) await fs.rm(folder, { recursive: true, force: true }); app.exit(process.exitCode || 0); }
       });

@@ -1,6 +1,6 @@
 {
   "name": "tma-safe",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "private": true,
   "description": "A calmer, local home for your passwords.",
   "author": "DaddyTylerXO",
@@ -12,7 +12,7 @@
     "package": "electron-builder --publish never"
   },
   "devDependencies": {
-    "electron": "44.8.0",
+    "electron": "44.9.1",
     "electron-builder": "26.15.3",
     "jsdom": "30.1.3"
   },
@@ -20,7 +20,7 @@
     "appId": "com.tmapps.safe",
     "productName": "TMA-Safe",
     "executableName": "TMA-Safe",
-    "files": ["electron/**", "ui/**", "assets/**", "browser-extension/**", "README.md", "SECURITY.md"],
+    "files": ["electron/**", "ui/**", "assets/**", "browser-extension/**", "README.md", "SECURITY.md", "docs/kb.json", "docs/releases.json"],
     "directories": {"output": "dist"},
     "artifactName": "TMA-Safe-${version}-${os}-${arch}.${ext}",
     "win": {"target": ["zip"], "icon": "assets/icon.ico", "signExecutable": false},
