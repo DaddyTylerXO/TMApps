@@ -1,5 +1,7 @@
 # TMA-Padlock
 
+Published **0.4.0** on 24 October 2026. [Native OS/build and launcher lifecycle evidence](docs/verification-0.4.0.md).
+
 Your codes, kept close. A local desktop authenticator in the TMApps family, with a pink, rounded interface and a padlock icon containing six boxes numbered 1–6.
 
 ## Features (0.4.0)

@@ -32,3 +32,7 @@ Assessment started 23 October 2026; final dependency recheck 24 October 2026. Sc
 ## Every-update requirements
 
 The release workflow blocks publishing unless the complete test suite, dependency audit, performance gate, source/package smoke tests, package fuse checks and native platform builds pass. Add a regression test for each security bug, rerun relevant adversarial cases after feature changes, review runtime updates, and update this assessment when the threat model changes. Automated regression checks supplement manual review; they are not a new independent penetration test for every commit.
+
+## Final release evidence
+
+The final five native jobs and publishing job passed on 24 October 2026. Each job ran 56 tests; Windows passed 55 with one POSIX-only skip and macOS/Linux passed all 56. The final dependency audit, redacted source/DOCX/ASAR scans, performance gates, source/package smoke and packaged fuse checks passed. See [verified OS/build and lifecycle scope](verification-0.4.0.md).

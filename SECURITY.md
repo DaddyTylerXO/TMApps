@@ -40,3 +40,7 @@ Crash diagnostics persist at most ten timestamps and allowlisted failure categor
 ## Maintenance review — 23 October 2026
 
 The earlier suite maintenance update changed documentation and shared acceptance criteria only. The 0.4.0 code update is assessed in docs/security-assessment.md. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.
+
+## Release verification 0.4.0
+
+All five native build/test/package-smoke/fuse gates passed before publication on 24 October 2026. The exact published Windows package also passed SHA-256 verification and isolated launcher install, launch, replacement-update and uninstall checks. See [dated evidence and limits](docs/verification-0.4.0.md). Publishing metadata/order changes do not change the encryption model above.

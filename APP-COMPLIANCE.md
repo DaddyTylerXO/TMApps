@@ -7,9 +7,9 @@ This is a requirements register, not a runtime certification. Source or package 
 | ID | Requirement | Status / evidence still required |
 | --- | --- | --- |
 | APP-01 | GitHub branch | Verified: TMA-Padlock branch; remote maintenance commits merged without rewriting history. |
-| APP-02 | TMApps Launcher | Existing launcher registration retained. 0.4.0 catalog update awaits the gated five-platform release. |
+| APP-02 | TMApps Launcher | Verified: 0.4.0 published with all five native packages and matching SHA-256 metadata; current launcher parser accepted it and suite ordering was verified. |
 | APP-03 | UI and approved identity | Original Bubble and approved icon retained. Finance, ArtCraft and Blocky theme updates remain open in required order. |
-| APP-04 | Windows macOS and Linux | Native five-runner release workflow; local Windows smoke passed. Latest native CI evidence pending; signing and OS-version gaps recorded in SECURITY.md. |
+| APP-04 | Windows macOS and Linux | Five native build/source/package-smoke jobs passed. Windows 11 local launcher install/launch/replacement-update/uninstall passed. Other lifecycle/version and signing gaps remain; see docs/verification-0.4.0.md. |
 | APP-05 | Consistent settings layout | Finance settings reference inspected at origin/TMA-Finance; search, categories and two-column panels adapted with pink bubble controls. Future themes remain open. |
 | APP-06 | Feature request button | Main Settings feature button targets feature-request.md verified on origin/main, identifying app/version. |
 | APP-07 | Bug report button | Main Settings bug button targets bug-report.md verified on origin/main, identifying app/version. |
@@ -27,7 +27,7 @@ This is a requirements register, not a runtime certification. Source or package 
 | APP-19 | Desktop notifications | Opt-in generic native notifications after backup/import/export; click opens app, OS handles dismiss/quiet mode. Windows managed shortcut registration tested; actual OS delivery needs platform/permission verification. |
 | APP-20 | Tray icon menu | Pink bubble tray with five actions and Linux native fallback, source/package smoke and trusted-frame tests. |
 | APP-21 | Settings performance detail | Settings explains startup, CPU/RAM password derivation, GPU/windows/transitions, disk backup, browser networking and battery tradeoffs. |
-| APP-22 | Performance and functional checks every update | Synthetic 2,000-account benchmark and source/package metrics; mandatory tests/performance/dependency/fuse gates. See docs/performance.md; native CI pending. |
+| APP-22 | Performance and functional checks every update | Synthetic 2,000-account benchmark and source/package metrics; mandatory tests/performance/dependency/fuse gates. See docs/performance.md; native CI passed; see docs/verification-0.4.0.md. |
 | APP-23 | Sensitive-data checks and remediation | Redacted tracked/history/DOCX scan and manual review of fictional screenshots; package ASAR scan added to native CI. No real user vaults accessed. See scripts/check-sensitive.py. |
 | APP-24 | New Features by version | New Features in Settings lists actual 0.1.0, 0.2.0, 0.2.1 and current 0.4.0 behavior. |
 | APP-25 | Accessibility setup and settings | Partial: semantic labels, keyboard/native dialogs, live status, and reduced-motion override. Optional accessibility setup/settings, screen-reader/scaling/contrast verification remain open. |
@@ -37,15 +37,16 @@ This is a requirements register, not a runtime certification. Source or package 
 | APP-29 | Four themes in separate updates | Original Bubble is this update. Finance, ArtCraft-inspired and Blocky Basic require three later separately verified/pushed theme updates. |
 | APP-30 | Notification sounds | Open: selectable Mail sound set, preview and persisted sound preferences remain required; native notification defaults only. |
 | APP-31 | Optional now playing | Open: optional zero-cost Spotify now-playing is not implemented. |
-| APP-32 | OS versions and architectures | Five native architectures configured; OS-version/install/update/uninstall evidence beyond runners remains open. Do not infer incompatibility from missing tests. |
-| APP-33 | OS support in listings | Open: full dated OS-version tables and matching launcher listings await native release evidence. |
+| APP-32 | OS versions and architectures | Dated native OS/build table and local Windows lifecycle evidence are in docs/verification-0.4.0.md. Other OS versions and macOS/Linux desktop lifecycle remain not yet verified. |
+| APP-33 | OS support in listings | Dated native OS/version evidence is in docs/verification-0.4.0.md and the live launcher description/verification metadata. Broader OS-version coverage and Projects integration remain open. |
 | APP-34 | App showcase videos | Open: AD-style showcase video not created. |
 | APP-35 | README and security lifecycle | README and SECURITY reviewed/updated for 0.4.0 and merged suite policy; docs record scope and limitations. |
 | APP-36 | Wiki and community documentation | Open: Wiki publishing/community/accessibility documentation requires separate verification and maintenance. |
-| APP-37 | Release and package metadata | Version 0.4.0 package/checksum/catalog workflow retained; source provenance/native publication pending. No fabricated release tag. |
+| APP-37 | Release and package metadata | Verified 0.4.0 release packages, SHA-256 catalog, source 9376efb and workflow 40077553546; app-scoped source tag created after native verification. |
 | APP-38 | HTTPS | Fixed HTTPS GitHub support/download URLs; renderer network blocked; no HTTP service added. |
 
 ## Runtime update 0.4.0
 
-Local check on 23 October 2026: 54 tests, 53 passed and one POSIX-only case skipped on Windows; source smoke covers main, mini, tray, demo and lock. Dependency audit reported zero known advisories. Performance measurements and security assessment are in docs/. Canonical Word and compatibility copy are rendered and visually checked before publication. Native CI and live launcher catalog verification are pending until upload; this register does not claim unrun checks or complete suite compliance. Licensing and legal-policy work remain deferred.
+Final native checks on 24 October 2026: 56 tests on each target; Windows passed 55 with one POSIX-only skip, macOS/Linux passed all 56; source smoke covers main, mini, tray, demo and lock. Dependency audit reported zero known advisories. Performance measurements and security assessment are in docs/. Canonical Word and compatibility copy are rendered and visually checked before publication. Native CI, live catalog/hash verification and the isolated Windows launcher lifecycle passed; this register does not claim unrun checks or complete suite compliance. Licensing and legal-policy work remain deferred.
 
+Latest publishing-only changes were reviewed against README and SECURITY. Package provenance and suite ordering are now recorded; the encryption model is unchanged. All broader open requirements above remain required work.

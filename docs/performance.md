@@ -23,3 +23,5 @@ The release gate allows derivation below 10 seconds, save below 5 seconds, cold 
 ## Application smoke measurements
 
 The source/packaged smoke artifacts also include `runtime-performance.json`, with per-process CPU and memory measurements. A local Windows source smoke run with main Settings, a mini list of three fictional accounts and a hidden tray popup recorded about 214 MB combined private process memory and roughly 0.06% aggregate CPU during a short sample. This is an illustrative smoke measurement with hardware acceleration disabled, not a long-duration idle/power benchmark. Shared working-set figures must not be summed as unique physical memory. CI records its own native measurements for each update.
+
+The published 0.4.0 native jobs passed all performance gates on 24 October 2026. Treat negative initial Electron CPU deltas, observed in one short local packaged sample, as invalid samples rather than physical CPU measurements; use repeated stable measurements for comparisons. Native OS/build and lifecycle evidence is recorded in [verification-0.4.0.md](verification-0.4.0.md).
