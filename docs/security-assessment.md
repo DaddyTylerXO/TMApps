@@ -12,7 +12,7 @@ Assessment started 23 October 2026; final dependency recheck 24 October 2026. Sc
 | Unbounded or malformed file/IPC input | Bounded regular-file reads, strict primitive field allowlists, queue limit 32, account limit 2,000, vault limit 8 MB; malformed input tests. |
 | Repeated online password guessing | In-process progressive cooldown after four failures, tested with an injected monotonic clock. Offline guessing remains a boundary. |
 | Default packaged Electron debug/execution switches | RunAsNode, NODE_OPTIONS and CLI inspect disabled; ASAR-only loading and integrity enabled. Fuse verification is a release gate on every platform. |
-| New feature inputs could broaden exposure | PNG/JPEG header and pixel limits before decoding, encrypted icon normalization, fixed support URL allowlist and strictly sanitized crash metadata. |
+| New feature inputs could broaden exposure | PNG/JPEG header and pixel limits before decoding, encrypted icon normalization with identical 64-pixel limits on imported metadata, fixed support URL allowlist and strictly sanitized crash metadata. |
 
 ## Verification
 
