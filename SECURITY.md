@@ -37,3 +37,12 @@ If credentials may have been exposed, stop the affected publication, notify the 
 ## Maintenance review — 23 October 2026
 
 This update changes documentation and shared acceptance criteria only. It makes no new claim about app security, platform support or completed security testing. Review this policy and README after each branch update; record any no-change assessment and preserve the app-specific model above. Follow the sensitive-data publishing rule for source, history and every generated artifact. Security vulnerabilities must use [private reporting](https://github.com/DaddyTylerXO/TMApps/security/advisories/new), never a public support form.
+
+## Distribution maintenance check — 24 October 2026
+
+The current manifests publish Launcher 1.15.1 and TMA-Safe 0.2.3. The read-only
+audit matched all 28 referenced package hashes to release metadata and checksum
+sidecars, with no findings. This is an integrity-metadata check, not execution of
+the packages, a historical secret scan or an independent security assessment.
+Read Safe's branch-specific security model and update notes before use. No app
+security guarantees or supported OS versions were expanded by this docs update.

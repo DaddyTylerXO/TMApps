@@ -1,12 +1,12 @@
 # TMApps numbered work queue
 
-Status: 23 October 2026. **✓ completed** means the named maintenance deliverable is finished; **X left** includes partial work and explicitly deferred work. App runtime features are not marked complete because policies were copied. Original numbering is preserved.
+Status: 24 October 2026. **✓ completed** means the named maintenance deliverable is finished; **X left** includes partial work and explicitly deferred work. App runtime features are not marked complete because policies were copied. Original numbering is preserved.
 
 1. X **Reconcile the supplied workbook, pasted requirements and theme references.** Original workbook and four PNG paths unavailable; pasted/visible requirements retained.
 2. ✓ **Update APP-STANDARDS.md for all existing and future apps.** 38 stable requirements, shared rules and onboarding checklist prepared for all ten branches.
 3. ✓ **Apply branch standards and maintain per-app compliance checklists.** Every branch receives an evidence checklist and next-update gate; runtime gaps remain explicitly open.
 4. ✓ **Keep README and Security updated after every branch update.** Reviewed/updated all ten branches and added the recurring review gate.
-5. X **Verify every app branch, Launcher listing, branding, versions and downloads.** Catalog/digests verified and index refreshed; complete branding/runtime acceptance still open.
+5. X **Verify every app branch, Launcher listing, branding, versions and downloads.** 24 October: 452 assets / 28 manifest packages checked with no findings; Launcher 1.15.1 and Safe 0.2.3 indexed. Complete branding/runtime acceptance still open.
 6. X **Match every app Settings page to TMA-Finance.** Implementation and UI verification across apps remain.
 7. X **Add local profiles and Launcher display-name synchronization.** Runtime implementation remains.
 8. X **Propose and implement approved startup animations.** Owner selection required before implementation; proposals not yet finalized.
@@ -27,7 +27,7 @@ Status: 23 October 2026. **✓ completed** means the named maintenance deliverab
 23. X **Add optional zero-cost Spotify now-playing.** Runtime implementation remains.
 24. X **Add Settings search and optional KB results.** Cross-app runtime work remains.
 25. X **Maintain KB guides, errors, resolution steps and offline coverage.** Source refresh, alignment and missing guides remain.
-26. X **Publish branded named Word KB libraries for every app.** Drafts require current-source refresh, complete screenshots and full rendered QA.
+26. X **Publish branded named Word KB libraries for every app.** Safe now publishes its named illustrated library (Safe-KB1–4); suite-wide current-source refresh, complete screenshots and rendered QA remain. Do not overwrite it with the older local draft.
 27. X **Publish the main Master KB and cross-app registry.** Draft exists; final content and rendered QA remain.
 28. X **Upload and link KB documentation in GitHub Wikis.** Wiki initialization/publication remains.
 29. X **Integrate Agent Office grey branding and white robot.** Approved identity recorded; runtime and Launcher asset integration remains.

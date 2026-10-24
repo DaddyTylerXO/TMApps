@@ -1,6 +1,6 @@
 # Operating-system support evidence
 
-Checked 23 October 2026. Package availability comes from the live Launcher catalog
+Checked 24 October 2026. Package availability comes from the live Launcher catalog
 and self-update feeds, with 28 package digests/sidecars verified. This document is
 not a new OS-version compatibility certification; no native binaries were run in
 this documentation update.
@@ -12,9 +12,9 @@ Architecture availability is separate from OS-version compatibility.
 
 | App / published version | Windows | macOS | Linux |
 | --- | --- | --- | --- |
-| [TMApps Launcher](https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher) 1.14.2 | Windows 10/11 x64 stated requirement; .NET Framework 4.8. Per-build matrix not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
+| [TMApps Launcher](https://github.com/DaddyTylerXO/TMApps/tree/TMApps-Launcher) 1.15.1 | Windows 10/11 x64 stated requirement; .NET Framework 4.8. Per-build matrix not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
 | [TMA-Mail](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Mail) 0.16.5-beta | Windows 10/11 x64 stated requirement; .NET Framework 4.8. Per-build matrix not yet verified | OS Not Supported — no current package | OS Not Supported — no current package |
-| [TMA-Safe](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Safe) 0.2.2 | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
+| [TMA-Safe](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Safe) 0.2.3 | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
 | [TMA-Padlock](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Padlock) 0.2.1 | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
 | [TMA-Cut](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Cut) 0.2.0 | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified | Package available; exact OS versions/builds not yet verified |
 | [TMA-Finance](https://github.com/DaddyTylerXO/TMApps/tree/TMA-Finance) 0.1.3 | Package available; exact OS versions/builds not yet verified | OS Not Supported — no current package | OS Not Supported — no current package |
@@ -40,3 +40,13 @@ duplicating boards. Suggested fields: OS, OS Version/Build, Architecture, App
 Version, Support Status, Evidence URL and Last Tested. Project creation/field
 population and the Launcher runtime tables remain outstanding; this document does
 not claim those interfaces have changed.
+
+## Latest publication evidence — 24 October 2026
+
+Launcher 1.15.1 and Safe 0.2.3 are now in the live distribution manifests.
+The Launcher publishing workflow [succeeded](https://github.com/DaddyTylerXO/TMApps/actions/runs/40000717239)
+and Safe's native release workflow [succeeded](https://github.com/DaddyTylerXO/TMApps/actions/runs/40005507808).
+These records do not extend compatibility to untested OS versions. Mail's
+cross-platform desktop work remains a source preview; its catalog package is
+still 0.16.5-beta for Windows. Do not advertise native Mail downloads from preview
+CI artifacts as supported catalog packages.

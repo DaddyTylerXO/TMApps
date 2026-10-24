@@ -26,7 +26,7 @@ Each application has its own branch. `main` contains the suite overview, shared 
 | [TMA-SocialsManager](https://github.com/DaddyTylerXO/TMApps/tree/TMA-SocialsManager) | Social account metrics and supported publishing tools | Windows, macOS, Linux |
 | [TMA-Agent Office](https://github.com/DaddyTylerXO/TMApps/tree/TMA-AgentOffice) | AI specialists, projects and local app integrations | Windows |
 
-Published-platform information was checked on **23 October 2026**. Architecture-specific downloads and versions are listed in [DOWNLOADS.md](DOWNLOADS.md). Branch source can contain work newer than a published package; requirements in the shared standards do not by themselves mean a port is available.
+Published-platform information was checked on **24 October 2026**. Architecture-specific downloads and versions are listed in [DOWNLOADS.md](DOWNLOADS.md). Branch source can contain work newer than a published package; requirements in the shared standards do not by themselves mean a port is available.
 
 ## Help and maintenance
 
