@@ -1,6 +1,6 @@
 # TMA-Safe
 
-A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Source version 0.3.0 is an unsigned beta and has not had an independent security audit.
+A local desktop password vault in the TMApps family. Purple, rounded controls and a simple white key icon follow TMApps Launcher and TMA-Mail. Version 0.3.0 is a published unsigned beta and has not had an independent security audit.
 
 ## Getting started
 
@@ -73,11 +73,11 @@ The release workflow tests and packages Windows x64, macOS x64/arm64 and Linux x
 
 Source prepared 23 October 2026. Published packages remain at the version shown in the live launcher catalog until the native release workflow succeeds. This update strengthens locking, reveal handling, file reads and encrypted backup writes. Twenty-five regression tests and Windows source/packaged smoke checks passed with fictional data. Security and performance checks now run in release CI. See the sanitised [verification summary](SECURITY-REVIEW-2026-10-20.md).
 
-The illustrated [TMA-Safe KB Library](docs/TMA-Safe%20KB%20Library.docx) contains Safe-KB1 through Safe-KB4, setup, offline coverage and troubleshooting. [KB Library.docx](docs/KB%20Library.docx) is retained as a compatibility copy. Master-library registration and in-app KB search remain pending.
+The 0.2.3 illustrated library introduced Safe-KB1 through Safe-KB4, setup, offline coverage and troubleshooting. The current [TMA-Safe KB Library](docs/TMA-Safe%20KB%20Library.docx) expands this to Safe-KB1–8 with matching in-app Help/search. [KB Library.docx](docs/KB%20Library.docx) is retained as a compatibility copy. Master-library registration remains pending.
 
 ## Feature update 0.3.0
 
-Prepared 24 October 2026. Until the native release workflow finishes, the live catalog remains the authority for the published version. This build adds searchable two-column Settings, purple/grey/black palettes in Original Bubble, scheduled gradual colour changes, optional magnification/contrast/reduced motion, password-generator defaults, and a first-launch fictional demo tour with replay.
+Published 24 October 2026 through [native release run 40078168014](https://github.com/DaddyTylerXO/TMApps/actions/runs/40078168014). The live Launcher catalog was verified at 0.3.0 with every other app record preserved. This build adds searchable two-column Settings, purple/grey/black palettes in Original Bubble, scheduled gradual colour changes, optional magnification/contrast/reduced motion, password-generator defaults, and a first-launch fictional demo tour with replay.
 
 Store API credentials using App Name, Email, Client ID and Client Secret, and store encrypted card records with masked numbers/security codes. These record types are excluded from website login filling. Import another encrypted vault through Vault & security using that file's own master password and key file; folders are preserved and exact duplicates skipped. Portable copies remain encrypted; plaintext export is not provided.
 
@@ -89,7 +89,7 @@ The Windows 11 Home 10.0.26300 x64 source smoke and 34-test suite passed on 24 O
 
 | OS / architecture | Current evidence and limitations |
 | --- | --- |
-| Windows x64 | Windows 11 Home 10.0.26300 source verified locally; packaged verification and CI are required for this source version. Unsigned portable ZIP; no installer/uninstaller certification. |
-| macOS x64 / arm64 | 0.2.3 native source/packaged CI passed; 0.3.0 pending its native workflow. Ad-hoc signing, not notarized. See the release verification JSON for the actual OS release tested. |
-| Linux x64 / arm64 | 0.2.3 native source/packaged CI passed; 0.3.0 pending its native workflow. Chromium sandbox/user-namespace and tray support depend on the desktop. |
+| Windows x64 | 0.3.0 source/package verified locally on Windows 11 Home 10.0.26300 and in CI on Windows_NT 10.0.26100. Unsigned portable ZIP; no installer/uninstaller certification. |
+| macOS x64 / arm64 | 0.3.0 native source/package checks passed on Darwin 24.6.0 for both architectures. Ad-hoc signing, not notarized. |
+| Linux x64 / arm64 | 0.3.0 native source/package checks passed on kernel 6.17.0-1022-azure for both architectures. Chromium sandbox/user-namespace and tray support depend on the desktop. |
 | Other OS versions / architectures | Not yet verified unless listed in the version-specific evidence. Absence of testing does not mean OS Version Not Supported. |
