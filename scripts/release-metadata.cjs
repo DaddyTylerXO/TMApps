@@ -9,4 +9,5 @@ let packageInfo;
 if (platform === 'win32') packageInfo = { ...select('.zip'), executable: 'TMA-Padlock.exe', format: 'zip' };
 else if (platform === 'darwin') packageInfo = { ...select('.tar.gz'), executable: 'TMA-Padlock.app/Contents/MacOS/TMA-Padlock', format: 'tar.gz' };
 else packageInfo = { ...select('.AppImage'), executable: 'TMA-Padlock.AppImage', format: 'appimage' };
-fs.writeFileSync(path.join(directory, `padlock-metadata-${platform}-${arch}.json`), JSON.stringify({ version, platform, arch, package: packageInfo, artifacts }, null, 2));
+const os=require('node:os');
+fs.writeFileSync(path.join(directory, `padlock-metadata-${platform}-${arch}.json`), JSON.stringify({ version, platform, arch, date:new Date().toISOString(),osVersion:os.version(),osRelease:os.release(),sourceCommit:process.env.GITHUB_SHA||null,workflow:process.env.GITHUB_RUN_ID?`https://github.com/DaddyTylerXO/TMApps/actions/runs/${process.env.GITHUB_RUN_ID}`:null,package: packageInfo, artifacts }, null, 2));
