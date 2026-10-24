@@ -66,7 +66,7 @@ The release workflow tests Windows x64, macOS x64/arm64, and Linux x64/arm64. It
 
 ## Guides and verification
 
-Read the [KB Library](docs/KB%20Library.docx), [offline guide](docs/KB-Library.md), [security assessment](docs/security-assessment.md), and [performance notes](docs/performance.md). Every release is gated on security/feature regression tests, a dependency audit, synthetic performance checks, source and packaged smoke tests, and packaged Electron fuse verification on all five native platform/architecture targets.
+Read the [KB Library](docs/TMA-Padlock%20KB%20Library.docx), [offline guide](docs/KB-Library.md), [security assessment](docs/security-assessment.md), and [performance notes](docs/performance.md). Every release is gated on security/feature regression tests, a dependency audit, synthetic performance checks, source and packaged smoke tests, and packaged Electron fuse verification on all five native platform/architecture targets.
 
 GitHub reporting requires a network connection and GitHub sign-in. Code generation and the built-in KB work offline. No account names, setup secrets, master passwords or codes are included in automatic diagnostics.
 
@@ -76,4 +76,4 @@ Setup uses manual keys and otpauth URLs. QR images, camera scanning, encrypted W
 
 ## Shared standards update — 23 October 2026
 
-[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. This policy update changes no app version, feature or published package. Review README and SECURITY after each branch update.
+[APP-STANDARDS.md](APP-STANDARDS.md) now records the complete suite requirements, including Finance Settings, four themes in separate updates, OS-version evidence and showcase videos. [APP-COMPLIANCE.md](APP-COMPLIANCE.md) tracks open acceptance work. That earlier policy-only update changed no app version, feature or published package. Runtime changes for 0.4.0 are described above. Review README and SECURITY after each branch update.

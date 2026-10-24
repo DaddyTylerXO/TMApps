@@ -10,7 +10,7 @@ async function readBounded(file,limit=8*1024*1024){
 }
 async function atomicWrite(file,bytes,{exclusive=false,guard=()=>{}}={}){
   await fs.mkdir(path.dirname(file),{recursive:true});const temp=file+'.'+crypto.randomUUID()+'.tmp';let handle;
-  try{guard();handle=await fs.open(temp,'wx',0o600);await handle.writeFile(bytes);await handle.sync();await handle.close();handle=null;guard();if(exclusive)await fs.link(temp,file);else for(let attempt=0;;attempt++){guard();try{await fs.rename(temp,file);break;}catch(e){if(process.platform!=='win32'||!['EPERM','EBUSY','EACCES'].includes(e.code)||attempt>=5)throw e;await new Promise(r=>setTimeout(r,20*(attempt+1)));}}}
+  try{guard();handle=await fs.open(temp,'wx',0o600);await handle.writeFile(bytes);await handle.sync();await handle.close();handle=null;guard();if(exclusive)await fs.link(temp,file);else for(let attempt=0;;attempt++){guard();try{await fs.rename(temp,file);break;}catch(e){if(process.platform!=='win32'||!['EPERM','EBUSY','EACCES'].includes(e.code)||attempt>=10)throw e;await new Promise(r=>setTimeout(r,50*(attempt+1)));}}}
   finally{await handle?.close();await fs.rm(temp,{force:true});}
 }
 module.exports={readBounded,atomicWrite};

@@ -3,7 +3,7 @@ const {version}=require('../package.json');
 const ROOT='https://github.com/DaddyTylerXO/TMApps';
 const fs=require('node:fs'),path=require('node:path');
 const categories=['renderer-exit','main-exception','main-rejection','load-failure'];
-const links={feature:ROOT+'/issues/new?template=feature-request.md&title=%5BPadlock%5D%20Feature%20request',bug:ROOT+'/issues/new?template=bug-report.md&title=%5BPadlock%5D%20Bug%20report',issue:ROOT+'/issues/new?template=general-issue.md&title=%5BPadlock%5D%20Issue',help:ROOT+'/tree/TMA-Padlock/docs',discussions:ROOT+'/discussions',library:ROOT+'/blob/TMA-Padlock/docs/KB%20Library.docx'};
+const links={feature:ROOT+'/issues/new?template=feature-request.md&title=%5BPadlock%20'+version+'%5D%20Feature%20request',bug:ROOT+'/issues/new?template=bug-report.md&title=%5BPadlock%20'+version+'%5D%20Bug%20report',issue:ROOT+'/issues/new?template=general-issue.md&title=%5BPadlock%20'+version+'%5D%20Issue',help:ROOT+'/tree/TMA-Padlock/docs',discussions:ROOT+'/discussions',library:ROOT+'/blob/TMA-Padlock/docs/TMA-Padlock%20KB%20Library.docx'};
 // Keep a small, allowlisted diagnostic. Never record error messages, paths,
 // account data, arbitrary stack traces, passwords or renderer-provided payloads.
 class Diagnostics {

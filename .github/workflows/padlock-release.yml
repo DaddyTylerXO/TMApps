@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [TMA-Padlock]
-    paths: ['electron/**', 'ui/**', 'assets/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/padlock-release.yml']
+    paths: ['electron/**', 'ui/**', 'assets/**', 'tests/**', 'scripts/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/padlock-release.yml']
 permissions:
   contents: write
 concurrency:
@@ -58,6 +58,8 @@ jobs:
           pnpm install --frozen-lockfile --ignore-scripts
           node node_modules/electron/install.js
           node -e "if(process.platform!=='${{ matrix.platform }}'||process.arch!=='${{ matrix.arch }}')throw Error('Wrong native build runner')"
+      - name: Redacted sensitive-data scan
+        run: python scripts/check-sensitive.py
       - run: pnpm test
       - name: Dependency security gate
         run: pnpm audit --audit-level moderate
@@ -76,6 +78,8 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: pnpm exec electron-builder ${{ matrix.args }} --publish never
+      - name: Redacted packaged application scan
+        run: python scripts/check-sensitive.py --packages
       - name: Verify packaged security fuses
         run: node scripts/verify-fuses.cjs
       - name: Prepare macOS launcher archive

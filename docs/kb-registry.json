@@ -1,0 +1,59 @@
+{
+  "app": "TMA-Padlock",
+  "branch": "TMA-Padlock",
+  "version": "0.4.0",
+  "canonical": "docs/TMA-Padlock KB Library.docx",
+  "compatibility": "docs/KB Library.docx",
+  "articles": [
+    {
+      "id": "Padlock-KB1",
+      "title": "First setup and master password",
+      "bookmark": "PadlockKB1"
+    },
+    {
+      "id": "Padlock-KB2",
+      "title": "Add and verify an authenticator",
+      "bookmark": "PadlockKB2"
+    },
+    {
+      "id": "Padlock-KB3",
+      "title": "Offline codes, expiry timers and clock problems",
+      "bookmark": "PadlockKB3"
+    },
+    {
+      "id": "Padlock-KB4",
+      "title": "Encrypted backup, export and import",
+      "bookmark": "PadlockKB4"
+    },
+    {
+      "id": "Padlock-KB5",
+      "title": "Tray and compact authenticator window",
+      "bookmark": "PadlockKB5"
+    },
+    {
+      "id": "Padlock-KB6",
+      "title": "Custom icons and account privacy",
+      "bookmark": "PadlockKB6"
+    },
+    {
+      "id": "Padlock-KB7",
+      "title": "Appearance, scheduled colours and performance",
+      "bookmark": "PadlockKB7"
+    },
+    {
+      "id": "Padlock-KB8",
+      "title": "Locking and security boundaries",
+      "bookmark": "PadlockKB8"
+    },
+    {
+      "id": "Padlock-KB9",
+      "title": "Search, support and reporting",
+      "bookmark": "PadlockKB9"
+    },
+    {
+      "id": "Padlock-KB10",
+      "title": "Error messages and safe recovery",
+      "bookmark": "PadlockKB10"
+    }
+  ]
+}

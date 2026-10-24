@@ -4,12 +4,14 @@ Run with the Codex bundled Python after exporting .integration/kb.json and
 capturing synthetic app screenshots. Render and visually inspect after creation.
 """
 import json
+import re
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from shutil import copyfile
 
 root=Path(__file__).resolve().parents[1]
 articles=json.loads((root/'.integration/kb.json').read_text(encoding='utf-8'))
@@ -18,7 +20,7 @@ section=doc.sections[0]
 section.page_width=Inches(8.27);section.page_height=Inches(11.69)
 section.top_margin=section.bottom_margin=Inches(.7)
 section.left_margin=section.right_margin=Inches(.8)
-for name in ['Normal','Title','Subtitle','Heading 1','Heading 2']:
+for name in ['Normal','Title','Subtitle','Heading 1','Heading 2','Header','Footer']:
     style=doc.styles[name];style.font.name='Calibri';style.font.color.rgb=RGBColor(0,0,0)
 doc.styles['Normal'].font.size=Pt(11)
 doc.styles['Normal'].paragraph_format.space_after=Pt(9)
@@ -32,8 +34,40 @@ doc.core_properties.title='KB Library'
 doc.core_properties.subject='TMA-Padlock user guides and troubleshooting'
 doc.core_properties.author='TMApps'
 doc.core_properties.keywords='Padlock-KB1, authenticator, offline, backup, security'
+header=section.header.paragraphs[0]
+header.add_run().add_picture(str(root/'assets/icon.png'),width=Inches(.28))
+header.add_run('  TMA-Padlock  |  KB Library').bold=True
+header.paragraph_format.space_after=Pt(8)
+for r in header.runs:r.font.color.rgb=RGBColor(0,0,0);r.font.size=Pt(10)
+footer=section.footer.paragraphs[0]
+footer.alignment=WD_ALIGN_PARAGRAPH.RIGHT
+footer.add_run('TMA-Padlock 0.4.0  |  ').font.color.rgb=RGBColor(0,0,0)
+field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');footer._p.append(field)
+bookmark_id=0
+def bookmark(p,name):
+    global bookmark_id
+    bookmark_id+=1
+    start=OxmlElement('w:bookmarkStart');start.set(qn('w:id'),str(bookmark_id));start.set(qn('w:name'),name)
+    end=OxmlElement('w:bookmarkEnd');end.set(qn('w:id'),str(bookmark_id))
+    p._p.insert(0,start);p._p.append(end)
+def link(p,text,anchor=None,url=None):
+    h=OxmlElement('w:hyperlink')
+    if anchor:h.set(qn('w:anchor'),anchor)
+    if url:
+        from docx.opc.constants import RELATIONSHIP_TYPE
+        h.set(qn('r:id'),p.part.relate_to(url,RELATIONSHIP_TYPE.HYPERLINK,is_external=True))
+    r=OxmlElement('w:r');pr=OxmlElement('w:rPr')
+    color=OxmlElement('w:color');color.set(qn('w:val'),'832B50');pr.append(color)
+    underline=OxmlElement('w:u');underline.set(qn('w:val'),'single');pr.append(underline)
+    r.append(pr);t=OxmlElement('w:t');t.text=text;r.append(t);h.append(r);p._p.append(h)
+def referenced_paragraph(text):
+    p=doc.add_paragraph()
+    for segment in re.split(r'(Padlock-KB\d+)',text):
+        if re.fullmatch(r'Padlock-KB\d+',segment):link(p,segment,anchor=segment.replace('-',''))
+        else:p.add_run(segment)
+    return p
 
-def picture(name,width=6.6):
+def picture(name,width=6.1):
     p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
     p.add_run().add_picture(str(root/'docs/screenshots'/name),width=Inches(width))
     p.paragraph_format.space_after=Pt(4)
@@ -41,21 +75,23 @@ def caption(text):
     p=doc.add_paragraph(text);p.paragraph_format.space_after=Pt(10)
     for r in p.runs:r.italic=True;r.font.size=Pt(9)
 def article(i):
-    a=articles[i-1];doc.add_heading(a['id']+' '+a['title'],level=1)
+    a=articles[i-1];heading=doc.add_heading(a['id']+' '+a['title'],level=1);bookmark(heading,a['id'].replace('-',''))
     # Short paragraphs are easier to scan in the Word guide.
     text=a['text'].replace('’',"'").replace('–','-')
     sentences=text.split('. ');middle=max(1,len(sentences)//2)
     for chunk in [sentences[:middle],sentences[middle:]]:
-        if chunk:doc.add_paragraph('. '.join(chunk)+('' if chunk[-1].endswith('.') else '.'))
+        if chunk:referenced_paragraph('. '.join(chunk)+('' if chunk[-1].endswith('.') else '.'))
+    p=doc.add_paragraph();link(p,'Back to index',anchor='PadlockIndex');p.paragraph_format.space_after=Pt(6)
 
 doc.add_heading('KB Library',0)
 doc.add_paragraph('TMA-Padlock 0.4.0 | User guides and setup information',style='Subtitle')
 doc.add_paragraph('23 October 2026')
+doc.add_paragraph('Suite reference: the TMApps Master KB Library was not yet published on main at verification. This guide preserves Padlock KB IDs for future registry links.')
 doc.add_paragraph('Keep this guide with your recovery plan. All example accounts and codes in the screenshots are fictional. The same numbered articles are available offline in Settings and can be found with Settings search.')
-doc.add_heading('Find a guide',1)
+bookmark(doc.add_heading('Find a guide',1),'PadlockIndex')
 for a in articles:
-    p=doc.add_paragraph(a['id']+'  '+a['title']);p.paragraph_format.space_after=Pt(4)
-picture('tour.png',5.5)
+    p=doc.add_paragraph();link(p,a['id']+'  '+a['title'],anchor=a['id'].replace('-',''));p.paragraph_format.space_after=Pt(4)
+picture('tour.png',4.3)
 caption('The separate demo introduces the app without changing real accounts.')
 doc.add_page_break()
 article(1);article(2)
@@ -85,6 +121,10 @@ for text in ['Review every word in the description. Never include setup keys, ma
 doc.add_heading('Online reference',1)
 doc.add_paragraph('github.com/DaddyTylerXO/TMApps/tree/TMA-Padlock/docs')
 doc.add_paragraph('For the security assessment and performance measurements, see security-assessment.md and performance.md in that folder. Related guides: Padlock-KB3 for offline operation, Padlock-KB4 for recovery and Padlock-KB8 for security boundaries.')
-out=root/'docs/KB Library.docx'
+doc.add_page_break()
+article(10)
+doc.add_paragraph('Keep the original encrypted vault and known-good backups safe while troubleshooting. Never upload a whole application-data folder. When contacting support, include the app version, operating system and architecture, the KB steps you tried and only sanitized error details.')
+out=root/'docs/TMA-Padlock KB Library.docx'
 doc.save(out)
+copyfile(out,root/'docs/KB Library.docx')
 print(out)

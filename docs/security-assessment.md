@@ -1,6 +1,6 @@
 # TMA-Padlock 0.4.0 security assessment
 
-Date: 23 October 2026. Scope: application source, synthetic vaults, renderer/IPC boundaries, encrypted backup/import, startup/tray, icon/report inputs and packaged runtime configuration. This is a code review and automated adversarial assessment, not an independent penetration-testing certification. No real user vaults or credentials were used.
+Assessment started 23 October 2026; final dependency recheck 24 October 2026. Scope: application source, synthetic vaults, renderer/IPC boundaries, encrypted backup/import, startup/tray, icon/report inputs and packaged runtime configuration. This is a code review and automated adversarial assessment, not an independent penetration-testing certification. No real user vaults or credentials were used.
 
 ## Findings resolved
 
@@ -18,7 +18,7 @@ Date: 23 October 2026. Scope: application source, synthetic vaults, renderer/IPC
 
 `pnpm test` runs OTP reference vectors, encrypted round trips, tamper cases, lock races, import/cooldown tests, IPC isolation/flooding tests, HTML injection checks, settings/startup tests and feature UI tests. POSIX permissions/symlink checks run on macOS/Linux and are skipped on Windows. Source and packaged Electron smoke tests assert no renderer Node access, no stored secret in rendered text, working main/mini/tray windows and mini lock clearing. Native builds cover Windows x64, macOS Intel/ARM64 and Linux x64/ARM64.
 
-`pnpm audit --audit-level moderate` is a release gate. The audit on this update reported zero known advisories, including development dependencies. The previously tracked development-only sprintf-js advisory was [withdrawn by GitHub on 22 October 2026](https://github.com/advisories/GHSA-hp3w-g68c-fv3c). Electron was updated from 44.8.0 to 44.9.3 in its existing supported release line; runtime releases are checked independently against the [official release list](https://releases.electronjs.org/?channel=stable).
+`pnpm audit --audit-level moderate` is a release gate. The final audit reported zero known advisories, including development dependencies. The 24 October recheck found newly published fast-uri advisories in build tooling; pnpm-workspace.yaml now pins the patched 3.1.9 release before publication. The previously tracked development-only sprintf-js advisory was [withdrawn by GitHub on 22 October 2026](https://github.com/advisories/GHSA-hp3w-g68c-fv3c). Electron was updated from 44.8.0 to 44.9.3 in its existing supported release line; runtime releases are checked independently against the [official release list](https://releases.electronjs.org/?channel=stable).
 
 ## Remaining boundaries
 
